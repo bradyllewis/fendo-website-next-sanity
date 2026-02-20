@@ -99,3 +99,63 @@ export const pagesSlugs = defineQuery(`
   *[_type == "page" && defined(slug.current)]
   {"slug": slug.current}
 `)
+
+// ─── Events ───────────────────────────────────────────────────────────────────
+
+const eventFields = /* groq */ `
+  _id,
+  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),
+  title,
+  "slug": slug.current,
+  eventType,
+  status,
+  startDate,
+  endDate,
+  location,
+  coverImage,
+  shortDescription,
+  spotsTotal,
+  spotsFilled,
+  entryFee,
+  registrationUrl,
+  isFeatured,
+  tags,
+`
+
+export const allEventsQuery = defineQuery(`
+  *[_type == "event"] | order(startDate asc) {
+    ${eventFields}
+  }
+`)
+
+export const upcomingEventsQuery = defineQuery(`
+  *[_type == "event" && status in ["upcoming", "registration_open", "waitlist"]] | order(startDate asc) {
+    ${eventFields}
+  }
+`)
+
+export const featuredEventQuery = defineQuery(`
+  *[_type == "event" && isFeatured == true] | order(startDate asc) [0] {
+    ${eventFields}
+    description,
+    sponsors[] {
+      name,
+      logo,
+      url,
+    },
+  }
+`)
+
+// ─── Testimonials ─────────────────────────────────────────────────────────────
+
+export const featuredTestimonialsQuery = defineQuery(`
+  *[_type == "testimonial" && isFeatured == true] | order(publishedAt desc) {
+    _id,
+    quote,
+    authorName,
+    authorDetail,
+    authorPhoto,
+    category,
+    rating,
+  }
+`)

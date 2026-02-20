@@ -17,14 +17,9 @@ import {settingsQuery} from '@/sanity/lib/queries'
 import {resolveOpenGraphImage} from '@/sanity/lib/utils'
 import {handleError} from '@/app/client-utils'
 
-/**
- * Generate metadata for the page.
- * Learn more: https://nextjs.org/docs/app/api-reference/functions/generate-metadata#generatemetadata-function
- */
 export async function generateMetadata(): Promise<Metadata> {
   const {data: settings} = await sanityFetch({
     query: settingsQuery,
-    // Metadata should never contain stega
     stega: false,
   })
   const title = settings?.title || demo.title
@@ -56,11 +51,12 @@ const inter = Inter({
   variable: '--font-inter',
   subsets: ['latin'],
   display: 'swap',
+  weight: ['300', '400', '500', '600', '700'],
 })
 
 const ibmPlexMono = IBM_Plex_Mono({
   variable: '--font-ibm-plex-mono',
-  weight: ['400'],
+  weight: ['400', '500'],
   subsets: ['latin'],
   display: 'swap',
 })
@@ -69,24 +65,22 @@ export default async function RootLayout({children}: {children: React.ReactNode}
   const {isEnabled: isDraftMode} = await draftMode()
 
   return (
-    <html lang="en" className={`${inter.variable} ${ibmPlexMono.variable} bg-white text-black`}>
-      <body>
-        <section className="min-h-screen pt-24">
-          {/* The <Toaster> component is responsible for rendering toast notifications used in /app/client-utils.ts and /app/components/DraftModeToast.tsx */}
-          <Toaster />
-          {isDraftMode && (
-            <>
-              <DraftModeToast />
-              {/*  Enable Visual Editing, only to be rendered when Draft Mode is enabled */}
-              <VisualEditing />
-            </>
-          )}
-          {/* The <SanityLive> component is responsible for making all sanityFetch calls in your application live, so should always be rendered. */}
-          <SanityLive onError={handleError} />
-          <Header />
-          <main className="">{children}</main>
-          <Footer />
-        </section>
+    <html
+      lang="en"
+      className={`${inter.variable} ${ibmPlexMono.variable}`}
+    >
+      <body className="bg-bg text-fg antialiased">
+        <Toaster />
+        {isDraftMode && (
+          <>
+            <DraftModeToast />
+            <VisualEditing />
+          </>
+        )}
+        <SanityLive onError={handleError} />
+        <Header />
+        <main className="pt-20">{children}</main>
+        <Footer />
         <SpeedInsights />
       </body>
     </html>

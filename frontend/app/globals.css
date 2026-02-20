@@ -2,44 +2,368 @@
 
 @plugin "@tailwindcss/typography";
 
+/* ============================================================
+   FENDO GOLF -- Global Design System
+   Premium Performance Golf Brand
+   ============================================================ */
+
+@theme {
+  /* --- Core Brand Palette --- */
+  --color-bg:           #F8EDD9;   /* Beige - page background */
+  --color-fg:           #0C1C23;   /* Dark Green - primary text, dark surfaces */
+  --color-muted:        #4D6B59;   /* Forest muted - body copy, secondary text */
+  --color-muted-2:      #6E8880;   /* Light forest gray - timestamps, meta */
+  --color-border:       #C8B596;   /* Warm tan - dividers and borders */
+  --color-surface:      #F1E2C5;   /* Lighter beige - subtle section backgrounds */
+  --color-accent:       #BD5846;   /* Earthy red - primary CTA, active states */
+  --color-accent-hover: #A84136;   /* Darker red - accent hover state */
+  --color-success:      #31483B;   /* Forest green - success states */
+  --color-danger:       #9E3525;   /* Deep red - error/danger states */
+
+  /* --- Additional Brand Colors --- */
+  --color-navy:         #040F2C;   /* Navy - darkest dark, deep hero sections */
+  --color-green:        #31483B;   /* Forest Green - secondary brand color */
+  --color-mustard:      #F2E19E;   /* Mustard - warm highlight accent */
+
+  /* --- Neutral Scale (warm earth-toned) --- */
+  --color-gray-50:  #F0E4CC;
+  --color-gray-100: #E5D4B4;
+  --color-gray-200: #D4BF99;
+  --color-gray-300: #BEA67C;
+  --color-gray-400: #9D8762;
+  --color-gray-500: #7E6C4E;
+  --color-gray-600: #5F513A;
+  --color-gray-700: #44392A;
+  --color-gray-800: #2B241B;
+  --color-gray-900: #1A150E;
+  --color-gray-950: #0E0C07;
+  --color-black: #040F2C;   /* Navy */
+  --color-white: #F8EDD9;   /* Beige */
+
+  /* --- Typography --- */
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-ibm-plex-mono), 'Courier New', monospace;
+
+  /* --- Shadows --- */
+  --shadow-card:       0 1px 3px rgba(12,28,35,0.06), 0 4px 16px rgba(12,28,35,0.04);
+  --shadow-card-hover: 0 2px 8px rgba(12,28,35,0.10), 0 8px 24px rgba(12,28,35,0.08);
+  --shadow-layer:      0 35px 60px -15px rgba(12,28,35,0.12);
+
+  /* --- Layout --- */
+  --header-height: 5rem;
+
+  /* --- Transitions --- */
+  --default-transition-duration: 200ms;
+}
+
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+
 @layer base {
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply font-medium tracking-tight;
+  html {
+    color: var(--color-fg);
+    background-color: var(--color-bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+    line-height: 1.05;
+  }
+
+  /* Accessible focus rings - keyboard users only */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Subtle scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 10px;
+  }
+
+  /* Selection highlight */
+  ::selection {
+    background: var(--color-accent);
+    color: #fff;
   }
 }
 
+/* ============================================================
+   LAYOUT UTILITY
+   ============================================================ */
+
 @utility container {
-  margin: 0 auto;
-  padding: 0 2rem;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1200px;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* ============================================================
+   TYPOGRAPHY UTILITIES -- Editorial + Athletic scale
+   ============================================================
+   Usage:
+   .display-xl  -> Hero headlines (7rem+)
+   .display-lg  -> Section heroes (4-5rem)
+   .display-md  -> Sub-section headers (2.5-3rem)
+   .label-mono  -> Uppercase tracking labels (spec-sheet vibe)
+   ============================================================ */
+
+@utility display-xl {
+  font-size: clamp(3.5rem, 8vw, 7.5rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+}
+
+@utility display-lg {
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+}
+
+@utility display-md {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+}
+
+@utility label-mono {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+@utility label-mono-accent {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+/* ============================================================
+   BUTTON SYSTEM
+   ============================================================
+   .btn-primary  -> Solid dark - primary action
+   .btn-accent   -> Solid accent red - featured CTA
+   .btn-ghost    -> Invisible, text-only link
+   .btn-outline  -> Ghost with visible border
+   ============================================================ */
+
+@utility btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--color-fg);
+  color: var(--color-bg);
+  padding: 0.75rem 1.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(12,28,35,0.18);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+@utility btn-accent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--color-accent);
+  color: #ffffff;
+  padding: 0.75rem 1.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+
+  &:hover {
+    background-color: var(--color-accent-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(189,88,70,0.30);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+@utility btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 160ms ease;
+
+  &:hover {
+    color: var(--color-fg);
+  }
+}
+
+@utility btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--color-border);
+  color: var(--color-fg);
+  padding: 0.75rem 1.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+
+  &:hover {
+    border-color: var(--color-fg);
+    background-color: var(--color-fg);
+    color: var(--color-bg);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+/* ============================================================
+   CARD SYSTEM
+   ============================================================ */
+
+@utility card-base {
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+
+  &:hover {
+    border-color: var(--color-gray-400);
+    box-shadow: var(--shadow-card-hover);
+  }
+}
+
+/* ============================================================
+   SECTION SYSTEM
+   ============================================================ */
+
+@utility section-padding {
+  padding-top: 6rem;
+  padding-bottom: 6rem;
+}
+
+@utility section-padding-sm {
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+/* ============================================================
+   LINK ARROW ANIMATION
+   Arrow slides right on hover
+   ============================================================ */
+
+@utility link-arrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--color-fg);
+  transition: color 160ms ease;
+
+  & .arrow {
+    display: inline-block;
+    transition: transform 200ms ease;
+  }
+
+  &:hover {
+    color: var(--color-accent);
+  }
+
+  &:hover .arrow {
+    transform: translateX(4px);
+  }
+}
+
+/* ============================================================
+   DARK VARIANT
+   ============================================================ */
+
+/* ============================================================
+   HERO ANIMATIONS
+   ============================================================ */
+
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes highlight-sweep {
+  from { transform: scaleX(0) skewY(-1deg); }
+  to   { transform: scaleX(1) skewY(-1deg); }
+}
+
+@keyframes ball-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(1080deg); }
+}
+
+@keyframes cup-ripple {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
-
-@theme {
-  --shadow-layer: 0 35px 60px -15px rgba(0, 0, 0, 0.3);
-
-  --color-framework: #000;
-  --color-black: #0b0b0b;
-  --color-white: #fff;
-  --color-brand: #f50;
-  --color-blue: #0052ff;
-  --color-yellow: #cdea19;
-  --color-gray-50: #f6f6f8;
-  --color-gray-100: #eeeef1;
-  --color-gray-200: #e3e4e8;
-  --color-gray-300: #bbbdc9;
-  --color-gray-400: #9499ad;
-  --color-gray-500: #727892;
-  --color-gray-600: #515870;
-  --color-gray-700: #383d51;
-  --color-gray-800: #252837;
-  --color-gray-900: #1b1d27;
-  --color-gray-950: #13141b;
-
-  --default-transition-duration: 250ms;
-}

@@ -1,55 +1,157 @@
-import Link from 'next/link'
-import {settingsQuery} from '@/sanity/lib/queries'
-import {sanityFetch} from '@/sanity/lib/live'
+'use client'
 
-export default async function Header() {
-  const {data: settings} = await sanityFetch({
-    query: settingsQuery,
-  })
+import Image from 'next/image'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+
+const NAV_LINKS = [
+  { label: 'Compete', href: '/compete' },
+  { label: 'Playbook', href: '/playbook' },
+  { label: 'Collective', href: '/collective' },
+  { label: 'Gear', href: '/gear' },
+]
+
+export default function Header() {
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [mobileOpen])
+
+  const closeMenu = () => setMobileOpen(false)
 
   return (
-    <header className="fixed z-50 h-24 inset-0 bg-white/80 flex items-center backdrop-blur-lg">
-      <div className="container py-6 px-2 sm:px-6">
-        <div className="flex items-center justify-between gap-5">
-          <Link className="flex items-center gap-2" href="/">
-            <span className="text-lg sm:text-2xl pl-2 font-semibold">
-              {settings?.title || 'Sanity + Next.js'}
-            </span>
+    <>
+      <header className="fixed top-0 inset-x-0 z-50 h-20 bg-bg/90 backdrop-blur-xl border-b border-border/60">
+        <div className="container h-full flex items-center justify-between gap-6">
+
+          {/* Logo */}
+          <Link
+            href="/"
+            className="flex items-center shrink-0"
+            aria-label="Fendo Golf — Home"
+            onClick={closeMenu}
+          >
+            <Image
+              src="/images/Fendo-golf-blue-logo.webp"
+              alt="Fendo Golf"
+              width={240}
+              height={64}
+              className="h-18 w-auto"
+              priority
+            />
           </Link>
 
-          <nav>
-            <ul
-              role="list"
-              className="flex items-center gap-4 md:gap-6 leading-5 text-xs sm:text-base tracking-tight font-mono"
-            >
-              <li>
-                <Link href="/about" className="hover:underline">
-                  About
-                </Link>
-              </li>
+          {/* Desktop nav */}
+          <nav aria-label="Primary navigation" className="hidden md:flex items-center gap-8">
+            {NAV_LINKS.map(({ label, href }) => (
+              <Link
+                key={href}
+                href={href}
+                className="text-sm font-medium text-muted hover:text-fg transition-colors duration-200"
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
 
-              <li className="sm:before:w-[1px] sm:before:bg-gray-200 before:block flex sm:gap-4 md:gap-6">
-                <Link
-                  className="rounded-full flex gap-4 items-center bg-black hover:bg-blue focus:bg-blue py-2 px-4 justify-center sm:py-3 sm:px-6 text-white transition-colors duration-200"
-                  href="https://github.com/sanity-io/sanity-template-nextjs-clean"
-                  target="_blank"
-                  rel="noopener noreferrer"
+          {/* Right side */}
+          <div className="flex items-center gap-3">
+            {/* CTA — desktop only */}
+            <Link
+              href="/collective"
+              className="hidden md:inline-flex btn-accent text-sm px-4 py-2.5 rounded-xl"
+            >
+              Get First Access
+            </Link>
+
+            {/* Hamburger — mobile only */}
+            <button
+              className="md:hidden flex flex-col justify-center items-center w-10 h-10 gap-[5px] rounded-lg hover:bg-surface transition-colors duration-200 shrink-0"
+              aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-menu"
+              onClick={() => setMobileOpen((prev) => !prev)}
+            >
+              <span
+                className={`block h-[2px] bg-fg rounded-full transition-all duration-200 ease-in-out origin-center ${
+                  mobileOpen ? 'w-5 translate-y-[7px] rotate-45' : 'w-5'
+                }`}
+              />
+              <span
+                className={`block h-[2px] bg-fg rounded-full transition-all duration-200 ease-in-out ${
+                  mobileOpen ? 'w-0 opacity-0' : 'w-5'
+                }`}
+              />
+              <span
+                className={`block h-[2px] bg-fg rounded-full transition-all duration-200 ease-in-out origin-center ${
+                  mobileOpen ? 'w-5 -translate-y-[7px] -rotate-45' : 'w-5'
+                }`}
+              />
+            </button>
+          </div>
+
+        </div>
+      </header>
+
+      {/* Mobile menu */}
+      <div
+        id="mobile-menu"
+        className={`fixed inset-0 z-40 md:hidden transition-all duration-300 ease-in-out ${
+          mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        aria-hidden={!mobileOpen}
+      >
+        {/* Backdrop */}
+        <div
+          className="absolute inset-0 bg-fg/30 backdrop-blur-sm"
+          onClick={closeMenu}
+          aria-hidden="true"
+        />
+
+        {/* Slide-down panel */}
+        <div
+          className={`absolute top-20 inset-x-0 bg-bg border-b border-border shadow-layer transition-transform duration-300 ease-in-out ${
+            mobileOpen ? 'translate-y-0' : '-translate-y-3'
+          }`}
+        >
+          <nav aria-label="Mobile navigation" className="container py-4 flex flex-col">
+            {NAV_LINKS.map(({ label, href }) => (
+              <Link
+                key={href}
+                href={href}
+                className="flex items-center justify-between py-4 text-base font-semibold text-fg border-b border-border/50 hover:text-accent transition-colors duration-200 group"
+                onClick={closeMenu}
+              >
+                <span>{label}</span>
+                <svg
+                  className="w-4 h-4 text-muted group-hover:text-accent group-hover:translate-x-0.5 transition-all duration-200"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  aria-hidden="true"
                 >
-                  <span className="whitespace-nowrap">View on GitHub</span>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="hidden sm:block h-4 sm:h-6"
-                  >
-                    <path d="M12.001 2C6.47598 2 2.00098 6.475 2.00098 12C2.00098 16.425 4.86348 20.1625 8.83848 21.4875C9.33848 21.575 9.52598 21.275 9.52598 21.0125C9.52598 20.775 9.51348 19.9875 9.51348 19.15C7.00098 19.6125 6.35098 18.5375 6.15098 17.975C6.03848 17.6875 5.55098 16.8 5.12598 16.5625C4.77598 16.375 4.27598 15.9125 5.11348 15.9C5.90098 15.8875 6.46348 16.625 6.65098 16.925C7.55098 18.4375 8.98848 18.0125 9.56348 17.75C9.65098 17.1 9.91348 16.6625 10.201 16.4125C7.97598 16.1625 5.65098 15.3 5.65098 11.475C5.65098 10.3875 6.03848 9.4875 6.67598 8.7875C6.57598 8.5375 6.22598 7.5125 6.77598 6.1375C6.77598 6.1375 7.61348 5.875 9.52598 7.1625C10.326 6.9375 11.176 6.825 12.026 6.825C12.876 6.825 13.726 6.9375 14.526 7.1625C16.4385 5.8625 17.276 6.1375 17.276 6.1375C17.826 7.5125 17.476 8.5375 17.376 8.7875C18.0135 9.4875 18.401 10.375 18.401 11.475C18.401 15.3125 16.0635 16.1625 13.8385 16.4125C14.201 16.725 14.5135 17.325 14.5135 18.2625C14.5135 19.6 14.501 20.675 14.501 21.0125C14.501 21.275 14.6885 21.5875 15.1885 21.4875C19.259 20.1133 21.9999 16.2963 22.001 12C22.001 6.475 17.526 2 12.001 2Z"></path>
-                  </svg>
-                </Link>
-              </li>
-            </ul>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            ))}
+
+            {/* Mobile CTA */}
+            <div className="pt-5 pb-2">
+              <Link
+                href="/collective"
+                className="btn-accent w-full justify-center text-base py-3.5 rounded-xl"
+                onClick={closeMenu}
+              >
+                Get First Access
+              </Link>
+            </div>
           </nav>
         </div>
       </div>
-    </header>
+    </>
   )
 }

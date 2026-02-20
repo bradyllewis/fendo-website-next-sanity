@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm --version:*)",
+      "Bash(python3:*)",
+      "Bash(python:*)",
+      "Bash(dir:*)",
+      "Bash(cmd /c \"dir C:\\\\Users\\\\brady\\\\.agents\\\\skills\\\\ui-ux-pro-max\\\\scripts\")",
+      "Bash(npm run type-check:*)",
+      "Bash(npx next build:*)",
+      "Bash(icacls:*)",
+      "Bash(cmd.exe /c \"icacls C:\\\\Users\\\\brady\\\\.config\\\\sanity /grant brady:\\(OI\\)\\(CI\\)F /T\":*)"
+    ]
+  }
+}

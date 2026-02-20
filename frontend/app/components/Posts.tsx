@@ -15,23 +15,28 @@ const Post = ({post}: {post: AllPostsQueryResult[number]}) => {
     <article
       data-sanity={dataAttr({id: _id, type: 'post', path: 'title'}).toString()}
       key={_id}
-      className="border border-gray-200 rounded-sm p-6 bg-gray-50 flex flex-col justify-between transition-colors hover:bg-white relative"
+      className="card-base p-7 flex flex-col justify-between gap-6 relative cursor-pointer"
     >
-      <Link className="hover:text-brand underline transition-colors" href={`/posts/${slug}`}>
-        <span className="absolute inset-0 z-10" />
+      <Link href={`/posts/${slug}`}>
+        <span className="absolute inset-0 z-10 rounded-2xl" aria-label={title ?? undefined} />
       </Link>
-      <div>
-        <h3 className="text-2xl mb-4">{title}</h3>
 
-        <p className="line-clamp-3 text-sm leading-6 text-gray-600 max-w-[70ch]">{excerpt}</p>
-      </div>
-      <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
-        {author && author.firstName && author.lastName && (
-          <div className="flex items-center">
-            <Avatar person={author} small={true} />
-          </div>
+      <div>
+        <h3 className="text-lg font-semibold tracking-tight text-fg mb-3 leading-snug">
+          {title}
+        </h3>
+        {excerpt && (
+          <p className="text-sm leading-relaxed text-muted line-clamp-3 max-w-[60ch]">
+            {excerpt}
+          </p>
         )}
-        <time className="text-gray-500 text-xs font-mono" dateTime={date}>
+      </div>
+
+      <div className="flex items-center justify-between pt-4 border-t border-border">
+        {author?.firstName && author?.lastName && (
+          <Avatar person={author} small={true} />
+        )}
+        <time className="text-muted-2 text-xs font-mono ml-auto" dateTime={date ?? undefined}>
           <DateComponent dateString={date} />
         </time>
       </div>
@@ -39,38 +44,23 @@ const Post = ({post}: {post: AllPostsQueryResult[number]}) => {
   )
 }
 
-const Posts = ({
-  children,
-  heading,
-  subHeading,
-}: {
-  children: React.ReactNode
-  heading?: string
-  subHeading?: string
-}) => (
-  <div>
-    {heading && <h2 className="text-3xl text-gray-900 sm:text-4xl lg:text-5xl">{heading}</h2>}
-    {subHeading && <p className="mt-2 text-lg leading-8 text-gray-600">{subHeading}</p>}
-    <div className="pt-6 space-y-6">{children}</div>
-  </div>
-)
-
 export const MorePosts = async ({skip, limit}: {skip: string; limit: number}) => {
   const {data} = await sanityFetch({
     query: morePostsQuery,
     params: {skip, limit},
   })
 
-  if (!data || data.length === 0) {
-    return null
-  }
+  if (!data || data.length === 0) return null
 
   return (
-    <Posts heading={`Recent Posts (${data?.length})`}>
-      {data?.map((post: AllPostsQueryResult[number]) => (
-        <Post key={post._id} post={post} />
-      ))}
-    </Posts>
+    <div>
+      <p className="label-mono mb-6">More from The Playbook ({data.length})</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {data.map((post: AllPostsQueryResult[number]) => (
+          <Post key={post._id} post={post} />
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -82,13 +72,10 @@ export const AllPosts = async () => {
   }
 
   return (
-    <Posts
-      heading="Recent Posts"
-      subHeading={`${data.length === 1 ? 'This blog post is' : `These ${data.length} blog posts are`} populated from your Sanity Studio.`}
-    >
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {data.map((post: AllPostsQueryResult[number]) => (
         <Post key={post._id} post={post} />
       ))}
-    </Posts>
+    </div>
   )
 }
