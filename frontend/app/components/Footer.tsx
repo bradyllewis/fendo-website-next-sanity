@@ -62,7 +62,7 @@ export default function Footer() {
                 alt="Fendo Golf"
                 width={100}
                 height={28}
-                className="h-6 w-auto brightness-0 invert mb-5"
+                className="h-20 w-auto brightness-0 invert mb-5"
               />
             </Link>
             <p className="text-bg/40 text-xs leading-relaxed max-w-[180px]">

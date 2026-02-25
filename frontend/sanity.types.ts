@@ -122,6 +122,145 @@ export type Button = {
   link?: Link;
 };
 
+export type Testimonial = {
+  _id: string;
+  _type: "testimonial";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  quote: string;
+  authorName: string;
+  authorDetail?: string;
+  authorPhoto?: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  };
+  category?: "product" | "community" | "education" | "events" | "general";
+  rating?: 5 | 4 | 3;
+  isFeatured?: boolean;
+  publishedAt?: string;
+};
+
+export type SanityImageCrop = {
+  _type: "sanity.imageCrop";
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+};
+
+export type SanityImageHotspot = {
+  _type: "sanity.imageHotspot";
+  x: number;
+  y: number;
+  height: number;
+  width: number;
+};
+
+export type SanityFileAssetReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "sanity.fileAsset";
+};
+
+export type MediaAsset = {
+  _id: string;
+  _type: "mediaAsset";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  title: string;
+  mediaType: "image" | "video";
+  uploadedImage?: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  };
+  imageSourceUrl?: string;
+  uploadedVideo?: {
+    asset?: SanityFileAssetReference;
+    media?: unknown;
+    _type: "file";
+  };
+  videoSourceUrl?: string;
+  thumbnailImage?: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  };
+  caption?: string;
+  description?: string;
+  tags?: Array<string>;
+  dateTaken?: string;
+  credit?: string;
+  isFeatured?: boolean;
+};
+
+export type Event = {
+  _id: string;
+  _type: "event";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  title: string;
+  slug: Slug;
+  eventType: "tournament" | "clinic" | "community_round" | "sponsored_championship" | "meetup";
+  status: "upcoming" | "registration_open" | "waitlist" | "completed" | "cancelled";
+  startDate: string;
+  endDate?: string;
+  location?: {
+    venueName?: string;
+    city?: string;
+    state?: string;
+    addressLine?: string;
+  };
+  coverImage?: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  };
+  shortDescription?: string;
+  description?: BlockContentTextOnly;
+  spotsTotal?: number;
+  spotsFilled?: number;
+  entryFee?: number;
+  registrationUrl?: string;
+  isFeatured?: boolean;
+  sponsors?: Array<{
+    name?: string;
+    logo?: {
+      asset?: SanityImageAssetReference;
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      _type: "image";
+    };
+    url?: string;
+    _key: string;
+  }>;
+  tags?: Array<string>;
+};
+
+export type Slug = {
+  _type: "slug";
+  current: string;
+  source?: string;
+};
+
 export type Settings = {
   _id: string;
   _type: "settings";
@@ -160,22 +299,6 @@ export type Settings = {
     metadataBase?: string;
     _type: "image";
   };
-};
-
-export type SanityImageCrop = {
-  _type: "sanity.imageCrop";
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
-};
-
-export type SanityImageHotspot = {
-  _type: "sanity.imageHotspot";
-  x: number;
-  y: number;
-  height: number;
-  width: number;
 };
 
 export type Page = {
@@ -240,12 +363,6 @@ export type Person = {
     alt?: string;
     _type: "image";
   };
-};
-
-export type Slug = {
-  _type: "slug";
-  current: string;
-  source?: string;
 };
 
 export type SanityAssistInstructionTask = {
@@ -404,6 +521,7 @@ export type SanityImageMetadata = {
   palette?: SanityImagePalette;
   lqip?: string;
   blurHash?: string;
+  thumbHash?: string;
   hasAlpha?: boolean;
   isOpaque?: boolean;
 };
@@ -467,7 +585,7 @@ export type Geopoint = {
   alt?: number;
 };
 
-export type AllSanitySchemaTypes = PageReference | PostReference | Link | SanityImageAssetReference | CallToAction | InfoSection | BlockContentTextOnly | BlockContent | Button | Settings | SanityImageCrop | SanityImageHotspot | Page | PersonReference | Post | Person | Slug | SanityAssistInstructionTask | SanityAssistTaskStatus | SanityAssistSchemaTypeAnnotations | SanityAssistOutputType | SanityAssistOutputField | AssistInstructionContextReference | SanityAssistInstructionContext | AssistInstructionContext | SanityAssistInstructionUserInput | SanityAssistInstructionPrompt | SanityAssistInstructionFieldRef | SanityAssistInstruction | SanityAssistSchemaTypeField | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset | Geopoint;
+export type AllSanitySchemaTypes = PageReference | PostReference | Link | SanityImageAssetReference | CallToAction | InfoSection | BlockContentTextOnly | BlockContent | Button | Testimonial | SanityImageCrop | SanityImageHotspot | SanityFileAssetReference | MediaAsset | Event | Slug | Settings | Page | PersonReference | Post | Person | SanityAssistInstructionTask | SanityAssistTaskStatus | SanityAssistSchemaTypeAnnotations | SanityAssistOutputType | SanityAssistOutputField | AssistInstructionContextReference | SanityAssistInstructionContext | AssistInstructionContext | SanityAssistInstructionUserInput | SanityAssistInstructionPrompt | SanityAssistInstructionFieldRef | SanityAssistInstruction | SanityAssistSchemaTypeField | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset | Geopoint;
 
 export declare const internalGroqTypeReferenceTo: unique symbol;
 
@@ -742,6 +860,143 @@ export type PagesSlugsResult = Array<{
   slug: string;
 }>;
 
+// Source: sanity\lib\queries.ts
+// Variable: allEventsQuery
+// Query: *[_type == "event"] | order(startDate asc) {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  isFeatured,  tags,  }
+export type AllEventsQueryResult = Array<{
+  _id: string;
+  docStatus: "draft" | "published";
+  title: string;
+  slug: string;
+  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament";
+  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist";
+  startDate: string;
+  endDate: string | null;
+  location: {
+    venueName?: string;
+    city?: string;
+    state?: string;
+    addressLine?: string;
+  } | null;
+  coverImage: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  } | null;
+  shortDescription: string | null;
+  spotsTotal: number | null;
+  spotsFilled: number | null;
+  entryFee: number | null;
+  registrationUrl: string | null;
+  isFeatured: boolean | null;
+  tags: Array<string> | null;
+}>;
+
+// Source: sanity\lib\queries.ts
+// Variable: upcomingEventsQuery
+// Query: *[_type == "event" && status in ["upcoming", "registration_open", "waitlist"]] | order(startDate asc) {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  isFeatured,  tags,  }
+export type UpcomingEventsQueryResult = Array<{
+  _id: string;
+  docStatus: "draft" | "published";
+  title: string;
+  slug: string;
+  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament";
+  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist";
+  startDate: string;
+  endDate: string | null;
+  location: {
+    venueName?: string;
+    city?: string;
+    state?: string;
+    addressLine?: string;
+  } | null;
+  coverImage: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  } | null;
+  shortDescription: string | null;
+  spotsTotal: number | null;
+  spotsFilled: number | null;
+  entryFee: number | null;
+  registrationUrl: string | null;
+  isFeatured: boolean | null;
+  tags: Array<string> | null;
+}>;
+
+// Source: sanity\lib\queries.ts
+// Variable: featuredEventQuery
+// Query: *[_type == "event" && isFeatured == true] | order(startDate asc) [0] {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  isFeatured,  tags,    description,    sponsors[] {      name,      logo,      url,    },  }
+export type FeaturedEventQueryResult = {
+  _id: string;
+  docStatus: "draft" | "published";
+  title: string;
+  slug: string;
+  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament";
+  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist";
+  startDate: string;
+  endDate: string | null;
+  location: {
+    venueName?: string;
+    city?: string;
+    state?: string;
+    addressLine?: string;
+  } | null;
+  coverImage: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  } | null;
+  shortDescription: string | null;
+  spotsTotal: number | null;
+  spotsFilled: number | null;
+  entryFee: number | null;
+  registrationUrl: string | null;
+  isFeatured: true;
+  tags: Array<string> | null;
+  description: BlockContentTextOnly | null;
+  sponsors: Array<{
+    name: string | null;
+    logo: {
+      asset?: SanityImageAssetReference;
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      _type: "image";
+    } | null;
+    url: string | null;
+  }> | null;
+} | null;
+
+// Source: sanity\lib\queries.ts
+// Variable: featuredTestimonialsQuery
+// Query: *[_type == "testimonial" && isFeatured == true] | order(publishedAt desc) {    _id,    quote,    authorName,    authorDetail,    authorPhoto,    category,    rating,  }
+export type FeaturedTestimonialsQueryResult = Array<{
+  _id: string;
+  quote: string;
+  authorName: string;
+  authorDetail: string | null;
+  authorPhoto: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  } | null;
+  category: "community" | "education" | "events" | "general" | "product" | null;
+  rating: 3 | 4 | 5 | null;
+}>;
+
 // Query TypeMap
 import "@sanity/client";
 declare module "@sanity/client" {
@@ -754,6 +1009,10 @@ declare module "@sanity/client" {
     "\n  *[_type == \"post\" && slug.current == $slug] [0] {\n    content[]{\n    ...,\n    markDefs[]{\n      ...,\n      \n  _type == \"link\" => {\n    \"page\": page->slug.current,\n    \"post\": post->slug.current\n  }\n\n    }\n  },\n    \n  _id,\n  \"status\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  \"title\": coalesce(title, \"Untitled\"),\n  \"slug\": slug.current,\n  excerpt,\n  coverImage,\n  \"date\": coalesce(date, _updatedAt),\n  \"author\": author->{firstName, lastName, picture},\n\n  }\n": PostQueryResult;
     "\n  *[_type == \"post\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": PostPagesSlugsResult;
     "\n  *[_type == \"page\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": PagesSlugsResult;
+    "\n  *[_type == \"event\"] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  isFeatured,\n  tags,\n\n  }\n": AllEventsQueryResult;
+    "\n  *[_type == \"event\" && status in [\"upcoming\", \"registration_open\", \"waitlist\"]] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  isFeatured,\n  tags,\n\n  }\n": UpcomingEventsQueryResult;
+    "\n  *[_type == \"event\" && isFeatured == true] | order(startDate asc) [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  isFeatured,\n  tags,\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": FeaturedEventQueryResult;
+    "\n  *[_type == \"testimonial\" && isFeatured == true] | order(publishedAt desc) {\n    _id,\n    quote,\n    authorName,\n    authorDetail,\n    authorPhoto,\n    category,\n    rating,\n  }\n": FeaturedTestimonialsQueryResult;
   }
 }
 

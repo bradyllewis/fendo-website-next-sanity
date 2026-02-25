@@ -20,7 +20,7 @@ export default function GearCallout() {
           <div>
             <p className="label-mono mb-5">Performance Tools</p>
             <h2 id="gear-heading" className="display-md text-fg mb-6">
-              The Right Tool Makes What Matters Easier.
+              <span className='bg-accent/80 pl-2 pr-3 text-bg rounded-sm'>The Right Tool</span> Makes What Matters Easier.
             </h2>
             <p className="text-muted leading-relaxed mb-10 max-w-[44ch]">
               The Fendo GS1 Groove System is built for one job: keeping your clubface in peak condition. Precision cleaning, every round. Because performance starts before the swing.
@@ -37,29 +37,32 @@ export default function GearCallout() {
               ))}
             </ul>
 
-            <Link href="/gear/gs1" className="btn-outline">
+            <Link href="https://fendogolf.com/products/fendo-gs1-groove-system?variant=50300537667831" target='_blank' className="btn-outline">
               Shop the GS1
             </Link>
           </div>
 
           {/* Visual: product card */}
-          <div className="relative bg-fg rounded-2xl overflow-hidden min-h-80 lg:min-h-[480px] flex flex-col items-center justify-center p-12">
+                      <Link href="https://fendogolf.com/products/fendo-gs1-groove-system?variant=50300537667831" target='_blank'>
+
+          <div className="relative bg-fg rounded-2xl overflow-hidden min-h-80 lg:min-h-[480px] flex flex-col items-end justify-end p-5">
             <div
-              className="absolute inset-0 opacity-[0.04]"
-              style={{backgroundImage: 'url(/images/tile-1-black.png)', backgroundSize: '5px'}}
+              className="absolute inset-2 bg-cover bg-center"
+              style={{backgroundImage: 'url(/images/gs1-golf-product1.webp)'}}
               aria-hidden="true"
             />
-            <div className="relative z-10 text-center">
-              <p className="label-mono text-white/30 mb-6">Flagship Product</p>
-              <h3 className="text-4xl md:text-5xl font-semibold tracking-tight text-bg mb-3">GS1</h3>
-              <p className="text-bg/40 text-sm font-mono">Groove System</p>
-              <div className="mt-10 flex items-center justify-center gap-3 text-bg/20">
+            <div className="relative z-10 text-center bg-bg/80 backdrop-blur-sm rounded-xl px-1 py-4">
+              <p className="label-mono text-fg mb-2 font-bold">Flagship Product</p>
+              <h3 className="text-4xl md:text-5xl font-semibold tracking-tight text-accent mb-1">GS1</h3>
+              <p className="text-accent text-sm font-mono">Groove System</p>
+              <div className="mt-1 flex items-center justify-center gap-3 text-bg/20">
                 <span className="inline-block w-6 h-px bg-current" />
-                <span className="text-xs font-mono text-bg/30">Precision · Habit · Performance</span>
+                <span className="text-xs font-mono text-fg">Precision · Habit · Performance</span>
                 <span className="inline-block w-6 h-px bg-current" />
               </div>
             </div>
           </div>
+          </Link>
         </div>
       </div>
     </section>

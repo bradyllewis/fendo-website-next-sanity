@@ -3373,6 +3373,13 @@
           },
           "optional": true
         },
+        "thumbHash": {
+          "type": "objectAttribute",
+          "value": {
+            "type": "string"
+          },
+          "optional": true
+        },
         "hasAlpha": {
           "type": "objectAttribute",
           "value": {

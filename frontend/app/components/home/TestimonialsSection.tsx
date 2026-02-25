@@ -26,7 +26,9 @@ export default function TestimonialsSection() {
         <div className="mb-14">
           <p className="label-mono mb-4">Proof</p>
           <h2 id="proof-heading" className="display-md text-fg max-w-xl">
-            Golfers Who Take the Short Game Seriously.
+            Golfers Who Take<br />
+            <span className="bg-green/80 pl-2 pr-3 text-bg rounded-sm">the Short Game</span><br />
+            Seriously.
           </h2>
         </div>
 
