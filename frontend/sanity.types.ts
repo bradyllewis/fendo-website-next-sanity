@@ -122,6 +122,133 @@ export type Button = {
   link?: Link;
 };
 
+export type SanityFileAssetReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "sanity.fileAsset";
+};
+
+export type PersonReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "person";
+};
+
+export type PlaybookReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "playbook";
+};
+
+export type Playbook = {
+  _id: string;
+  _type: "playbook";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  title: string;
+  slug: Slug;
+  contentType: "article" | "video" | "guide" | "drill" | "tutorial";
+  category?: "short-game" | "putting" | "chipping" | "bunker-play" | "full-swing" | "course-management" | "mental-game" | "fitness" | "equipment" | "rules" | "general";
+  difficulty?: "all-levels" | "beginner" | "intermediate" | "advanced";
+  tags?: Array<string>;
+  excerpt?: string;
+  body?: BlockContent;
+  coverImage?: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  };
+  video?: {
+    platform?: "youtube" | "vimeo" | "uploaded";
+    embedId?: string;
+    url?: string;
+    uploadedFile?: {
+      asset?: SanityFileAssetReference;
+      media?: unknown;
+      _type: "file";
+    };
+    duration?: string;
+  };
+  attachments?: Array<{
+    title: string;
+    description?: string;
+    fileType?: "pdf" | "worksheet" | "scorecard" | "drill-sheet" | "checklist" | "spreadsheet" | "other";
+    file: {
+      asset?: SanityFileAssetReference;
+      media?: unknown;
+      _type: "file";
+    };
+    _key: string;
+  }>;
+  author?: PersonReference;
+  contributors?: Array<{
+    _key: string;
+  } & PersonReference>;
+  relatedPlaybooks?: Array<{
+    _key: string;
+  } & PlaybookReference>;
+  publishedAt?: string;
+  isFeatured?: boolean;
+  isPremium?: boolean;
+  displayOrder?: number;
+};
+
+export type SanityImageCrop = {
+  _type: "sanity.imageCrop";
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+};
+
+export type SanityImageHotspot = {
+  _type: "sanity.imageHotspot";
+  x: number;
+  y: number;
+  height: number;
+  width: number;
+};
+
+export type Slug = {
+  _type: "slug";
+  current: string;
+  source?: string;
+};
+
+export type Gear = {
+  _id: string;
+  _type: "gear";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  name: string;
+  slug: Slug;
+  tagline?: string;
+  category?: string;
+  badge?: string;
+  shortDescription?: string;
+  features?: Array<string>;
+  price?: number;
+  shopUrl: string;
+  image: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt: string;
+    _type: "image";
+  };
+  isFeatured?: boolean;
+  displayOrder?: number;
+};
+
 export type Testimonial = {
   _id: string;
   _type: "testimonial";
@@ -143,29 +270,6 @@ export type Testimonial = {
   rating?: 5 | 4 | 3;
   isFeatured?: boolean;
   publishedAt?: string;
-};
-
-export type SanityImageCrop = {
-  _type: "sanity.imageCrop";
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
-};
-
-export type SanityImageHotspot = {
-  _type: "sanity.imageHotspot";
-  x: number;
-  y: number;
-  height: number;
-  width: number;
-};
-
-export type SanityFileAssetReference = {
-  _ref: string;
-  _type: "reference";
-  _weak?: boolean;
-  [internalGroqTypeReferenceTo]?: "sanity.fileAsset";
 };
 
 export type MediaAsset = {
@@ -255,12 +359,6 @@ export type Event = {
   tags?: Array<string>;
 };
 
-export type Slug = {
-  _type: "slug";
-  current: string;
-  source?: string;
-};
-
 export type Settings = {
   _id: string;
   _type: "settings";
@@ -316,13 +414,6 @@ export type Page = {
   } & CallToAction | {
     _key: string;
   } & InfoSection>;
-};
-
-export type PersonReference = {
-  _ref: string;
-  _type: "reference";
-  _weak?: boolean;
-  [internalGroqTypeReferenceTo]?: "person";
 };
 
 export type Post = {
@@ -585,7 +676,7 @@ export type Geopoint = {
   alt?: number;
 };
 
-export type AllSanitySchemaTypes = PageReference | PostReference | Link | SanityImageAssetReference | CallToAction | InfoSection | BlockContentTextOnly | BlockContent | Button | Testimonial | SanityImageCrop | SanityImageHotspot | SanityFileAssetReference | MediaAsset | Event | Slug | Settings | Page | PersonReference | Post | Person | SanityAssistInstructionTask | SanityAssistTaskStatus | SanityAssistSchemaTypeAnnotations | SanityAssistOutputType | SanityAssistOutputField | AssistInstructionContextReference | SanityAssistInstructionContext | AssistInstructionContext | SanityAssistInstructionUserInput | SanityAssistInstructionPrompt | SanityAssistInstructionFieldRef | SanityAssistInstruction | SanityAssistSchemaTypeField | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset | Geopoint;
+export type AllSanitySchemaTypes = PageReference | PostReference | Link | SanityImageAssetReference | CallToAction | InfoSection | BlockContentTextOnly | BlockContent | Button | SanityFileAssetReference | PersonReference | PlaybookReference | Playbook | SanityImageCrop | SanityImageHotspot | Slug | Gear | Testimonial | MediaAsset | Event | Settings | Page | Post | Person | SanityAssistInstructionTask | SanityAssistTaskStatus | SanityAssistSchemaTypeAnnotations | SanityAssistOutputType | SanityAssistOutputField | AssistInstructionContextReference | SanityAssistInstructionContext | AssistInstructionContext | SanityAssistInstructionUserInput | SanityAssistInstructionPrompt | SanityAssistInstructionFieldRef | SanityAssistInstruction | SanityAssistSchemaTypeField | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset | Geopoint;
 
 export declare const internalGroqTypeReferenceTo: unique symbol;
 
@@ -978,6 +1069,240 @@ export type FeaturedEventQueryResult = {
 } | null;
 
 // Source: sanity\lib\queries.ts
+// Variable: allGearQuery
+// Query: *[_type == "gear"] | order(displayOrder asc, name asc) {      _id,  name,  "slug": slug.current,  tagline,  category,  badge,  shortDescription,  features,  price,  shopUrl,  image,  isFeatured,  displayOrder,  }
+export type AllGearQueryResult = Array<{
+  _id: string;
+  name: string;
+  slug: string;
+  tagline: string | null;
+  category: string | null;
+  badge: string | null;
+  shortDescription: string | null;
+  features: Array<string> | null;
+  price: number | null;
+  shopUrl: string;
+  image: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt: string;
+    _type: "image";
+  };
+  isFeatured: boolean | null;
+  displayOrder: number | null;
+}>;
+
+// Source: sanity\lib\queries.ts
+// Variable: featuredGearQuery
+// Query: *[_type == "gear" && isFeatured == true] | order(displayOrder asc) [0] {      _id,  name,  "slug": slug.current,  tagline,  category,  badge,  shortDescription,  features,  price,  shopUrl,  image,  isFeatured,  displayOrder,  }
+export type FeaturedGearQueryResult = {
+  _id: string;
+  name: string;
+  slug: string;
+  tagline: string | null;
+  category: string | null;
+  badge: string | null;
+  shortDescription: string | null;
+  features: Array<string> | null;
+  price: number | null;
+  shopUrl: string;
+  image: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt: string;
+    _type: "image";
+  };
+  isFeatured: true;
+  displayOrder: number | null;
+} | null;
+
+// Source: sanity\lib\queries.ts
+// Variable: allPlaybooksQuery
+// Query: *[_type == "playbook"] | order(publishedAt desc) {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,  }
+export type AllPlaybooksQueryResult = Array<{
+  _id: string;
+  title: string;
+  slug: string;
+  contentType: "article" | "drill" | "guide" | "tutorial" | "video";
+  category: "bunker-play" | "chipping" | "course-management" | "equipment" | "fitness" | "full-swing" | "general" | "mental-game" | "putting" | "rules" | "short-game" | null;
+  difficulty: "advanced" | "all-levels" | "beginner" | "intermediate" | null;
+  tags: Array<string> | null;
+  coverImage: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  } | null;
+  excerpt: string | null;
+  publishedAt: string | null;
+  author: {
+    firstName: string;
+    lastName: string;
+    picture: {
+      asset?: SanityImageAssetReference;
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      alt?: string;
+      _type: "image";
+    };
+  } | null;
+  isFeatured: boolean | null;
+  isPremium: boolean | null;
+  displayOrder: number | null;
+}>;
+
+// Source: sanity\lib\queries.ts
+// Variable: featuredPlaybookQuery
+// Query: *[_type == "playbook" && isFeatured == true] | order(displayOrder asc, publishedAt desc) [0] {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,  }
+export type FeaturedPlaybookQueryResult = {
+  _id: string;
+  title: string;
+  slug: string;
+  contentType: "article" | "drill" | "guide" | "tutorial" | "video";
+  category: "bunker-play" | "chipping" | "course-management" | "equipment" | "fitness" | "full-swing" | "general" | "mental-game" | "putting" | "rules" | "short-game" | null;
+  difficulty: "advanced" | "all-levels" | "beginner" | "intermediate" | null;
+  tags: Array<string> | null;
+  coverImage: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  } | null;
+  excerpt: string | null;
+  publishedAt: string | null;
+  author: {
+    firstName: string;
+    lastName: string;
+    picture: {
+      asset?: SanityImageAssetReference;
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      alt?: string;
+      _type: "image";
+    };
+  } | null;
+  isFeatured: true;
+  isPremium: boolean | null;
+  displayOrder: number | null;
+} | null;
+
+// Source: sanity\lib\queries.ts
+// Variable: playbookQuery
+// Query: *[_type == "playbook" && slug.current == $slug] [0] {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,    body,    "contributors": contributors[]->{firstName, lastName, picture},    video {      platform,      embedId,      url,      "fileUrl": uploadedFile.asset->url,      duration,    },    attachments[] {      _key,      title,      description,      fileType,      "fileUrl": file.asset->url,    },    "relatedPlaybooks": relatedPlaybooks[]->{        _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,    },  }
+export type PlaybookQueryResult = {
+  _id: string;
+  title: string;
+  slug: string;
+  contentType: "article" | "drill" | "guide" | "tutorial" | "video";
+  category: "bunker-play" | "chipping" | "course-management" | "equipment" | "fitness" | "full-swing" | "general" | "mental-game" | "putting" | "rules" | "short-game" | null;
+  difficulty: "advanced" | "all-levels" | "beginner" | "intermediate" | null;
+  tags: Array<string> | null;
+  coverImage: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  } | null;
+  excerpt: string | null;
+  publishedAt: string | null;
+  author: {
+    firstName: string;
+    lastName: string;
+    picture: {
+      asset?: SanityImageAssetReference;
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      alt?: string;
+      _type: "image";
+    };
+  } | null;
+  isFeatured: boolean | null;
+  isPremium: boolean | null;
+  displayOrder: number | null;
+  body: BlockContent | null;
+  contributors: Array<{
+    firstName: string;
+    lastName: string;
+    picture: {
+      asset?: SanityImageAssetReference;
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      alt?: string;
+      _type: "image";
+    };
+  }> | null;
+  video: {
+    platform: "uploaded" | "vimeo" | "youtube" | null;
+    embedId: string | null;
+    url: string | null;
+    fileUrl: string | null;
+    duration: string | null;
+  } | null;
+  attachments: Array<{
+    _key: string;
+    title: string;
+    description: string | null;
+    fileType: "checklist" | "drill-sheet" | "other" | "pdf" | "scorecard" | "spreadsheet" | "worksheet" | null;
+    fileUrl: string | null;
+  }> | null;
+  relatedPlaybooks: Array<{
+    _id: string;
+    title: string;
+    slug: string;
+    contentType: "article" | "drill" | "guide" | "tutorial" | "video";
+    category: "bunker-play" | "chipping" | "course-management" | "equipment" | "fitness" | "full-swing" | "general" | "mental-game" | "putting" | "rules" | "short-game" | null;
+    difficulty: "advanced" | "all-levels" | "beginner" | "intermediate" | null;
+    tags: Array<string> | null;
+    coverImage: {
+      asset?: SanityImageAssetReference;
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      alt?: string;
+      _type: "image";
+    } | null;
+    excerpt: string | null;
+    publishedAt: string | null;
+    author: {
+      firstName: string;
+      lastName: string;
+      picture: {
+        asset?: SanityImageAssetReference;
+        media?: unknown;
+        hotspot?: SanityImageHotspot;
+        crop?: SanityImageCrop;
+        alt?: string;
+        _type: "image";
+      };
+    } | null;
+    isFeatured: boolean | null;
+    isPremium: boolean | null;
+    displayOrder: number | null;
+  }> | null;
+} | null;
+
+// Source: sanity\lib\queries.ts
+// Variable: playbookSlugQuery
+// Query: *[_type == "playbook" && defined(slug.current)]  {"slug": slug.current}
+export type PlaybookSlugQueryResult = Array<{
+  slug: string;
+}>;
+
+// Source: sanity\lib\queries.ts
 // Variable: featuredTestimonialsQuery
 // Query: *[_type == "testimonial" && isFeatured == true] | order(publishedAt desc) {    _id,    quote,    authorName,    authorDetail,    authorPhoto,    category,    rating,  }
 export type FeaturedTestimonialsQueryResult = Array<{
@@ -1012,6 +1337,12 @@ declare module "@sanity/client" {
     "\n  *[_type == \"event\"] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  isFeatured,\n  tags,\n\n  }\n": AllEventsQueryResult;
     "\n  *[_type == \"event\" && status in [\"upcoming\", \"registration_open\", \"waitlist\"]] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  isFeatured,\n  tags,\n\n  }\n": UpcomingEventsQueryResult;
     "\n  *[_type == \"event\" && isFeatured == true] | order(startDate asc) [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  isFeatured,\n  tags,\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": FeaturedEventQueryResult;
+    "\n  *[_type == \"gear\"] | order(displayOrder asc, name asc) {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": AllGearQueryResult;
+    "\n  *[_type == \"gear\" && isFeatured == true] | order(displayOrder asc) [0] {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": FeaturedGearQueryResult;
+    "\n  *[_type == \"playbook\"] | order(publishedAt desc) {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n  }\n": AllPlaybooksQueryResult;
+    "\n  *[_type == \"playbook\" && isFeatured == true] | order(displayOrder asc, publishedAt desc) [0] {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n  }\n": FeaturedPlaybookQueryResult;
+    "\n  *[_type == \"playbook\" && slug.current == $slug] [0] {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n    body,\n    \"contributors\": contributors[]->{firstName, lastName, picture},\n    video {\n      platform,\n      embedId,\n      url,\n      \"fileUrl\": uploadedFile.asset->url,\n      duration,\n    },\n    attachments[] {\n      _key,\n      title,\n      description,\n      fileType,\n      \"fileUrl\": file.asset->url,\n    },\n    \"relatedPlaybooks\": relatedPlaybooks[]->{\n      \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n    },\n  }\n": PlaybookQueryResult;
+    "\n  *[_type == \"playbook\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": PlaybookSlugQueryResult;
     "\n  *[_type == \"testimonial\" && isFeatured == true] | order(publishedAt desc) {\n    _id,\n    quote,\n    authorName,\n    authorDetail,\n    authorPhoto,\n    category,\n    rating,\n  }\n": FeaturedTestimonialsQueryResult;
   }
 }

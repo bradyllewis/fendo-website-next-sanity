@@ -9,7 +9,9 @@
       "Bash(npm run type-check:*)",
       "Bash(npx next build:*)",
       "Bash(icacls:*)",
-      "Bash(cmd.exe /c \"icacls C:\\\\Users\\\\brady\\\\.config\\\\sanity /grant brady:\\(OI\\)\\(CI\\)F /T\":*)"
+      "Bash(cmd.exe /c \"icacls C:\\\\Users\\\\brady\\\\.config\\\\sanity /grant brady:\\(OI\\)\\(CI\\)F /T\":*)",
+      "Bash(cd \"C:/Users/brady/fendo-website-next-sanity/studio\" && npx sanity schema extract --enforce-required-fields --path ../sanity.schema.json 2>&1)",
+      "Bash(cd \"C:/Users/brady/fendo-website-next-sanity/frontend\" && npx sanity typegen generate 2>&1)"
     ]
   }
 }
