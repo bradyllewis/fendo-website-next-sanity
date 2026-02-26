@@ -1,25 +1,26 @@
 import Link from 'next/link'
 
-import {IconArrow, IconCheck} from '@/app/components/icons'
+import {IconArrow, IconCheck, IconTarget, IconUsers} from '@/app/components/icons'
+import {ScrollReveal} from '@/app/components/ScrollReveal'
 
 function CompeteBlock() {
   return (
-    <section className="border-b border-border" aria-labelledby="compete-heading">
+    <section className="my-12" aria-labelledby="compete-heading">
       <div className="lg:grid lg:grid-cols-2">
 
-        {/* Visual */}
-        <div className="relative bg-fg min-h-72 lg:min-h-[520px] overflow-hidden order-last lg:order-first">
+        {/* Visual — slides in from the left */}
+        <ScrollReveal direction="left" className="relative shadow-lg bg-bg min-h-72 lg:min-h-[520px] overflow-hidden order-last lg:order-first rounded-tr-4xl rounded-br-4xl">
           <div
-            className="absolute inset-0 opacity-[0.05]"
-            style={{backgroundImage: 'url(/images/tile-grid-white.png)', backgroundSize: '20px'}}
+            className="absolute inset-0  bg-[center_68%] bg-cover opacity-70"
+            style={{ backgroundImage: "url(/images/fendo_golf_tournament_1.jpg)" }}
             aria-hidden="true"
           />
-          <div className="relative z-10 h-full p-12 lg:p-16 flex flex-col justify-between">
-            <span className="label-mono text-white/30">01 — Compete</span>
+          <div className="relative z-10 h-full p-12 pt-8 lg:p-16 lg:pt-10 flex flex-col justify-between">
+            <span className="label-mono text-fg/80 font-bold md:text-2xl">01 — Compete</span>
             <div className="flex flex-col gap-3">
               {['Local Clinics', 'Sponsored Championships', 'Peer Challenges'].map((item) => (
-                <div key={item} className="flex items-center gap-3">
-                  <span className="text-accent">
+                <div key={item} className="flex items-center gap-3 bg-fg/65 border-accent rounded-full px-4 py-1 pb-2 w-fit">
+                  <span className="text-green-300">
                     <IconCheck className="w-3.5 h-3.5" />
                   </span>
                   <span className="text-white/60 text-sm font-medium">{item}</span>
@@ -28,12 +29,12 @@ function CompeteBlock() {
             </div>
           </div>
           <span
-            className="absolute bottom-6 right-8 font-mono text-[9rem] font-semibold text-white/[0.05] leading-none select-none pointer-events-none"
+            className="absolute bottom-6 right-8 font-mono text-[9rem] font-semibold text-bg/85 leading-none select-none pointer-events-none"
             aria-hidden="true"
           >
             01
           </span>
-        </div>
+        </ScrollReveal>
 
         {/* Content */}
         <div className="p-12 lg:p-16 xl:p-20 flex flex-col justify-center">
@@ -55,11 +56,11 @@ function CompeteBlock() {
 
 function LearnBlock() {
   return (
-    <section className="border-b border-border" aria-labelledby="learn-heading">
+    <section className="my-12" aria-labelledby="learn-heading">
       <div className="lg:grid lg:grid-cols-2">
 
         {/* Content */}
-        <div className="p-12 lg:p-16 xl:p-20 flex flex-col justify-center">
+        <div className="p-12 lg:p-16 xl:p-20 flex flex-col justify-center items-end text-right">
           <p className="label-mono-accent mb-5">Learn</p>
           <h2 id="learn-heading" className="display-md text-fg mb-5">
             No Gimmicks.<br />Just Fundamentals.
@@ -72,30 +73,33 @@ function LearnBlock() {
           </Link>
         </div>
 
-        {/* Visual */}
-        <div className="relative bg-fg min-h-72 lg:min-h-[520px] overflow-hidden">
+        {/* Visual — slides in from the right */}
+        <ScrollReveal direction="right" className="relative shadow-lg bg-bg min-h-72 lg:min-h-[520px] overflow-hidden rounded-tl-4xl rounded-bl-4xl">
           <div
-            className="absolute inset-0 opacity-[0.05]"
-            style={{backgroundImage: 'url(/images/tile-1-black.png)', backgroundSize: '5px'}}
+            className="absolute inset-0 bg-[center_68%] bg-cover opacity-70"
+            style={{ backgroundImage: "url(/images/fendo_golf_long_putt.jpg)" }}
             aria-hidden="true"
           />
-          <div className="relative z-10 h-full p-12 lg:p-16 flex flex-col justify-between">
-            <span className="label-mono text-white/30">02 — Learn</span>
+          <div className="relative z-10 h-full p-12 pt-8 lg:p-16 lg:pt-10 flex flex-col justify-between">
+            <span className="label-mono text-fg/80 font-bold md:text-2xl">02 — Learn</span>
             <div className="space-y-4">
               {['Preparation Routines', 'Short Game Frameworks', 'Habit Science', 'Scoring Systems'].map((item) => (
-                <div key={item} className="border-b border-white/10 pb-3 last:border-0">
-                  <span className="text-white/50 text-sm font-medium font-mono">{item}</span>
+                <div key={item} className="flex items-center gap-3 bg-fg/65 border-accent rounded-full px-4 py-1 pb-2 w-fit">
+                  <span className="text-green-300">
+                    <IconTarget className="w-3.5 h-3.5" />
+                  </span>
+                  <span className="text-white/60 text-sm font-medium">{item}</span>
                 </div>
               ))}
             </div>
           </div>
           <span
-            className="absolute bottom-6 right-8 font-mono text-[9rem] font-semibold text-white/[0.05] leading-none select-none pointer-events-none"
+            className="absolute bottom-6 right-8 font-mono text-[9rem] font-semibold text-bg/85 leading-none select-none pointer-events-none"
             aria-hidden="true"
           >
             02
           </span>
-        </div>
+        </ScrollReveal>
       </div>
     </section>
   )
@@ -103,36 +107,36 @@ function LearnBlock() {
 
 function ConnectBlock() {
   return (
-    <section className="border-b border-border" aria-labelledby="connect-heading">
+    <section className="my-12" aria-labelledby="connect-heading">
       <div className="lg:grid lg:grid-cols-2">
 
-        {/* Visual */}
-        <div className="relative bg-fg min-h-72 lg:min-h-[520px] overflow-hidden order-last lg:order-first">
+        {/* Visual — slides in from the left */}
+        <ScrollReveal direction="left" className="relative shadow-lg bg-bg min-h-72 lg:min-h-[520px] overflow-hidden order-last lg:order-first rounded-tr-4xl rounded-br-4xl">
           <div
-            className="absolute inset-0 opacity-[0.05]"
-            style={{backgroundImage: 'url(/images/tile-grid-white.png)', backgroundSize: '20px'}}
+            className="absolute inset-0 bg-[center_70%] bg-cover opacity-70"
+            style={{ backgroundImage: "url(/images/fendo_golf_friends_vintage.jpg)" }}
             aria-hidden="true"
           />
-          <div className="relative z-10 h-full p-12 lg:p-16 flex flex-col justify-between">
-            <span className="label-mono text-white/30">03 — Connect</span>
+          <div className="relative z-10 h-full p-12 pt-8 lg:p-16 lg:pt-10 flex flex-col justify-between">
+            <span className="label-mono text-fg/80 font-bold md:text-2xl text-right">03 — Connect</span>
             <div className="grid grid-cols-2 gap-3">
               {['Leaderboards', 'Challenges', 'Local Meetups', 'Beta Perks'].map((badge) => (
-                <div
-                  key={badge}
-                  className="border border-white/10 rounded-lg px-3 py-2"
-                >
-                  <span className="text-white/50 text-xs font-mono font-medium">{badge}</span>
+                <div key={badge} className="flex items-center gap-3 bg-fg/65 border-accent rounded-full px-4 py-1 pb-2 w-fit">
+                  <span className="text-green-300">
+                    <IconUsers className="w-3.5 h-3.5" />
+                  </span>
+                  <span className="text-white/60 text-sm font-medium">{badge}</span>
                 </div>
               ))}
             </div>
           </div>
           <span
-            className="absolute bottom-6 right-8 font-mono text-[9rem] font-semibold text-white/[0.05] leading-none select-none pointer-events-none"
+            className="absolute bottom-6 right-8 font-mono text-[9rem] font-semibold text-bg/85 leading-none select-none pointer-events-none"
             aria-hidden="true"
           >
             03
           </span>
-        </div>
+        </ScrollReveal>
 
         {/* Content */}
         <div className="p-12 lg:p-16 xl:p-20 flex flex-col justify-center">

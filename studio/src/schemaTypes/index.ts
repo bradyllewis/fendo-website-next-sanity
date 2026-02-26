@@ -4,6 +4,8 @@ import {post} from './documents/post'
 import {event} from './documents/event'
 import {mediaAsset} from './documents/mediaAsset'
 import {testimonial} from './documents/testimonial'
+import {gear} from './documents/gear'
+import {playbook} from './documents/playbook'
 import {callToAction} from './objects/callToAction'
 import {infoSection} from './objects/infoSection'
 import {settings} from './singletons/settings'
@@ -24,6 +26,8 @@ export const schemaTypes = [
   event,
   mediaAsset,
   testimonial,
+  gear,
+  playbook,
   // Objects
   button,
   blockContent,

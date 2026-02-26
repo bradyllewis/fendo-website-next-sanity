@@ -134,8 +134,8 @@ export default async function CompetePage() {
           style={{backgroundSize: '24px'}}
           aria-hidden="true"
         />
-        <div className="container relative text-center max-w-2xl mx-auto">
-          <p className="label-mono text-bg/30 mb-6">The Collective</p>
+        <div className="container relative text-center max-w-2xl mx-auto py-28">
+          <p className="label-mono text-accent mb-6">The Collective</p>
           <h2 className="display-md text-bg mb-5">
             Competition is better together.
           </h2>

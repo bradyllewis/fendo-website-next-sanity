@@ -367,3 +367,39 @@
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* ============================================================
+   SCROLL REVEAL
+   Set exclusively via JS (ScrollReveal component), so no SSR
+   flash. The transition applies to all [data-reveal] states.
+   Mobile (<lg): slides up instead of sideways.
+   ============================================================ */
+
+[data-reveal] {
+  transition:
+    opacity 680ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 680ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-reveal="left"] {
+  opacity: 0;
+  transform: translateX(-60px);
+}
+
+[data-reveal="right"] {
+  opacity: 0;
+  transform: translateX(60px);
+}
+
+/* On mobile there's no left/right column — slide up instead */
+@media (max-width: 1023px) {
+  [data-reveal="left"],
+  [data-reveal="right"] {
+    transform: translateY(36px);
+  }
+}
+
+[data-reveal="visible"] {
+  opacity: 1;
+  transform: none;
+}

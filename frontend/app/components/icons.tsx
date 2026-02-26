@@ -73,3 +73,31 @@ export const IconDollar = ({className = 'w-4 h-4'}: {className?: string}) => (
     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
   </svg>
 )
+
+export const IconVideo = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polygon points="23 7 16 12 23 17 23 7" />
+    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+  </svg>
+)
+
+export const IconPlay = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+    <polygon points="5 3 19 12 5 21 5 3" />
+  </svg>
+)
+
+export const IconDownload = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="7 10 12 15 17 10" />
+    <line x1="12" y1="15" x2="12" y2="3" />
+  </svg>
+)
+
+export const IconClock = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+)

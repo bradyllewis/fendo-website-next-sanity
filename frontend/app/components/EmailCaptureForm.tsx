@@ -11,7 +11,7 @@ export default function EmailCaptureForm() {
         id="footer-email"
         type="email"
         placeholder="your@email.com"
-        className="flex-1 bg-white/8 border border-white/15 text-white placeholder:text-white/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
+        className="flex-1 bg-white/8 border border-white/45 text-white placeholder:text-white/30 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors"
       />
       <button
         type="submit"

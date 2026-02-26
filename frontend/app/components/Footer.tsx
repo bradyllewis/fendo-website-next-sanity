@@ -35,20 +35,29 @@ export default function Footer() {
     <footer className="bg-fg text-bg">
 
       {/* Email Capture */}
-      <div className="border-b border-bg/10">
-        <div className="container py-16 lg:py-20">
-          <div className="max-w-2xl">
-            <p className="label-mono text-bg/40 mb-4">Stay Sharp</p>
-            <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-bg mb-3">
-              Get it first.
-            </h2>
-            <p className="text-bg/50 text-base mb-8 leading-relaxed">
-              Short game frameworks, event drops, and Collective-only perks — delivered before anyone else.
-            </p>
-            <EmailCaptureForm />
-          </div>
-        </div>
+      <div className="relative border-b border-bg/10 overflow-hidden">
+  {/* Background image layer */}
+  <div
+    className="absolute inset-0 bg-[center_68%] bg-cover opacity-30"
+    style={{ backgroundImage: "url(/images/vintage_golf_scene_1.jpg)" }}
+  />
+
+  {/* Content */}
+  <div className="relative z-10">
+    <div className="container py-16 lg:py-36">
+      <div className="max-w-2xl">
+        <p className="label-mono text-bg mb-4"><span className='bg-accent rounded-sm px-2 py-1'>Stay Sharp</span></p>
+        <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-bg mb-3">
+          Get it first.
+        </h2>
+        <p className="text-bg/80 text-base mb-8 leading-relaxed">
+          Short game frameworks, event drops, and Collective-only perks — delivered before anyone else.
+        </p>
+        <EmailCaptureForm />
       </div>
+    </div>
+  </div>
+</div>
 
       {/* Links Grid */}
       <div className="container py-16">
