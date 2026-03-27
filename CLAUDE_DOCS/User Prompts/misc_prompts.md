@@ -1,1 +1,10 @@
 Review or use your .claude/skills/sanity_cms_skill to flawlessly complete the following tasks: 
+
+
+
+
+
+
+
+
+pnpm update @sanity/cli

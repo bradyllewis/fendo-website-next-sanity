@@ -39,3 +39,29 @@ export interface SanityEvent {
   isFeatured: boolean | null
   tags: string[] | null
 }
+
+/** Full event detail — extends card shape with description + sponsors. */
+export interface SanityEventFull extends SanityEvent {
+  description: unknown[] | null
+  sponsors: {
+    name?: string | null
+    logo?: {asset?: {_ref: string; _type: string} | null} | null
+    url?: string | null
+  }[] | null
+}
+
+export const EVENT_TYPE_LABELS: Record<string, string> = {
+  tournament:              'Tournament',
+  clinic:                  'Clinic',
+  community_round:         'Community Round',
+  sponsored_championship:  'Championship',
+  meetup:                  'Meetup',
+}
+
+export const STATUS_LABELS: Record<string, string> = {
+  upcoming:           'Upcoming',
+  registration_open:  'Registration Open',
+  waitlist:           'Waitlist',
+  completed:          'Completed',
+  cancelled:          'Cancelled',
+}

@@ -6,6 +6,7 @@ import {allGearQuery} from '@/sanity/lib/queries'
 import {IconCheck, IconArrow} from '@/app/components/icons'
 import SanityImage from '@/app/components/SanityImage'
 import type {SanityGear} from './types'
+import SpinSloganSection from '@/app/components/home/SpinSloganSection'
 
 export const metadata: Metadata = {
   title: 'Gear',
@@ -124,7 +125,7 @@ export default async function GearPage() {
           aria-hidden="true"
         />
 
-        <div className="container relative py-24 lg:py-32">
+        <div className="container relative py-24 lg:py-32 pb-8 lg:pb-2">
           <div className="max-w-2xl">
             <p
               className="label-mono mb-6"
@@ -159,6 +160,7 @@ export default async function GearPage() {
                 </span>
               </Link>
             </div>
+            <SpinSloganSection />
           </div>
         </div>
       </section>

@@ -5,15 +5,9 @@ import SanityImage from '@/app/components/SanityImage'
 import {IconCalendar, IconMapPin, IconUsersSmall, IconArrow} from '@/app/components/icons'
 import type {SanityEvent} from '@/app/compete/types'
 
-// ── Event type badge config ───────────────────────────────────────────────────
+import {EVENT_TYPE_LABELS, STATUS_LABELS} from '@/app/compete/types'
 
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  tournament:              'Tournament',
-  clinic:                  'Clinic',
-  community_round:         'Community Round',
-  sponsored_championship:  'Championship',
-  meetup:                  'Meetup',
-}
+// ── Event type badge config ───────────────────────────────────────────────────
 
 const EVENT_TYPE_STYLES: Record<string, string> = {
   tournament:              'bg-navy text-bg',
@@ -24,14 +18,6 @@ const EVENT_TYPE_STYLES: Record<string, string> = {
 }
 
 // ── Status badge config ───────────────────────────────────────────────────────
-
-const STATUS_LABELS: Record<string, string> = {
-  upcoming:           'Upcoming',
-  registration_open:  'Open — Register',
-  waitlist:           'Waitlist',
-  completed:          'Completed',
-  cancelled:          'Cancelled',
-}
 
 const STATUS_STYLES: Record<string, string> = {
   upcoming:           'text-green bg-green/10',
@@ -102,7 +88,9 @@ export default function EventCard({event}: EventCardProps) {
   const spotsRatio  = spotsTotal && spotsFilled != null ? Math.min(spotsFilled / spotsTotal, 1) : null
   const isComplete  = status === 'completed' || status === 'cancelled'
 
-  return (
+  const href = slug ? `/compete/${slug}` : null
+
+  const card = (
     <article className="card-base flex flex-col overflow-hidden group">
 
       {/* Cover image */}
@@ -225,7 +213,8 @@ export default function EventCard({event}: EventCardProps) {
               href={registrationUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-accent text-xs px-4 py-2.5 rounded-lg shrink-0"
+              onClick={(e) => e.stopPropagation()}
+              className="btn-accent text-xs px-4 py-2.5 rounded-lg shrink-0 relative z-10"
               aria-label={`Register for ${title}`}
             >
               Register
@@ -243,4 +232,14 @@ export default function EventCard({event}: EventCardProps) {
       </div>
     </article>
   )
+
+  if (href) {
+    return (
+      <Link href={href} className="block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent rounded-2xl">
+        {card}
+      </Link>
+    )
+  }
+
+  return card
 }

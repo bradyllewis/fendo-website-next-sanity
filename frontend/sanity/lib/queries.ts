@@ -146,6 +146,23 @@ export const featuredEventQuery = defineQuery(`
   }
 `)
 
+export const eventQuery = defineQuery(`
+  *[_type == "event" && slug.current == $slug] [0] {
+    ${eventFields}
+    description,
+    sponsors[] {
+      name,
+      logo,
+      url,
+    },
+  }
+`)
+
+export const eventSlugQuery = defineQuery(`
+  *[_type == "event" && defined(slug.current)]
+  {"slug": slug.current}
+`)
+
 // ─── Gear ─────────────────────────────────────────────────────────────────────
 
 const gearFields = /* groq */ `
