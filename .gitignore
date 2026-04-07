@@ -29,3 +29,6 @@ next-env.d.ts
 
 # VS Code
 .vscode
+
+# Supabase CLI binary
+/bin/
