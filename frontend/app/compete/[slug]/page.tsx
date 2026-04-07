@@ -12,6 +12,8 @@ import {resolveOpenGraphImage} from '@/sanity/lib/utils'
 import {IconCalendar, IconMapPin, IconUsersSmall, IconDollar} from '@/app/components/icons'
 import type {SanityEventFull} from '../types'
 import {EVENT_TYPE_LABELS, STATUS_LABELS} from '../types'
+import {createClient} from '@/lib/supabase/server'
+import RegisterButton from '@/app/components/compete/RegisterButton'
 
 type Props = {params: Promise<{slug: string}>}
 
@@ -103,14 +105,44 @@ export default async function EventDetailPage(props: Props) {
 
   if (!entry?._id) return notFound()
 
+  // ── Registration data from Supabase ────────────────────────────────────────
+  let paidCount = 0
+  let userRegistration: { id: string; status: string } | null = null
+
+  if (entry.requiresRegistration) {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    const { count } = await supabase
+      .from('event_registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_sanity_id', entry._id)
+      .eq('status', 'paid')
+
+    paidCount = count ?? 0
+
+    if (user) {
+      const { data: reg } = await supabase
+        .from('event_registrations')
+        .select('id, status')
+        .eq('event_sanity_id', entry._id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      userRegistration = reg
+    }
+  }
+
   const typeLabel   = entry.eventType ? EVENT_TYPE_LABELS[entry.eventType] ?? entry.eventType : null
   const typeStyle   = entry.eventType ? EVENT_TYPE_STYLES[entry.eventType] ?? '' : ''
   const statusLabel = entry.status    ? STATUS_LABELS[entry.status]        ?? entry.status    : null
   const statusStyle = entry.status    ? STATUS_STYLES[entry.status]        ?? '' : ''
   const locationStr = formatLocation(entry.location)
   const fullAddress = formatFullAddress(entry.location)
-  const spotsLeft   = entry.spotsTotal != null && entry.spotsFilled != null ? entry.spotsTotal - entry.spotsFilled : null
-  const spotsRatio  = entry.spotsTotal && entry.spotsFilled != null ? Math.min(entry.spotsFilled / entry.spotsTotal, 1) : null
+  const filledCount = entry.requiresRegistration ? paidCount : (entry.spotsFilled ?? 0)
+  const spotsLeft   = entry.spotsTotal != null ? entry.spotsTotal - filledCount : null
+  const spotsRatio  = entry.spotsTotal ? Math.min(filledCount / entry.spotsTotal, 1) : null
   const isComplete  = entry.status === 'completed' || entry.status === 'cancelled'
   const entryFeeStr = entry.entryFee == null ? null : entry.entryFee === 0 ? 'Free' : `$${entry.entryFee}`
 
@@ -305,7 +337,7 @@ export default async function EventDetailPage(props: Props) {
                             : 'No spots remaining'}
                         </p>
                         <span className="text-xs font-mono text-muted-2">
-                          {entry.spotsFilled ?? 0}/{entry.spotsTotal}
+                          {filledCount}/{entry.spotsTotal}
                         </span>
                       </div>
                       {spotsRatio != null && (
@@ -323,7 +355,23 @@ export default async function EventDetailPage(props: Props) {
               </div>
 
               {/* CTA */}
-              {registrationCTA(entry)}
+              {entry.requiresRegistration ? (
+                <RegisterButton
+                  event={{
+                    _id: entry._id,
+                    slug: entry.slug ?? '',
+                    title: entry.title ?? '',
+                    entryFee: entry.entryFee,
+                    status: entry.status,
+                    spotsTotal: entry.spotsTotal,
+                    requiresRegistration: entry.requiresRegistration,
+                  }}
+                  paidCount={paidCount}
+                  userRegistration={userRegistration}
+                />
+              ) : (
+                registrationCTA(entry)
+              )}
             </div>
 
             {/* Sponsors */}

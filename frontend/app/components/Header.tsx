@@ -3,6 +3,11 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useAuth } from '@/app/components/auth/useAuth'
+import UserMenu from '@/app/components/auth/UserMenu'
+import UserAvatar from '@/app/components/auth/UserAvatar'
+import { IconUser, IconLogOut } from '@/app/components/icons'
+import { signOut } from '@/app/auth/actions'
 
 const NAV_LINKS = [
   { label: 'Compete', href: '/compete' },
@@ -13,6 +18,7 @@ const NAV_LINKS = [
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const { user, profile, isLoading } = useAuth()
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -59,13 +65,21 @@ export default function Header() {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
-            {/* CTA — desktop only */}
-            <Link
-              href="/collective"
-              className="hidden md:inline-flex btn-accent text-sm px-4 py-2.5 rounded-xl"
-            >
-              Get First Access
-            </Link>
+            {/* Desktop auth area */}
+            <div className="hidden md:flex items-center">
+              {isLoading ? (
+                <div className="w-8 h-8 rounded-full bg-surface animate-pulse" />
+              ) : user ? (
+                <UserMenu profile={profile} />
+              ) : (
+                <Link
+                  href="/auth/sign-in"
+                  className="btn-accent text-sm px-4 py-2.5 rounded-xl"
+                >
+                  Sign In
+                </Link>
+              )}
+            </div>
 
             {/* Hamburger — mobile only */}
             <button
@@ -118,6 +132,23 @@ export default function Header() {
           }`}
         >
           <nav aria-label="Mobile navigation" className="container py-4 flex flex-col">
+            {/* User info (mobile) */}
+            {user && profile && (
+              <div className="flex items-center gap-3 pb-4 mb-2 border-b border-border/50">
+                <UserAvatar
+                  avatarUrl={profile.avatar_url}
+                  fullName={profile.full_name}
+                  size="sm"
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-fg truncate">
+                    {profile.display_name || profile.full_name || 'Member'}
+                  </p>
+                  <p className="text-xs text-muted truncate">{profile.email}</p>
+                </div>
+              </div>
+            )}
+
             {NAV_LINKS.map(({ label, href }) => (
               <Link
                 key={href}
@@ -139,16 +170,48 @@ export default function Header() {
               </Link>
             ))}
 
-            {/* Mobile CTA */}
-            <div className="pt-5 pb-2">
-              <Link
-                href="/collective"
-                className="btn-accent w-full justify-center text-base py-3.5 rounded-xl"
-                onClick={closeMenu}
-              >
-                Get First Access
-              </Link>
-            </div>
+            {/* Auth links (mobile) */}
+            {user ? (
+              <>
+                <Link
+                  href="/account"
+                  className="flex items-center gap-3 py-4 text-base font-semibold text-fg border-b border-border/50 hover:text-accent transition-colors duration-200"
+                  onClick={closeMenu}
+                >
+                  <IconUser className="w-4 h-4" />
+                  My Profile
+                </Link>
+                <div className="pt-5 pb-2">
+                  <form action={signOut}>
+                    <button
+                      type="submit"
+                      onClick={closeMenu}
+                      className="btn-outline w-full justify-center text-base py-3.5 rounded-xl flex items-center gap-2"
+                    >
+                      <IconLogOut className="w-4 h-4" />
+                      Sign Out
+                    </button>
+                  </form>
+                </div>
+              </>
+            ) : (
+              <div className="pt-5 pb-2 flex flex-col gap-3">
+                <Link
+                  href="/auth/sign-in"
+                  className="btn-accent w-full justify-center text-base py-3.5 rounded-xl"
+                  onClick={closeMenu}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/auth/sign-up"
+                  className="btn-outline w-full justify-center text-base py-3.5 rounded-xl"
+                  onClick={closeMenu}
+                >
+                  Create Account
+                </Link>
+              </div>
+            )}
           </nav>
         </div>
       </div>

@@ -11,6 +11,7 @@ import {playbookQuery, playbookSlugQuery} from '@/sanity/lib/queries'
 import {resolveOpenGraphImage} from '@/sanity/lib/utils'
 import {IconArrow, IconDownload, IconClock, IconVideo, IconPlay} from '@/app/components/icons'
 import PlaybookCard from '@/app/components/playbook/PlaybookCard'
+import PlaybookProgressBar from '@/app/components/playbook/PlaybookProgressBar'
 import type {SanityPlaybookFull, SanityPlaybook} from '../types'
 import {CONTENT_TYPE_LABELS, CATEGORY_LABELS, DIFFICULTY_LABELS} from '../types'
 
@@ -67,7 +68,7 @@ function PlaybookVideo({video}: {video: SanityPlaybookFull['video']}) {
 
     return (
       <div className="mb-12">
-        <div className="relative aspect-video rounded-xl overflow-hidden bg-fg">
+        <div className="relative aspect-video rounded-xl overflow-hidden bg-fg shadow-xl">
           <iframe
             src={src}
             title="Playbook video"
@@ -89,7 +90,7 @@ function PlaybookVideo({video}: {video: SanityPlaybookFull['video']}) {
   if (platform === 'uploaded' && fileUrl) {
     return (
       <div className="mb-12">
-        <div className="relative aspect-video rounded-xl overflow-hidden bg-fg">
+        <div className="relative aspect-video rounded-xl overflow-hidden bg-fg shadow-xl">
           <video
             src={fileUrl}
             controls
@@ -137,10 +138,11 @@ function Attachments({attachments}: {attachments: SanityPlaybookFull['attachment
   if (!attachments?.length) return null
 
   return (
-    <div className="mt-12 pt-10 border-t border-border">
-      <h3 className="label-mono mb-5">Downloads &amp; Resources</h3>
+    <div className="mt-14 pt-10 border-t border-border">
+      <p className="label-mono mb-2 text-accent">Resources</p>
+      <h3 className="text-lg font-semibold text-fg mb-6 tracking-tight">Downloads &amp; Attachments</h3>
       <ul className="space-y-3">
-        {attachments.map((att) => (
+        {attachments.map((att) =>
           att.fileUrl ? (
             <li key={att._key}>
               <a
@@ -148,9 +150,9 @@ function Attachments({attachments}: {attachments: SanityPlaybookFull['attachment
                 target="_blank"
                 rel="noopener noreferrer"
                 download
-                className="flex items-center gap-4 p-4 rounded-xl border border-border bg-surface hover:border-accent transition-colors duration-160 group"
+                className="flex items-center gap-4 p-4 rounded-xl border border-border bg-surface hover:border-accent hover:bg-accent/5 transition-all duration-160 group"
               >
-                <span className="w-9 h-9 rounded-lg bg-fg/5 border border-border flex items-center justify-center shrink-0 group-hover:bg-accent/10 transition-colors duration-160">
+                <span className="w-9 h-9 rounded-lg bg-fg/5 border border-border flex items-center justify-center shrink-0 group-hover:bg-accent/10 group-hover:border-accent/30 transition-all duration-160">
                   <IconDownload className="w-4 h-4 text-fg/60 group-hover:text-accent transition-colors duration-160" />
                 </span>
                 <div className="flex-1 min-w-0">
@@ -167,7 +169,7 @@ function Attachments({attachments}: {attachments: SanityPlaybookFull['attachment
               </a>
             </li>
           ) : null
-        ))}
+        )}
       </ul>
     </div>
   )
@@ -201,43 +203,88 @@ export default async function PlaybookEntryPage(props: Props) {
     ...(post.contributors ?? []),
   ]
 
+  const hasImage = Boolean(post.coverImage?.asset) && post.contentType !== 'video'
+
   return (
     <>
+      {/* Reading progress */}
+      <PlaybookProgressBar />
+
       {/* ── Back link ───────────────────────────────────────────────────── */}
-      <div className="border-b border-border">
-        <div className="container py-4">
+      <div className="border-b border-border bg-bg">
+        <div className="container py-3.5">
           <Link
             href="/playbook"
-            className="inline-flex items-center gap-2 text-sm text-muted hover:text-fg transition-colors duration-160 group"
+            className="inline-flex items-center gap-2 text-sm text-muted hover:text-fg transition-colors duration-160 group w-fit"
           >
-            <span className="group-hover:-translate-x-0.5 transition-transform duration-160">
-              <svg className="w-4 h-4 rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </span>
-            Back to Playbook
+            <svg
+              className="w-4 h-4 rotate-180 group-hover:-translate-x-0.5 transition-transform duration-160"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+            <span className="font-mono text-xs tracking-wide uppercase">Playbook</span>
           </Link>
         </div>
       </div>
 
       {/* ── Entry header ────────────────────────────────────────────────── */}
       <article>
-        <header className="border-b border-border bg-surface/40">
-          <div className="container py-14 lg:py-20 max-w-4xl">
+        <header className="relative overflow-hidden bg-fg">
+          {/* Cover image used as atmospheric header background */}
+          {hasImage && (
+            <>
+              <div className="absolute inset-0 overflow-hidden">
+                <SanityImage
+                  id={post.coverImage!.asset!._ref}
+                  alt=""
+                  mode="cover"
+                  width={1400}
+                  height={700}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              {/* Gradient: opaque dark left → transparent right (desktop), opaque dark top → semi on mobile */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background:
+                    'linear-gradient(to bottom, rgba(12,28,35,0.92) 0%, rgba(12,28,35,0.88) 60%, rgba(12,28,35,0.96) 100%)',
+                }}
+                aria-hidden="true"
+              />
+              <div
+                className="absolute inset-0 hidden lg:block"
+                style={{
+                  background:
+                    'linear-gradient(to right, rgba(12,28,35,0.98) 0%, rgba(12,28,35,0.92) 40%, rgba(12,28,35,0.55) 65%, rgba(12,28,35,0.15) 100%)',
+                }}
+                aria-hidden="true"
+              />
+            </>
+          )}
+
+          <div className="container relative py-16 lg:py-24 max-w-4xl">
             {/* Badges */}
-            <div className="flex items-center gap-2 mb-6 flex-wrap">
+            <div className="flex items-center gap-2 mb-7 flex-wrap">
               {typeLabel && (
-                <span className="label-mono text-xs bg-fg text-bg px-2.5 py-1 rounded-full">
+                <span className="label-mono text-xs bg-accent text-bg px-2.5 py-1 rounded-full">
                   {typeLabel}
                 </span>
               )}
               {categoryLabel && (
-                <span className="label-mono text-xs border border-border px-2.5 py-1 rounded-full">
+                <span className="label-mono text-xs border border-bg/20 text-bg/60 px-2.5 py-1 rounded-full">
                   {categoryLabel}
                 </span>
               )}
               {difficultyLabel && (
-                <span className="label-mono text-xs border border-border text-muted px-2.5 py-1 rounded-full">
+                <span className="label-mono text-xs border border-bg/20 text-bg/40 px-2.5 py-1 rounded-full">
                   {difficultyLabel}
                 </span>
               )}
@@ -249,19 +296,19 @@ export default async function PlaybookEntryPage(props: Props) {
             </div>
 
             {/* Title */}
-            <h1 className="display-md lg:display-lg text-fg mb-5 max-w-[22ch] leading-tight">
+            <h1 className="display-md lg:display-lg text-bg mb-5 max-w-[22ch] leading-tight">
               {post.title}
             </h1>
 
             {/* Excerpt */}
             {post.excerpt && (
-              <p className="text-lg text-muted leading-relaxed max-w-[48ch] mb-8">
+              <p className="text-lg text-bg/60 leading-relaxed max-w-[48ch] mb-10">
                 {post.excerpt}
               </p>
             )}
 
             {/* Author + meta row */}
-            <div className="flex items-center gap-5 flex-wrap">
+            <div className="flex items-center gap-5 flex-wrap pt-8 border-t border-bg/10">
               {/* Author avatars */}
               {allContributors.length > 0 && (
                 <div className="flex items-center gap-3">
@@ -270,7 +317,7 @@ export default async function PlaybookEntryPage(props: Props) {
                       person.picture?.asset ? (
                         <div
                           key={i}
-                          className="w-8 h-8 rounded-full overflow-hidden border-2 border-bg bg-fg/10"
+                          className="w-8 h-8 rounded-full overflow-hidden border-2 border-fg/60 bg-fg/10"
                         >
                           <SanityImage
                             id={person.picture.asset._ref}
@@ -288,14 +335,14 @@ export default async function PlaybookEntryPage(props: Props) {
                       ) : (
                         <div
                           key={i}
-                          className="w-8 h-8 rounded-full border-2 border-bg bg-fg/20 flex items-center justify-center text-xs font-semibold text-bg/60"
+                          className="w-8 h-8 rounded-full border-2 border-fg/60 bg-bg/20 flex items-center justify-center text-xs font-semibold text-bg/70"
                         >
                           {person.firstName?.[0] ?? '?'}
                         </div>
                       )
                     )}
                   </div>
-                  <div className="text-sm text-fg font-medium">
+                  <div className="text-sm text-bg/70 font-medium">
                     {allContributors
                       .slice(0, 2)
                       .map((p) =>
@@ -310,7 +357,7 @@ export default async function PlaybookEntryPage(props: Props) {
 
               {/* Date */}
               {dateLabel && (
-                <div className="flex items-center gap-1.5 text-sm text-muted font-mono">
+                <div className="flex items-center gap-1.5 text-sm text-bg/50 font-mono">
                   <IconClock className="w-3.5 h-3.5" />
                   {dateLabel}
                 </div>
@@ -318,7 +365,7 @@ export default async function PlaybookEntryPage(props: Props) {
 
               {/* Video duration */}
               {post.video?.duration && post.contentType === 'video' && (
-                <div className="flex items-center gap-1.5 text-sm text-muted font-mono">
+                <div className="flex items-center gap-1.5 text-sm text-bg/50 font-mono">
                   <IconVideo className="w-3.5 h-3.5" />
                   {post.video.duration}
                 </div>
@@ -327,39 +374,86 @@ export default async function PlaybookEntryPage(props: Props) {
           </div>
         </header>
 
-        {/* ── Cover image ───────────────────────────────────────────────── */}
-        {post.coverImage?.asset && post.contentType !== 'video' && (
-          <div className="container max-w-4xl mt-10">
-            <div className="relative aspect-[16/9] overflow-hidden rounded-xl">
-              <SanityImage
-                id={post.coverImage.asset._ref}
-                alt={post.coverImage.alt ?? post.title ?? 'Cover image'}
-                hotspot={post.coverImage.hotspot ?? undefined}
-                crop={post.coverImage.crop ?? undefined}
-                mode="cover"
-                width={896}
-                height={504}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
-        )}
-
         {/* ── Body ─────────────────────────────────────────────────────── */}
-        <div className="container max-w-3xl py-10 lg:py-14">
+        <div className="container max-w-3xl py-12 lg:py-16">
           {/* Video embed (shown before body for video content) */}
           {post.video && <PlaybookVideo video={post.video} />}
 
+          {/* Cover image — shown after header for non-video content that has an image */}
+          {hasImage && (
+            <div className="mb-12 -mt-4">
+              <div className="relative aspect-[16/9] overflow-hidden rounded-xl shadow-lg border border-border/50">
+                <SanityImage
+                  id={post.coverImage!.asset!._ref}
+                  alt={post.coverImage!.alt ?? post.title ?? 'Cover image'}
+                  hotspot={post.coverImage!.hotspot ?? undefined}
+                  crop={post.coverImage!.crop ?? undefined}
+                  mode="cover"
+                  width={896}
+                  height={504}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Rich text body */}
           {post.body && Array.isArray(post.body) && post.body.length > 0 && (
-            <PortableText
-              className="prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-fg"
-              value={post.body as PortableTextBlock[]}
-            />
+            <div className="relative">
+              {/* Decorative left rule for long-form content */}
+              <div className="absolute -left-6 top-0 bottom-0 w-px bg-border hidden xl:block" aria-hidden="true" />
+              <PortableText
+                className="prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-fg"
+                value={post.body as PortableTextBlock[]}
+              />
+            </div>
           )}
 
           {/* Attachments */}
           <Attachments attachments={post.attachments} />
+
+          {/* Author card — inline at bottom of content */}
+          {allContributors.length > 0 && (
+            <div className="mt-14 pt-10 border-t border-border">
+              <p className="label-mono mb-5 text-muted">Written by</p>
+              <div className="flex flex-col gap-4">
+                {allContributors.map((person, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    {person.picture?.asset ? (
+                      <div className="w-11 h-11 rounded-full overflow-hidden shrink-0 bg-fg/10">
+                        <SanityImage
+                          id={person.picture.asset._ref}
+                          alt={
+                            person.firstName && person.lastName
+                              ? `${person.firstName} ${person.lastName}`
+                              : 'Contributor'
+                          }
+                          mode="cover"
+                          width={44}
+                          height={44}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-11 h-11 rounded-full bg-fg/10 border border-border flex items-center justify-center text-sm font-semibold text-fg/50 shrink-0">
+                        {person.firstName?.[0] ?? '?'}
+                      </div>
+                    )}
+                    <div>
+                      {person.firstName && person.lastName && (
+                        <p className="font-semibold text-sm text-fg">
+                          {person.firstName} {person.lastName}
+                        </p>
+                      )}
+                      {i === 0 && dateLabel && (
+                        <p className="text-xs text-muted font-mono mt-0.5">{dateLabel}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </article>
 

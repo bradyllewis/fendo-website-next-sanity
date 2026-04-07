@@ -2389,6 +2389,13 @@
         },
         "optional": true
       },
+      "requiresRegistration": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "boolean"
+        },
+        "optional": true
+      },
       "isFeatured": {
         "type": "objectAttribute",
         "value": {

@@ -24,7 +24,8 @@
     "format": "prettier --cache --write .",
     "import-sample-data": "cd studio && sanity dataset import sample-data.tar.gz --replace",
     "lint": "npm run lint --workspace=frontend",
-    "type-check": "npm run type-check --workspaces"
+    "type-check": "npm run type-check --workspaces",
+    "supabase": "./bin/supabase.exe"
   },
   "prettier": "@sanity/prettier-config",
   "devDependencies": {
@@ -37,7 +38,5 @@
       "esbuild"
     ]
   },
-  "dependencies": {
-    "supabase": "^2.84.4"
-  }
+  "dependencies": {}
 }

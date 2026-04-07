@@ -18,7 +18,8 @@
       "Bash(pnpm approve-builds:*)",
       "Bash(pnpm config:*)",
       "Bash(cd:*)",
-      "Bash(timeout 20 pnpm dev)"
+      "Bash(timeout 20 pnpm dev)",
+      "Bash(pnpm run:*)"
     ]
   }
 }

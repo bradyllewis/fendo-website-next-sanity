@@ -142,7 +142,15 @@ export const event = defineType({
       name: 'registrationUrl',
       title: 'Registration / Signup URL',
       type: 'url',
-      description: 'External link for registration (e.g., Eventbrite, custom form).',
+      description: 'External link for registration (e.g., Eventbrite, custom form). Ignored when In-App Registration is enabled below.',
+    }),
+    defineField({
+      name: 'requiresRegistration',
+      title: 'Enable In-App Registration (Stripe)',
+      type: 'boolean',
+      description:
+        'If enabled, users register and pay directly through this website via Stripe Checkout. The Registration URL above is ignored.',
+      initialValue: false,
     }),
     defineField({
       name: 'isFeatured',

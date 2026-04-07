@@ -36,6 +36,7 @@ export interface SanityEvent {
   spotsFilled: number | null
   entryFee: number | null
   registrationUrl: string | null
+  requiresRegistration: boolean | null
   isFeatured: boolean | null
   tags: string[] | null
 }

@@ -58,9 +58,10 @@ function formatEntryFee(fee?: number | null): string {
 
 interface EventCardProps {
   event: SanityEvent
+  paidCount?: number
 }
 
-export default function EventCard({event}: EventCardProps) {
+export default function EventCard({event, paidCount}: EventCardProps) {
   const {
     _id,
     title,
@@ -75,6 +76,7 @@ export default function EventCard({event}: EventCardProps) {
     spotsFilled,
     entryFee,
     registrationUrl,
+    requiresRegistration,
     slug,
   } = event
 
@@ -84,8 +86,12 @@ export default function EventCard({event}: EventCardProps) {
   const statusStyle = status    ? STATUS_STYLES[status]         ?? ''         : ''
 
   const locationStr = formatLocation(location)
-  const spotsLeft   = spotsTotal != null && spotsFilled != null ? spotsTotal - spotsFilled : null
-  const spotsRatio  = spotsTotal && spotsFilled != null ? Math.min(spotsFilled / spotsTotal, 1) : null
+  // For in-app registration events, use live DB count if provided;
+  // otherwise fall back to the Sanity spotsFilled field.
+  const effectiveFilled =
+    requiresRegistration && paidCount !== undefined ? paidCount : (spotsFilled ?? 0)
+  const spotsLeft   = spotsTotal != null ? spotsTotal - effectiveFilled : null
+  const spotsRatio  = spotsTotal ? Math.min(effectiveFilled / spotsTotal, 1) : null
   const isComplete  = status === 'completed' || status === 'cancelled'
 
   const href = slug ? `/compete/${slug}` : null
@@ -189,7 +195,7 @@ export default function EventCard({event}: EventCardProps) {
                   : 'No spots left'}
               </span>
               <span className="text-xs font-mono text-muted-2">
-                {spotsFilled ?? 0}/{spotsTotal}
+                {effectiveFilled}/{spotsTotal}
               </span>
             </div>
             <div className="h-1.5 rounded-full bg-surface overflow-hidden">
@@ -208,7 +214,20 @@ export default function EventCard({event}: EventCardProps) {
             {formatEntryFee(entryFee)}
           </span>
 
-          {registrationUrl && !isComplete ? (
+          {isComplete ? (
+            <span className="text-xs font-mono text-muted-2 italic">
+              Event ended
+            </span>
+          ) : requiresRegistration && slug ? (
+            <Link
+              href={`/compete/${slug}`}
+              onClick={(e) => e.stopPropagation()}
+              className="btn-accent text-xs px-4 py-2.5 rounded-lg shrink-0 relative z-10"
+              aria-label={`Register for ${title}`}
+            >
+              Register Now
+            </Link>
+          ) : registrationUrl ? (
             <a
               href={registrationUrl}
               target="_blank"
@@ -219,10 +238,6 @@ export default function EventCard({event}: EventCardProps) {
             >
               Register
             </a>
-          ) : isComplete ? (
-            <span className="text-xs font-mono text-muted-2 italic">
-              Event ended
-            </span>
           ) : (
             <span className="text-xs font-mono text-muted-2 italic">
               Details coming soon

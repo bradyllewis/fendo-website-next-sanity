@@ -118,6 +118,7 @@ const eventFields = /* groq */ `
   spotsFilled,
   entryFee,
   registrationUrl,
+  requiresRegistration,
   isFeatured,
   tags,
 `

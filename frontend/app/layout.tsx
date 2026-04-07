@@ -8,6 +8,7 @@ import {toPlainText} from 'next-sanity'
 import {VisualEditing} from 'next-sanity/visual-editing'
 import {Toaster} from 'sonner'
 
+import AuthProvider from '@/app/components/auth/AuthProvider'
 import DraftModeToast from '@/app/components/DraftModeToast'
 import Footer from '@/app/components/Footer'
 import Header from '@/app/components/Header'
@@ -70,18 +71,20 @@ export default async function RootLayout({children}: {children: React.ReactNode}
       className={`${inter.variable} ${ibmPlexMono.variable}`}
     >
       <body className="bg-bg text-fg antialiased">
-        <Toaster />
-        {isDraftMode && (
-          <>
-            <DraftModeToast />
-            <VisualEditing />
-          </>
-        )}
-        <SanityLive onError={handleError} />
-        <Header />
-        <main className="pt-20">{children}</main>
-        <Footer />
-        <SpeedInsights />
+        <AuthProvider>
+          <Toaster />
+          {isDraftMode && (
+            <>
+              <DraftModeToast />
+              <VisualEditing />
+            </>
+          )}
+          <SanityLive onError={handleError} />
+          <Header />
+          <main className="pt-20">{children}</main>
+          <Footer />
+          <SpeedInsights />
+        </AuthProvider>
       </body>
     </html>
   )

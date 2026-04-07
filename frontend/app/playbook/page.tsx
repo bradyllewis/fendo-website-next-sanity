@@ -194,7 +194,7 @@ export default async function PlaybookPage() {
           </div>
 
           {/* Grid with client-side content type filters */}
-          {items.length > 0 ? (
+          {gridItems.length > 0 ? (
             <PlaybookGrid items={gridItems} />
           ) : (
             <div className="text-center py-24 border border-dashed border-border rounded-2xl">

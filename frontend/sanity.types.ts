@@ -12,7 +12,9 @@
  * ---------------------------------------------------------------------------------
  */
 
-// Source: ..\sanity.schema.json
+export declare const internalGroqTypeReferenceTo: unique symbol;
+
+// Source: ../sanity.schema.json
 export type PageReference = {
   _ref: string;
   _type: "reference";
@@ -343,6 +345,7 @@ export type Event = {
   spotsFilled?: number;
   entryFee?: number;
   registrationUrl?: string;
+  requiresRegistration?: boolean;
   isFeatured?: boolean;
   sponsors?: Array<{
     name?: string;
@@ -628,14 +631,14 @@ export type SanityFileAsset = {
   title?: string;
   description?: string;
   altText?: string;
-  sha1hash?: string;
-  extension?: string;
-  mimeType?: string;
-  size?: number;
-  assetId?: string;
+  sha1hash: string;
+  extension: string;
+  mimeType: string;
+  size: number;
+  assetId: string;
   uploadId?: string;
-  path?: string;
-  url?: string;
+  path: string;
+  url: string;
   source?: SanityAssetSourceData;
 };
 
@@ -657,14 +660,14 @@ export type SanityImageAsset = {
   title?: string;
   description?: string;
   altText?: string;
-  sha1hash?: string;
-  extension?: string;
-  mimeType?: string;
-  size?: number;
-  assetId?: string;
+  sha1hash: string;
+  extension: string;
+  mimeType: string;
+  size: number;
+  assetId: string;
   uploadId?: string;
-  path?: string;
-  url?: string;
+  path: string;
+  url: string;
   metadata?: SanityImageMetadata;
   source?: SanityAssetSourceData;
 };
@@ -678,9 +681,7 @@ export type Geopoint = {
 
 export type AllSanitySchemaTypes = PageReference | PostReference | Link | SanityImageAssetReference | CallToAction | InfoSection | BlockContentTextOnly | BlockContent | Button | SanityFileAssetReference | PersonReference | PlaybookReference | Playbook | SanityImageCrop | SanityImageHotspot | Slug | Gear | Testimonial | MediaAsset | Event | Settings | Page | Post | Person | SanityAssistInstructionTask | SanityAssistTaskStatus | SanityAssistSchemaTypeAnnotations | SanityAssistOutputType | SanityAssistOutputField | AssistInstructionContextReference | SanityAssistInstructionContext | AssistInstructionContext | SanityAssistInstructionUserInput | SanityAssistInstructionPrompt | SanityAssistInstructionFieldRef | SanityAssistInstruction | SanityAssistSchemaTypeField | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset | Geopoint;
 
-export declare const internalGroqTypeReferenceTo: unique symbol;
-
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: settingsQuery
 // Query: *[_type == "settings"][0]
 export type SettingsQueryResult = {
@@ -723,7 +724,7 @@ export type SettingsQueryResult = {
   };
 } | null;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: getPageQuery
 // Query: *[_type == 'page' && slug.current == $slug][0]{    _id,    _type,    name,    slug,    heading,    subheading,    "pageBuilder": pageBuilder[]{      ...,      _type == "callToAction" => {        ...,        button {          ...,            link {      ...,        _type == "link" => {    "page": page->slug.current,    "post": post->slug.current  }      }        }      },      _type == "infoSection" => {        content[]{          ...,          markDefs[]{            ...,              _type == "link" => {    "page": page->slug.current,    "post": post->slug.current  }          }        }      },    },  }
 export type GetPageQueryResult = {
@@ -798,7 +799,7 @@ export type GetPageQueryResult = {
   }> | null;
 } | null;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: sitemapData
 // Query: *[_type == "page" || _type == "post" && defined(slug.current)] | order(_type asc) {    "slug": slug.current,    _type,    _updatedAt,  }
 export type SitemapDataResult = Array<{
@@ -811,7 +812,7 @@ export type SitemapDataResult = Array<{
   _updatedAt: string;
 }>;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: allPostsQuery
 // Query: *[_type == "post" && defined(slug.current)] | order(date desc, _updatedAt desc) {      _id,  "status": select(_originalId in path("drafts.**") => "draft", "published"),  "title": coalesce(title, "Untitled"),  "slug": slug.current,  excerpt,  coverImage,  "date": coalesce(date, _updatedAt),  "author": author->{firstName, lastName, picture},  }
 export type AllPostsQueryResult = Array<{
@@ -843,7 +844,7 @@ export type AllPostsQueryResult = Array<{
   } | null;
 }>;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: morePostsQuery
 // Query: *[_type == "post" && _id != $skip && defined(slug.current)] | order(date desc, _updatedAt desc) [0...$limit] {      _id,  "status": select(_originalId in path("drafts.**") => "draft", "published"),  "title": coalesce(title, "Untitled"),  "slug": slug.current,  excerpt,  coverImage,  "date": coalesce(date, _updatedAt),  "author": author->{firstName, lastName, picture},  }
 export type MorePostsQueryResult = Array<{
@@ -875,7 +876,7 @@ export type MorePostsQueryResult = Array<{
   } | null;
 }>;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: postQuery
 // Query: *[_type == "post" && slug.current == $slug] [0] {    content[]{    ...,    markDefs[]{      ...,        _type == "link" => {    "page": page->slug.current,    "post": post->slug.current  }    }  },      _id,  "status": select(_originalId in path("drafts.**") => "draft", "published"),  "title": coalesce(title, "Untitled"),  "slug": slug.current,  excerpt,  coverImage,  "date": coalesce(date, _updatedAt),  "author": author->{firstName, lastName, picture},  }
 export type PostQueryResult = {
@@ -937,23 +938,23 @@ export type PostQueryResult = {
   } | null;
 } | null;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: postPagesSlugs
 // Query: *[_type == "post" && defined(slug.current)]  {"slug": slug.current}
 export type PostPagesSlugsResult = Array<{
   slug: string;
 }>;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: pagesSlugs
 // Query: *[_type == "page" && defined(slug.current)]  {"slug": slug.current}
 export type PagesSlugsResult = Array<{
   slug: string;
 }>;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: allEventsQuery
-// Query: *[_type == "event"] | order(startDate asc) {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  isFeatured,  tags,  }
+// Query: *[_type == "event"] | order(startDate asc) {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  isFeatured,  tags,  }
 export type AllEventsQueryResult = Array<{
   _id: string;
   docStatus: "draft" | "published";
@@ -982,13 +983,14 @@ export type AllEventsQueryResult = Array<{
   spotsFilled: number | null;
   entryFee: number | null;
   registrationUrl: string | null;
+  requiresRegistration: boolean | null;
   isFeatured: boolean | null;
   tags: Array<string> | null;
 }>;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: upcomingEventsQuery
-// Query: *[_type == "event" && status in ["upcoming", "registration_open", "waitlist"]] | order(startDate asc) {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  isFeatured,  tags,  }
+// Query: *[_type == "event" && status in ["upcoming", "registration_open", "waitlist"]] | order(startDate asc) {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  isFeatured,  tags,  }
 export type UpcomingEventsQueryResult = Array<{
   _id: string;
   docStatus: "draft" | "published";
@@ -1017,13 +1019,14 @@ export type UpcomingEventsQueryResult = Array<{
   spotsFilled: number | null;
   entryFee: number | null;
   registrationUrl: string | null;
+  requiresRegistration: boolean | null;
   isFeatured: boolean | null;
   tags: Array<string> | null;
 }>;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: featuredEventQuery
-// Query: *[_type == "event" && isFeatured == true] | order(startDate asc) [0] {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  isFeatured,  tags,    description,    sponsors[] {      name,      logo,      url,    },  }
+// Query: *[_type == "event" && isFeatured == true] | order(startDate asc) [0] {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  isFeatured,  tags,    description,    sponsors[] {      name,      logo,      url,    },  }
 export type FeaturedEventQueryResult = {
   _id: string;
   docStatus: "draft" | "published";
@@ -1052,6 +1055,7 @@ export type FeaturedEventQueryResult = {
   spotsFilled: number | null;
   entryFee: number | null;
   registrationUrl: string | null;
+  requiresRegistration: boolean | null;
   isFeatured: true;
   tags: Array<string> | null;
   description: BlockContentTextOnly | null;
@@ -1068,7 +1072,62 @@ export type FeaturedEventQueryResult = {
   }> | null;
 } | null;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
+// Variable: eventQuery
+// Query: *[_type == "event" && slug.current == $slug] [0] {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  isFeatured,  tags,    description,    sponsors[] {      name,      logo,      url,    },  }
+export type EventQueryResult = {
+  _id: string;
+  docStatus: "draft" | "published";
+  title: string;
+  slug: string;
+  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament";
+  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist";
+  startDate: string;
+  endDate: string | null;
+  location: {
+    venueName?: string;
+    city?: string;
+    state?: string;
+    addressLine?: string;
+  } | null;
+  coverImage: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  } | null;
+  shortDescription: string | null;
+  spotsTotal: number | null;
+  spotsFilled: number | null;
+  entryFee: number | null;
+  registrationUrl: string | null;
+  requiresRegistration: boolean | null;
+  isFeatured: boolean | null;
+  tags: Array<string> | null;
+  description: BlockContentTextOnly | null;
+  sponsors: Array<{
+    name: string | null;
+    logo: {
+      asset?: SanityImageAssetReference;
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      _type: "image";
+    } | null;
+    url: string | null;
+  }> | null;
+} | null;
+
+// Source: sanity/lib/queries.ts
+// Variable: eventSlugQuery
+// Query: *[_type == "event" && defined(slug.current)]  {"slug": slug.current}
+export type EventSlugQueryResult = Array<{
+  slug: string;
+}>;
+
+// Source: sanity/lib/queries.ts
 // Variable: allGearQuery
 // Query: *[_type == "gear"] | order(displayOrder asc, name asc) {      _id,  name,  "slug": slug.current,  tagline,  category,  badge,  shortDescription,  features,  price,  shopUrl,  image,  isFeatured,  displayOrder,  }
 export type AllGearQueryResult = Array<{
@@ -1094,7 +1153,7 @@ export type AllGearQueryResult = Array<{
   displayOrder: number | null;
 }>;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: featuredGearQuery
 // Query: *[_type == "gear" && isFeatured == true] | order(displayOrder asc) [0] {      _id,  name,  "slug": slug.current,  tagline,  category,  badge,  shortDescription,  features,  price,  shopUrl,  image,  isFeatured,  displayOrder,  }
 export type FeaturedGearQueryResult = {
@@ -1120,7 +1179,7 @@ export type FeaturedGearQueryResult = {
   displayOrder: number | null;
 } | null;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: allPlaybooksQuery
 // Query: *[_type == "playbook"] | order(publishedAt desc) {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,  }
 export type AllPlaybooksQueryResult = Array<{
@@ -1158,7 +1217,7 @@ export type AllPlaybooksQueryResult = Array<{
   displayOrder: number | null;
 }>;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: featuredPlaybookQuery
 // Query: *[_type == "playbook" && isFeatured == true] | order(displayOrder asc, publishedAt desc) [0] {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,  }
 export type FeaturedPlaybookQueryResult = {
@@ -1196,7 +1255,7 @@ export type FeaturedPlaybookQueryResult = {
   displayOrder: number | null;
 } | null;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: playbookQuery
 // Query: *[_type == "playbook" && slug.current == $slug] [0] {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,    body,    "contributors": contributors[]->{firstName, lastName, picture},    video {      platform,      embedId,      url,      "fileUrl": uploadedFile.asset->url,      duration,    },    attachments[] {      _key,      title,      description,      fileType,      "fileUrl": file.asset->url,    },    "relatedPlaybooks": relatedPlaybooks[]->{        _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,    },  }
 export type PlaybookQueryResult = {
@@ -1295,14 +1354,14 @@ export type PlaybookQueryResult = {
   }> | null;
 } | null;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: playbookSlugQuery
 // Query: *[_type == "playbook" && defined(slug.current)]  {"slug": slug.current}
 export type PlaybookSlugQueryResult = Array<{
   slug: string;
 }>;
 
-// Source: sanity\lib\queries.ts
+// Source: sanity/lib/queries.ts
 // Variable: featuredTestimonialsQuery
 // Query: *[_type == "testimonial" && isFeatured == true] | order(publishedAt desc) {    _id,    quote,    authorName,    authorDetail,    authorPhoto,    category,    rating,  }
 export type FeaturedTestimonialsQueryResult = Array<{
@@ -1334,9 +1393,11 @@ declare module "@sanity/client" {
     "\n  *[_type == \"post\" && slug.current == $slug] [0] {\n    content[]{\n    ...,\n    markDefs[]{\n      ...,\n      \n  _type == \"link\" => {\n    \"page\": page->slug.current,\n    \"post\": post->slug.current\n  }\n\n    }\n  },\n    \n  _id,\n  \"status\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  \"title\": coalesce(title, \"Untitled\"),\n  \"slug\": slug.current,\n  excerpt,\n  coverImage,\n  \"date\": coalesce(date, _updatedAt),\n  \"author\": author->{firstName, lastName, picture},\n\n  }\n": PostQueryResult;
     "\n  *[_type == \"post\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": PostPagesSlugsResult;
     "\n  *[_type == \"page\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": PagesSlugsResult;
-    "\n  *[_type == \"event\"] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  isFeatured,\n  tags,\n\n  }\n": AllEventsQueryResult;
-    "\n  *[_type == \"event\" && status in [\"upcoming\", \"registration_open\", \"waitlist\"]] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  isFeatured,\n  tags,\n\n  }\n": UpcomingEventsQueryResult;
-    "\n  *[_type == \"event\" && isFeatured == true] | order(startDate asc) [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  isFeatured,\n  tags,\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": FeaturedEventQueryResult;
+    "\n  *[_type == \"event\"] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  isFeatured,\n  tags,\n\n  }\n": AllEventsQueryResult;
+    "\n  *[_type == \"event\" && status in [\"upcoming\", \"registration_open\", \"waitlist\"]] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  isFeatured,\n  tags,\n\n  }\n": UpcomingEventsQueryResult;
+    "\n  *[_type == \"event\" && isFeatured == true] | order(startDate asc) [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  isFeatured,\n  tags,\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": FeaturedEventQueryResult;
+    "\n  *[_type == \"event\" && slug.current == $slug] [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  isFeatured,\n  tags,\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": EventQueryResult;
+    "\n  *[_type == \"event\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": EventSlugQueryResult;
     "\n  *[_type == \"gear\"] | order(displayOrder asc, name asc) {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": AllGearQueryResult;
     "\n  *[_type == \"gear\" && isFeatured == true] | order(displayOrder asc) [0] {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": FeaturedGearQueryResult;
     "\n  *[_type == \"playbook\"] | order(publishedAt desc) {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n  }\n": AllPlaybooksQueryResult;

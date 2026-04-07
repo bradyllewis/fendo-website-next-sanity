@@ -18,9 +18,10 @@ const PAST_STATUSES     = new Set(['completed', 'cancelled'])
 interface EventsGridProps {
   events: SanityEvent[]
   studioUrl: string
+  paidCountMap?: Record<string, number>
 }
 
-export default function EventsGrid({events, studioUrl}: EventsGridProps) {
+export default function EventsGrid({events, studioUrl, paidCountMap = {}}: EventsGridProps) {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('upcoming')
 
   const filtered = events.filter((e) => {
@@ -80,7 +81,7 @@ export default function EventsGrid({events, studioUrl}: EventsGridProps) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((event) => (
-            <EventCard key={event._id} event={event} />
+            <EventCard key={event._id} event={event} paidCount={paidCountMap[event._id]} />
           ))}
         </div>
       )}

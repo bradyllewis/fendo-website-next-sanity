@@ -6,7 +6,7 @@ import FeatureBlocks from '@/app/components/home/FeatureBlocks'
 import TestimonialsSection from '@/app/components/home/TestimonialsSection'
 import GearCallout from '@/app/components/home/GearCallout'
 import ManifestoStrip from '@/app/components/home/ManifestoStrip'
-import LatestPosts from '@/app/components/home/LatestPosts'
+import PlaybookShowcase from '@/app/components/home/PlaybookShowcase'
 
 export default async function Page() {
   return (
@@ -18,7 +18,7 @@ export default async function Page() {
       <TestimonialsSection />
       <GearCallout />
       <ManifestoStrip />
-      <LatestPosts />
+      <PlaybookShowcase count={3} />
     </>
   )
 }

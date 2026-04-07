@@ -345,6 +345,7 @@ export type Event = {
   spotsFilled?: number;
   entryFee?: number;
   registrationUrl?: string;
+  requiresRegistration?: boolean;
   isFeatured?: boolean;
   sponsors?: Array<{
     name?: string;
