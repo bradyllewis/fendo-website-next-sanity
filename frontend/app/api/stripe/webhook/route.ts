@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Try to UPDATE the pending row created at checkout time
-        const { count: updatedCount, error: updateError } = await supabase
+        const { data: updatedRows, error: updateError } = await supabase
           .from('event_registrations')
           .update({
             status: 'paid',
@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
           })
           .eq('stripe_checkout_session_id', session.id)
           .eq('status', 'pending')
-          .select('id', { count: 'exact', head: true })
+          .select('id')
+        const updatedCount = updatedRows?.length ?? 0
 
         if (updateError) {
           console.error('[webhook] Failed to update pending registration:', updateError)
