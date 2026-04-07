@@ -149,3 +149,10 @@ export const IconLoader = ({className = 'w-4 h-4'}: {className?: string}) => (
     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
   </svg>
 )
+
+export const IconTicket = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z" />
+    <line x1="9" y1="2" x2="9" y2="22" strokeDasharray="2 2" />
+  </svg>
+)

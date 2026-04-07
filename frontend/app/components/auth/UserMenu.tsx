@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import UserAvatar from './UserAvatar'
-import { IconUser, IconLogOut, IconUsers } from '@/app/components/icons'
+import { IconUser, IconLogOut, IconUsers, IconTicket } from '@/app/components/icons'
 import { signOut } from '@/app/auth/actions'
 import type { Profile } from '@/lib/supabase/types'
 
@@ -65,6 +65,14 @@ export default function UserMenu({ profile }: { profile: Profile | null }) {
             >
               <IconUser className="w-4 h-4" />
               My Profile
+            </Link>
+            <Link
+              href="/account/events"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-fg hover:bg-surface transition-colors duration-150"
+            >
+              <IconTicket className="w-4 h-4" />
+              My Events
             </Link>
             <Link
               href="/collective"
