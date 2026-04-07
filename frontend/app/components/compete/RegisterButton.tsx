@@ -32,6 +32,8 @@ export default function RegisterButton({
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmingCancel, setConfirmingCancel] = useState(false)
+  const [isUnregistering, setIsUnregistering] = useState(false)
 
   const isFull = event.spotsTotal != null && paidCount >= event.spotsTotal
   const isRegistered = userRegistration?.status === 'paid'
@@ -82,6 +84,27 @@ export default function RegisterButton({
     startCheckout()
   }, [startCheckout])
 
+  const handleUnregister = useCallback(async () => {
+    if (!userRegistration?.id) return
+    setIsUnregistering(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/registrations/${userRegistration.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || 'Failed to cancel. Please try again.')
+        setConfirmingCancel(false)
+        return
+      }
+      router.refresh()
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setIsUnregistering(false)
+      setConfirmingCancel(false)
+    }
+  }, [userRegistration?.id, router])
+
   if (isComplete) {
     return (
       <div className={`pt-4 border-t border-border ${className}`}>
@@ -93,6 +116,63 @@ export default function RegisterButton({
   }
 
   if (isRegistered) {
+    const isFree = !event.entryFee || event.entryFee === 0
+
+    // Free event + not completed → show unregister affordance
+    if (isFree && !isComplete) {
+      if (confirmingCancel) {
+        return (
+          <div className={`pt-4 border-t border-border ${className}`}>
+            <p className="text-sm text-fg text-center mb-3">Cancel your spot for this event?</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmingCancel(false)}
+                disabled={isUnregistering}
+                className="btn-ghost flex-1 text-sm justify-center"
+              >
+                Keep it
+              </button>
+              <button
+                onClick={handleUnregister}
+                disabled={isUnregistering}
+                className="btn-ghost flex-1 text-sm justify-center text-danger hover:text-danger"
+              >
+                {isUnregistering ? (
+                  <span className="flex items-center gap-2 justify-center">
+                    <IconLoader className="w-4 h-4" />
+                    <span>Cancelling…</span>
+                  </span>
+                ) : (
+                  'Yes, cancel'
+                )}
+              </button>
+            </div>
+            {error && (
+              <p className="mt-2 text-xs text-danger text-center">{error}</p>
+            )}
+          </div>
+        )
+      }
+
+      return (
+        <div className={`pt-4 border-t border-border ${className}`}>
+          <div className="flex items-center justify-center gap-2 py-3 rounded-xl bg-green/10 border border-green/20">
+            <svg className="w-4 h-4 text-green" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm font-medium text-green">You&apos;re registered</span>
+          </div>
+          <button
+            onClick={() => setConfirmingCancel(true)}
+            className="w-full mt-2 text-[0.65rem] font-mono text-muted hover:text-danger transition-colors duration-160 text-center"
+          >
+            Cancel registration
+          </button>
+        </div>
+      )
+    }
+
+    // Paid event or completed event → static badge only
     return (
       <div className={`pt-4 border-t border-border ${className}`}>
         <div className="flex items-center justify-center gap-2 py-3 rounded-xl bg-green/10 border border-green/20">

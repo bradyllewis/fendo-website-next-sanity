@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { IconCalendar, IconTicket, IconArrow } from '@/app/components/icons'
 import type { EventRegistration } from '@/lib/supabase/types'
+import UnregisterButton from './UnregisterButton'
 
 interface Props {
   registrations: EventRegistration[]
@@ -36,12 +37,22 @@ export default function RegistrationsList({ registrations }: Props) {
               </p>
             )}
           </div>
-          <Link
-            href={`/compete/${reg.event_slug}`}
-            className="btn-ghost text-xs px-3 py-2 shrink-0"
-          >
-            View Event
-          </Link>
+          <div className="flex flex-col items-end gap-0.5 shrink-0">
+            <Link
+              href={`/compete/${reg.event_slug}`}
+              className="btn-ghost text-xs px-3 py-2"
+            >
+              View Event
+            </Link>
+            {reg.status === 'paid' &&
+              reg.amount_paid === 0 &&
+              !reg.stripe_payment_intent_id && (
+                <UnregisterButton
+                  registrationId={reg.id}
+                  eventTitle={reg.event_title}
+                />
+              )}
+          </div>
         </div>
       ))}
     </div>
