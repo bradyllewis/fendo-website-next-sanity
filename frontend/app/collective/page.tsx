@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { IconTarget, IconUsers, IconTrophy, IconBook } from '@/app/components/icons'
+import { IconTarget, IconUsers, IconBook, IconTicket } from '@/app/components/icons'
 
 export const metadata = {
   title: 'The Collective',
@@ -66,7 +66,7 @@ export default async function CollectivePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <QuickCard
               href="/compete"
-              icon={<IconTrophy className="w-6 h-6" />}
+              icon={<IconTicket className="w-6 h-6" />}
               title="Compete"
               description="Browse upcoming events and register for your next round."
             />

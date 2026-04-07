@@ -7,7 +7,7 @@ import {studioUrl} from '@/sanity/lib/api'
 
 import FeaturedEvent from '@/app/components/compete/FeaturedEvent'
 import EventsGrid from '@/app/components/compete/EventsGrid'
-import {IconArrow, IconTrophy} from '@/app/components/icons'
+import {IconArrow, IconTicket} from '@/app/components/icons'
 import type {SanityEvent} from './types'
 import { createClient } from '@/lib/supabase/server'
 
@@ -141,7 +141,7 @@ export default async function CompetePage() {
               </h2>
             </div>
             <span className="text-muted" aria-hidden="true">
-              <IconTrophy className="w-8 h-8" />
+              <IconTicket className="w-8 h-8" />
             </span>
           </div>
 
