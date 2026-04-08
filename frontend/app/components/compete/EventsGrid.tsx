@@ -19,9 +19,10 @@ interface EventsGridProps {
   events: SanityEvent[]
   studioUrl: string
   paidCountMap?: Record<string, number>
+  registeredEventIds?: Set<string>
 }
 
-export default function EventsGrid({events, studioUrl, paidCountMap = {}}: EventsGridProps) {
+export default function EventsGrid({events, studioUrl, paidCountMap = {}, registeredEventIds = new Set()}: EventsGridProps) {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('upcoming')
 
   const filtered = events.filter((e) => {
@@ -81,7 +82,12 @@ export default function EventsGrid({events, studioUrl, paidCountMap = {}}: Event
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((event) => (
-            <EventCard key={event._id} event={event} paidCount={paidCountMap[event._id]} />
+            <EventCard
+              key={event._id}
+              event={event}
+              paidCount={paidCountMap[event._id]}
+              isRegistered={registeredEventIds.has(event._id)}
+            />
           ))}
         </div>
       )}

@@ -9,10 +9,11 @@ interface FeaturedEventProps {
   event: SanityEvent & {
     sponsors?: Array<{name?: string; logo?: {asset?: unknown}; url?: string}> | null
   }
+  isRegistered?: boolean
 }
 
-export default function FeaturedEvent({event}: FeaturedEventProps) {
-  const {title, eventType, startDate, endDate, location, coverImage, shortDescription, registrationUrl} = event
+export default function FeaturedEvent({event, isRegistered = false}: FeaturedEventProps) {
+  const {title, eventType, startDate, endDate, location, coverImage, shortDescription, registrationUrl, slug} = event
 
   const locationStr = [location?.venueName, location?.city, location?.state]
     .filter(Boolean)
@@ -58,7 +59,7 @@ export default function FeaturedEvent({event}: FeaturedEventProps) {
       {/* Dark gradient overlay */}
       <div
         className="absolute inset-0"
-        style={{background: 'linear-gradient(to top, rgba(4,15,44,0.92) 0%, rgba(4,15,44,0.5) 50%, rgba(4,15,44,0.1) 100%)'}}
+        style={{background: 'linear-gradient(to top, rgba(4,15,44,0.97) 0%, rgba(4,15,44,0.72) 55%, rgba(4,15,44,0.25) 100%)'}}
         aria-hidden="true"
       />
 
@@ -66,15 +67,23 @@ export default function FeaturedEvent({event}: FeaturedEventProps) {
       <div className="relative container py-12 lg:py-16">
         <div className="max-w-2xl">
           {/* Labels row */}
-          <div className="flex items-center gap-3 mb-6">
-            <span className="label-mono text-bg/40">Featured Event</span>
+          <div className="flex items-center gap-3 mb-6 flex-wrap">
+            <span className="label-mono text-bg/70">Featured Event</span>
             {eventType && (
               <>
-                <span className="text-bg/20 text-xs">·</span>
-                <span className="label-mono text-bg/40">
+                <span className="text-bg/40 text-xs">·</span>
+                <span className="label-mono text-bg/70">
                   {eventType.replace(/_/g, ' ')}
                 </span>
               </>
+            )}
+            {isRegistered && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[0.65rem] font-mono font-medium tracking-widest uppercase bg-green/15 text-bg border border-bg/20">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                  <path d="M1.5 5L4 7.5L8.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Registered
+              </span>
             )}
           </div>
 
@@ -85,7 +94,7 @@ export default function FeaturedEvent({event}: FeaturedEventProps) {
 
           {/* Description */}
           {shortDescription && (
-            <p className="text-bg/70 text-base md:text-lg leading-relaxed max-w-[50ch] mb-6">
+            <p className="text-bg/90 text-base md:text-lg leading-relaxed max-w-[50ch] mb-6">
               {shortDescription}
             </p>
           )}
@@ -93,13 +102,13 @@ export default function FeaturedEvent({event}: FeaturedEventProps) {
           {/* Meta row */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mb-8">
             {dateStr && (
-              <div className="flex items-center gap-2 text-sm font-mono text-bg/60">
+              <div className="flex items-center gap-2 text-sm font-mono text-bg/80">
                 <IconCalendar className="w-4 h-4" />
                 <span>{dateStr}</span>
               </div>
             )}
             {locationStr && (
-              <div className="flex items-center gap-2 text-sm font-mono text-bg/60">
+              <div className="flex items-center gap-2 text-sm font-mono text-bg/80">
                 <IconMapPin className="w-4 h-4" />
                 <span>{locationStr}</span>
               </div>
@@ -108,7 +117,13 @@ export default function FeaturedEvent({event}: FeaturedEventProps) {
 
           {/* CTA row */}
           <div className="flex items-center gap-4 flex-wrap">
-            {registrationUrl ? (
+            {slug && (
+              <Link href={`/compete/${slug}`} className="btn-accent">
+                Details
+                <IconArrow />
+              </Link>
+            )}
+            {!slug && registrationUrl && (
               <a
                 href={registrationUrl}
                 target="_blank"
@@ -117,7 +132,7 @@ export default function FeaturedEvent({event}: FeaturedEventProps) {
               >
                 Register Now
               </a>
-            ) : null}
+            )}
             <Link href="#events" className="btn-ghost group text-bg hover:text-bg/70">
               View all events
               <span className="group-hover:translate-x-1 transition-transform duration-200">

@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { stripe } from '@/lib/stripe/client'
 import { IconCalendar } from '@/app/components/icons'
 
 type Props = {
@@ -53,6 +55,42 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
       .eq('user_id', user.id)
       .maybeSingle()
     registration = data
+
+    // Fallback: if the webhook hasn't fired yet, verify with Stripe directly and
+    // fulfill inline. This mirrors the webhook handler exactly — it's idempotent
+    // (the webhook will skip if it arrives later and finds status='paid').
+    if (registration?.status === 'pending') {
+      try {
+        const stripeSession = await stripe.checkout.sessions.retrieve(session_id)
+
+        // Only fulfill if Stripe confirms payment AND the session belongs to this user
+        if (
+          stripeSession.payment_status === 'paid' &&
+          stripeSession.metadata?.userId === user.id
+        ) {
+          const admin = createAdminClient()
+          const { data: fulfilled } = await admin
+            .from('event_registrations')
+            .update({
+              status: 'paid',
+              stripe_payment_intent_id: (stripeSession.payment_intent as string) ?? null,
+              amount_paid: stripeSession.amount_total,
+              currency: stripeSession.currency ?? 'usd',
+            })
+            .eq('stripe_checkout_session_id', session_id)
+            .eq('status', 'pending')
+            .select('*')
+            .maybeSingle()
+
+          if (fulfilled) {
+            registration = fulfilled
+          }
+        }
+      } catch (err) {
+        // Non-fatal: if Stripe is unreachable, fall through with the pending state
+        console.error('[register-success] Stripe session verify failed:', err)
+      }
+    }
   }
 
   const isConfirmed = registration?.status === 'paid'

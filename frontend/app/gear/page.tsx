@@ -7,6 +7,7 @@ import {IconCheck, IconArrow} from '@/app/components/icons'
 import SanityImage from '@/app/components/SanityImage'
 import type {SanityGear} from './types'
 import SpinSloganSection from '@/app/components/home/SpinSloganSection'
+import {createClient} from '@/lib/supabase/server'
 
 export const metadata: Metadata = {
   title: 'Gear',
@@ -115,6 +116,9 @@ export default async function GearPage() {
   const {data: allGear} = await sanityFetch({query: allGearQuery})
   const gear = (allGear ?? []) as SanityGear[]
 
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
   return (
     <>
       {/* ── Hero ───────────────────────────────────────────────────────── */}
@@ -197,25 +201,45 @@ export default async function GearPage() {
       </section>
 
       {/* ── Bottom CTA ─────────────────────────────────────────────────── */}
-      <section className="relative bg-fg border-t border-bg/10 section-padding" aria-label="Join the Collective">
+      <section className="relative bg-fg border-t border-bg/10 section-padding" aria-label={user ? 'Keep Exploring' : 'Join the Collective'}>
         <div
           className="absolute inset-0 bg-[url(/images/tile-grid-white.png)] opacity-[0.03]"
           style={{backgroundSize: '24px'}}
           aria-hidden="true"
         />
-        <div className="container relative text-center max-w-2xl mx-auto py-28">
-          <p className="label-mono text-accent mb-6">The Collective</p>
-          <h2 className="display-md text-bg mb-5">
-            Better gear starts with better habits.
-          </h2>
-          <p className="text-bg/60 text-base md:text-lg leading-relaxed mb-10">
-            Join the Fendo Collective for member-only gear drops, early access to new products,
-            and a community that holds you to a higher standard.
-          </p>
-          <Link href="/collective" className="btn-accent">
-            Get First Access
-          </Link>
-        </div>
+        {user ? (
+          <div className="container relative text-center max-w-2xl mx-auto py-28">
+            <p className="label-mono text-accent mb-6">The Collective</p>
+            <h2 className="display-md text-bg mb-5">
+              Keep exploring.
+            </h2>
+            <p className="text-bg/60 text-base md:text-lg leading-relaxed mb-10">
+              Check out the Playbook for expert technique, or head to Compete to find your next event.
+            </p>
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <Link href="/playbook" className="btn-accent">
+                Browse Playbook
+              </Link>
+              <Link href="/compete" className="btn-ghost">
+                View Events
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="container relative text-center max-w-2xl mx-auto py-28">
+            <p className="label-mono text-accent mb-6">The Collective</p>
+            <h2 className="display-md text-bg mb-5">
+              Better gear starts with better habits.
+            </h2>
+            <p className="text-bg/60 text-base md:text-lg leading-relaxed mb-10">
+              Join the Fendo Collective for member-only gear drops, early access to new products,
+              and a community that holds you to a higher standard.
+            </p>
+            <Link href="/collective" className="btn-accent">
+              Get First Access
+            </Link>
+          </div>
+        )}
       </section>
     </>
   )

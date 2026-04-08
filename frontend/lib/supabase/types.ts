@@ -8,6 +8,7 @@ export type Profile = {
   home_course: string | null
   bio: string | null
   stripe_customer_id: string | null
+  role: 'user' | 'admin'
   created_at: string
   updated_at: string
 }

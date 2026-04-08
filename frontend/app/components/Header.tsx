@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '@/app/components/auth/useAuth'
 import UserMenu from '@/app/components/auth/UserMenu'
 import UserAvatar from '@/app/components/auth/UserAvatar'
-import { IconUser, IconLogOut } from '@/app/components/icons'
+import { IconUser, IconLogOut, IconShield } from '@/app/components/icons'
 import { signOut } from '@/app/auth/actions'
 
 const NAV_LINKS = [
@@ -181,6 +181,16 @@ export default function Header() {
                   <IconUser className="w-4 h-4" />
                   My Profile
                 </Link>
+                {profile?.role === 'admin' && (
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-3 py-4 text-base font-semibold text-fg border-b border-border/50 hover:text-accent transition-colors duration-200"
+                    onClick={closeMenu}
+                  >
+                    <IconShield className="w-4 h-4" />
+                    Admin Panel
+                  </Link>
+                )}
                 <div className="pt-5 pb-2">
                   <form action={signOut}>
                     <button

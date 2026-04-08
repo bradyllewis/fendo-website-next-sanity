@@ -5,6 +5,7 @@ import {upcomingEventsQuery} from '@/sanity/lib/queries'
 import {IconArrow, IconCalendar} from '@/app/components/icons'
 import EventCard from '@/app/components/compete/EventCard'
 import type {SanityEvent} from '@/app/compete/types'
+import {createClient} from '@/lib/supabase/server'
 
 interface UpcomingEventsProps {
   /** Maximum number of events to display. Defaults to 3. */
@@ -14,6 +15,21 @@ interface UpcomingEventsProps {
 export default async function UpcomingEvents({count = 3}: UpcomingEventsProps) {
   const {data: allUpcoming} = await sanityFetch({query: upcomingEventsQuery})
   const events = (allUpcoming as SanityEvent[]).slice(0, count)
+
+  // Fetch the current user's registrations so EventCards can show "Registered"
+  let registeredEventIds: Set<string> = new Set()
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    const { data: myRows } = await supabase
+      .from('event_registrations')
+      .select('event_sanity_id')
+      .eq('user_id', user.id)
+      .eq('status', 'paid')
+    if (myRows) {
+      for (const row of myRows) registeredEventIds.add(row.event_sanity_id)
+    }
+  }
 
   return (
     <section className="section-padding" aria-labelledby="upcoming-events-heading">
@@ -45,7 +61,7 @@ export default async function UpcomingEvents({count = 3}: UpcomingEventsProps) {
             }`}
           >
             {events.map((event) => (
-              <EventCard key={event._id} event={event} />
+              <EventCard key={event._id} event={event} isRegistered={registeredEventIds.has(event._id)} />
             ))}
           </div>
         ) : (

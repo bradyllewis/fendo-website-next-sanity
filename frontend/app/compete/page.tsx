@@ -43,9 +43,12 @@ export default async function CompetePage() {
     .map((e) => e._id)
 
   let paidCountMap: Record<string, number> = {}
+  let registeredEventIds: Set<string> = new Set()
 
+  const supabase = await createClient()
+
+  // Batch-query paid counts for spot bars
   if (registrationEventIds.length > 0) {
-    const supabase = await createClient()
     const { data: countRows } = await supabase
       .from('event_registrations')
       .select('event_sanity_id')
@@ -56,6 +59,19 @@ export default async function CompetePage() {
       for (const row of countRows) {
         paidCountMap[row.event_sanity_id] = (paidCountMap[row.event_sanity_id] ?? 0) + 1
       }
+    }
+  }
+
+  // Fetch the current user's registrations so EventCards can show "Registered"
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    const { data: myRows } = await supabase
+      .from('event_registrations')
+      .select('event_sanity_id')
+      .eq('user_id', user.id)
+      .eq('status', 'paid')
+    if (myRows) {
+      for (const row of myRows) registeredEventIds.add(row.event_sanity_id)
     }
   }
 
@@ -129,7 +145,10 @@ export default async function CompetePage() {
 
           {/* Featured event — only shown if flagged in Sanity */}
           {featuredEvent && (
-            <FeaturedEvent event={featuredEvent as any} />
+            <FeaturedEvent
+              event={featuredEvent as any}
+              isRegistered={!!(featuredEvent as any)?._id && registeredEventIds.has((featuredEvent as any)._id)}
+            />
           )}
 
           {/* Section header */}
@@ -146,31 +165,51 @@ export default async function CompetePage() {
           </div>
 
           {/* Events grid with client-side filter tabs */}
-          <EventsGrid events={events} studioUrl={studioUrl} paidCountMap={paidCountMap} />
+          <EventsGrid events={events} studioUrl={studioUrl} paidCountMap={paidCountMap} registeredEventIds={registeredEventIds} />
         </div>
       </section>
 
       {/* ── Bottom CTA ─────────────────────────────────────────────────── */}
-      <section className="relative bg-fg border-t border-bg/10 section-padding" aria-label="Join the Collective">
+      <section className="relative bg-fg border-t border-bg/10 section-padding" aria-label={user ? 'Keep Competing' : 'Join the Collective'}>
         {/* Texture */}
         <div
           className="absolute inset-0 bg-[url(/images/tile-grid-white.png)] opacity-[0.03]"
           style={{backgroundSize: '24px'}}
           aria-hidden="true"
         />
-        <div className="container relative text-center max-w-2xl mx-auto py-28">
-          <p className="label-mono text-accent mb-6">The Collective</p>
-          <h2 className="display-md text-bg mb-5">
-            Competition is better together.
-          </h2>
-          <p className="text-bg/60 text-base md:text-lg leading-relaxed mb-10">
-            Join the Fendo Collective for early access to events, member-only rounds,
-            and a community that holds you to a higher standard.
-          </p>
-          <Link href="/collective" className="btn-accent">
-            Get First Access
-          </Link>
-        </div>
+        {user ? (
+          <div className="container relative text-center max-w-2xl mx-auto py-28">
+            <p className="label-mono text-accent mb-6">The Collective</p>
+            <h2 className="display-md text-bg mb-5">
+              Sharpen your game.
+            </h2>
+            <p className="text-bg/60 text-base md:text-lg leading-relaxed mb-10">
+              Between events, stay sharp with expert guides, drills, and resources in the Fendo Playbook.
+            </p>
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <Link href="/playbook" className="btn-accent">
+                Browse Playbook
+              </Link>
+              <Link href="/account" className="btn-ghost">
+                My Registrations
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="container relative text-center max-w-2xl mx-auto py-28">
+            <p className="label-mono text-accent mb-6">The Collective</p>
+            <h2 className="display-md text-bg mb-5">
+              Competition is better together.
+            </h2>
+            <p className="text-bg/60 text-base md:text-lg leading-relaxed mb-10">
+              Join the Fendo Collective for early access to events, member-only rounds,
+              and a community that holds you to a higher standard.
+            </p>
+            <Link href="/collective" className="btn-accent">
+              Get First Access
+            </Link>
+          </div>
+        )}
       </section>
     </>
   )

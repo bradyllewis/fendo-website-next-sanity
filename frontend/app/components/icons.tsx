@@ -156,3 +156,54 @@ export const IconTicket = ({className = 'w-4 h-4'}: {className?: string}) => (
     <line x1="9" y1="2" x2="9" y2="22" strokeDasharray="2 2" />
   </svg>
 )
+
+export const IconGrid = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <rect x="3" y="3" width="7" height="7" rx="1" />
+    <rect x="14" y="3" width="7" height="7" rx="1" />
+    <rect x="3" y="14" width="7" height="7" rx="1" />
+    <rect x="14" y="14" width="7" height="7" rx="1" />
+  </svg>
+)
+
+export const IconShield = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+)
+
+export const IconSearch = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+)
+
+export const IconX = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+)
+
+export const IconChevronRight = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+)
+
+export const IconTrendUp = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+    <polyline points="17 6 23 6 23 12" />
+  </svg>
+)
+
+export const IconFootprints = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 16v-2.38C4 11.5 2.97 10.43 3 8c.03-2.69 1.88-5 4.38-5.38 2.72-.4 4.72 1.44 5.12 3.88.34 2.1.3 3.6-2.03 4.5C8.13 12 7 12.74 7 15.38V16H4Z" />
+    <path d="M20.07 8c.03 2.43-.97 3.5-.97 5.62V16H16v-2.38c0-2.64-1.13-3.48-3.46-4.38-2.34-.9-2.37-2.4-2.03-4.5C10.9 2.46 13 .56 15.62.94 18.18 1.3 20.04 3.66 20.07 8Z" />
+    <path d="M4 22c0-1.1.9-2 2-2h2a2 2 0 0 1 0 4H6a2 2 0 0 1-2-2Z" />
+    <path d="M14 22c0-1.1.9-2 2-2h2a2 2 0 0 1 0 4h-2a2 2 0 0 1-2-2Z" />
+  </svg>
+)

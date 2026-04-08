@@ -9,7 +9,7 @@ import SanityImage from '@/app/components/SanityImage'
 import {sanityFetch} from '@/sanity/lib/live'
 import {eventQuery, eventSlugQuery} from '@/sanity/lib/queries'
 import {resolveOpenGraphImage} from '@/sanity/lib/utils'
-import {IconCalendar, IconMapPin, IconUsersSmall, IconDollar} from '@/app/components/icons'
+import {IconCalendar, IconMapPin, IconUsersSmall, IconDollar, IconFootprints, IconChevronRight} from '@/app/components/icons'
 import type {SanityEventFull} from '../types'
 import {EVENT_TYPE_LABELS, STATUS_LABELS} from '../types'
 import {createClient} from '@/lib/supabase/server'
@@ -60,11 +60,11 @@ const EVENT_TYPE_STYLES: Record<string, string> = {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  upcoming:           'text-green bg-green/10',
-  registration_open:  'text-accent bg-accent/10',
-  waitlist:           'text-fg bg-mustard/40',
-  completed:          'text-muted-2 bg-surface',
-  cancelled:          'text-danger bg-danger/10',
+  upcoming:           'text-white bg-green/20 border border-green/40',
+  registration_open:  'text-accent bg-accent/20 border border-accent/40',
+  waitlist:           'text-fg bg-mustard/60 border border-mustard/70',
+  completed:          'text-muted bg-surface border border-border',
+  cancelled:          'text-danger bg-danger/20 border border-danger/40',
 }
 
 function formatEventDate(startDate: string, endDate?: string | null): string {
@@ -105,16 +105,16 @@ export default async function EventDetailPage(props: Props) {
 
   if (!entry?._id) return notFound()
 
-  // ── Registration data from Supabase ────────────────────────────────────────
+  // ── Auth + Registration data from Supabase ────────────────────────────────
   let paidCount = 0
   let userRegistration: { id: string; status: string } | null = null
 
-  if (entry.requiresRegistration) {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
+  if (entry.requiresRegistration) {
     const { count } = await supabase
       .from('event_registrations')
       .select('*', { count: 'exact', head: true })
@@ -181,6 +181,14 @@ export default async function EventDetailPage(props: Props) {
                   {statusLabel}
                 </span>
               )}
+              {userRegistration?.status === 'paid' && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[0.65rem] font-mono font-medium tracking-widest uppercase bg-green/15 text-green border border-green/35">
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                    <path d="M1.5 5L4 7.5L8.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Registered
+                </span>
+              )}
             </div>
 
             {/* Title */}
@@ -228,7 +236,7 @@ export default async function EventDetailPage(props: Props) {
       {/* ── Cover image ──────────────────────────────────────────────────── */}
       {entry.coverImage?.asset && '_ref' in entry.coverImage.asset && (
         <div className="container mt-10">
-          <div className="relative aspect-[21/9] overflow-hidden rounded-xl">
+          <div className="relative aspect-[35/18] overflow-hidden rounded-xl">
             <SanityImage
               id={entry.coverImage.asset._ref}
               alt={(entry.coverImage as {alt?: string})?.alt ?? entry.title ?? 'Event image'}
@@ -236,7 +244,7 @@ export default async function EventDetailPage(props: Props) {
               crop={entry.coverImage.crop ?? undefined}
               mode="cover"
               width={1200}
-              height={514}
+              height={617}
               className="w-full h-full object-cover"
             />
             {isComplete && (
@@ -417,25 +425,41 @@ export default async function EventDetailPage(props: Props) {
       </div>
 
       {/* ── Bottom CTA ──────────────────────────────────────────────────── */}
-      <section className="relative bg-fg border-t border-bg/10 section-padding" aria-label="Join the Collective">
+      <section className="relative bg-fg border-t border-bg/10 section-padding" aria-label={user ? 'More Events' : 'Join the Collective'}>
         <div
           className="absolute inset-0 bg-[url(/images/tile-grid-white.png)] opacity-[0.03]"
           style={{backgroundSize: '24px'}}
           aria-hidden="true"
         />
-        <div className="container relative text-center max-w-xl mx-auto">
-          <p className="label-mono text-bg/30 mb-6">The Collective</p>
-          <h2 className="display-md text-bg mb-5">
-            Ready to compete?
-          </h2>
-          <p className="text-bg/60 text-base leading-relaxed mb-10">
-            Join the Fendo Collective for early access to events, member-only tournaments,
-            and a community that pushes each other to improve.
-          </p>
-          <Link href="/collective" className="btn-accent">
-            Get First Access
-          </Link>
-        </div>
+        {user ? (
+          <div className="container relative text-center max-w-xl mx-auto">
+            <p className="label-mono text-bg/30 mb-6">The Collective</p>
+            <h2 className="display-md text-bg mb-5 flex flex-col items-center justify-center gap-3">
+              <IconMapPin className="w-8 h-8 lg:w-16 lg:h-16 text-accent shrink-0" />
+              <span>Stay in the <span className='text-accent'>swing</span> of things.</span>
+            </h2>
+            <p className="text-bg/60 text-base leading-relaxed mb-10">
+              Browse upcoming events, find your next competition, and stay sharp with the Fendo community.
+            </p>
+            <Link href="/compete" className="btn-accent">
+              View All Events
+            </Link>
+          </div>
+        ) : (
+          <div className="container relative text-center max-w-xl mx-auto">
+            <p className="label-mono text-bg/30 mb-6">The Collective</p>
+            <h2 className="display-md text-bg mb-5">
+              Ready to compete?
+            </h2>
+            <p className="text-bg/60 text-base leading-relaxed mb-10">
+              Join the Fendo Collective for early access to events, member-only tournaments,
+              and a community that pushes each other to improve.
+            </p>
+            <Link href="/collective" className="btn-accent">
+              Get First Access
+            </Link>
+          </div>
+        )}
       </section>
     </>
   )

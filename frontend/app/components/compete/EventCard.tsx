@@ -1,3 +1,5 @@
+'use client'
+
 import Link from 'next/link'
 import {format, parseISO} from 'date-fns'
 
@@ -20,11 +22,11 @@ const EVENT_TYPE_STYLES: Record<string, string> = {
 // ── Status badge config ───────────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<string, string> = {
-  upcoming:           'text-green bg-green/10',
-  registration_open:  'text-accent bg-accent/10',
-  waitlist:           'text-fg bg-mustard/40',
-  completed:          'text-muted-2 bg-surface',
-  cancelled:          'text-danger bg-danger/10',
+  upcoming:           'text-white bg-green/20 border border-green/40',
+  registration_open:  'text-white bg-green-700/60 border border-green-200/40',
+  waitlist:           'text-fg bg-mustard/60 border border-mustard/70',
+  completed:          'text-muted bg-surface border border-border',
+  cancelled:          'text-danger bg-danger/20 border border-danger/40',
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -59,9 +61,10 @@ function formatEntryFee(fee?: number | null): string {
 interface EventCardProps {
   event: SanityEvent
   paidCount?: number
+  isRegistered?: boolean
 }
 
-export default function EventCard({event, paidCount}: EventCardProps) {
+export default function EventCard({event, paidCount, isRegistered = false}: EventCardProps) {
   const {
     _id,
     title,
@@ -129,23 +132,16 @@ export default function EventCard({event, paidCount}: EventCardProps) {
           </div>
         )}
 
-        {/* Top badges row */}
-        <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2 pointer-events-none">
-          {typeLabel && (
-            <span
-              className={`inline-flex items-center px-2.5 py-1 rounded-md text-[0.65rem] font-mono font-medium tracking-widest uppercase ${typeStyle}`}
-            >
-              {typeLabel}
-            </span>
-          )}
-          {statusLabel && (
+        {/* Status badge — image overlay only */}
+        {statusLabel && (
+          <div className="absolute top-3 right-3 pointer-events-none">
             <span
               className={`inline-flex items-center px-2.5 py-1 rounded-md text-[0.65rem] font-mono font-medium tracking-widest uppercase backdrop-blur-sm ${statusStyle}`}
             >
               {statusLabel}
             </span>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Opacity overlay for completed/cancelled events */}
         {isComplete && (
@@ -154,7 +150,26 @@ export default function EventCard({event, paidCount}: EventCardProps) {
       </div>
 
       {/* Card body */}
-      <div className="flex flex-col flex-1 p-6 gap-4">
+      <div className="flex flex-col flex-1 p-6 gap-3">
+
+        {/* Type + Registered badges */}
+        {(typeLabel || isRegistered) && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {typeLabel && (
+              <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[0.65rem] font-mono font-medium tracking-widest uppercase ${typeStyle}`}>
+                {typeLabel}
+              </span>
+            )}
+            {isRegistered && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[0.65rem] font-mono font-medium tracking-widest uppercase bg-green/15 text-green border border-green/35">
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                  <path d="M1.5 5L4 7.5L8.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Registered
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Title */}
         <h3 className="text-lg font-semibold tracking-tight text-fg leading-snug">
@@ -218,26 +233,25 @@ export default function EventCard({event, paidCount}: EventCardProps) {
             <span className="text-xs font-mono text-muted-2 italic">
               Event ended
             </span>
-          ) : requiresRegistration && slug ? (
-            <Link
-              href={`/compete/${slug}`}
-              onClick={(e) => e.stopPropagation()}
-              className="btn-accent text-xs px-4 py-2.5 rounded-lg shrink-0 relative z-10"
-              aria-label={`Register for ${title}`}
+          ) : href ? (
+            // Card is already wrapped in Link — use a span to avoid nested <a>
+            <span
+              className="btn-primary text-xs px-4 py-2.5 rounded-lg shrink-0 relative z-10 pointer-events-none inline-flex items-center gap-1.5"
+              aria-label={`View details for ${title}`}
             >
-              Register Now
-            </Link>
+              Details
+              <IconArrow />
+            </span>
           ) : registrationUrl ? (
-            <a
-              href={registrationUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="btn-accent text-xs px-4 py-2.5 rounded-lg shrink-0 relative z-10"
-              aria-label={`Register for ${title}`}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); window.open(registrationUrl, '_blank', 'noopener,noreferrer') }}
+              className="btn-primary text-xs px-4 py-2.5 rounded-lg shrink-0 relative z-10 inline-flex items-center gap-1.5"
+              aria-label={`View details for ${title}`}
             >
-              Register
-            </a>
+              Details
+              <IconArrow />
+            </button>
           ) : (
             <span className="text-xs font-mono text-muted-2 italic">
               Details coming soon

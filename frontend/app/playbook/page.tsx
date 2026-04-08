@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 import {sanityFetch} from '@/sanity/lib/live'
 import {allPlaybooksQuery, featuredPlaybookQuery} from '@/sanity/lib/queries'
+import {createClient} from '@/lib/supabase/server'
 import {IconArrow, IconBook, IconVideo, IconClock} from '@/app/components/icons'
 import SanityImage from '@/app/components/SanityImage'
 import PlaybookGrid from '@/app/components/playbook/PlaybookGrid'
@@ -111,10 +112,13 @@ function FeaturedPlaybook({item}: {item: SanityPlaybook}) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function PlaybookPage() {
-  const [{data: allPlaybooks}, {data: featuredPlaybook}] = await Promise.all([
+  const [{ data: allPlaybooks }, { data: featuredPlaybook }] = await Promise.all([
     sanityFetch({query: allPlaybooksQuery}),
     sanityFetch({query: featuredPlaybookQuery}),
   ])
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   const items = (allPlaybooks ?? []) as SanityPlaybook[]
 
@@ -211,25 +215,45 @@ export default async function PlaybookPage() {
       </section>
 
       {/* ── Bottom CTA ──────────────────────────────────────────────────── */}
-      <section className="relative bg-fg border-t border-bg/10 section-padding" aria-label="Join the Collective">
+      <section className="relative bg-fg border-t border-bg/10 section-padding" aria-label={user ? 'Keep Learning' : 'Join the Collective'}>
         <div
           className="absolute inset-0 bg-[url(/images/tile-grid-white.png)] opacity-[0.03]"
           style={{backgroundSize: '24px'}}
           aria-hidden="true"
         />
-        <div className="container relative text-center max-w-2xl mx-auto py-28">
-          <p className="label-mono text-accent mb-6">The Collective</p>
-          <h2 className="display-md text-bg mb-5">
-            Better golfers read between the lines.
-          </h2>
-          <p className="text-bg/60 text-base md:text-lg leading-relaxed mb-10">
-            Join the Fendo Collective for member-only content, early access to new guides,
-            and a community that takes improvement seriously.
-          </p>
-          <Link href="/collective" className="btn-accent">
-            Get First Access
-          </Link>
-        </div>
+        {user ? (
+          <div className="container relative text-center max-w-2xl mx-auto py-28">
+            <p className="label-mono text-accent mb-6">The Collective</p>
+            <h2 className="display-md text-bg mb-5">
+              Put it into practice.
+            </h2>
+            <p className="text-bg/60 text-base md:text-lg leading-relaxed mb-10">
+              Ready to test what you've learned? Find a competition near you and compete with the Fendo community.
+            </p>
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <Link href="/compete" className="btn-accent">
+                Find an Event
+              </Link>
+              <Link href="/account" className="btn-ghost">
+                My Account
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="container relative text-center max-w-2xl mx-auto py-28">
+            <p className="label-mono text-accent mb-6">The Collective</p>
+            <h2 className="display-md text-bg mb-5">
+              Better golfers read between the lines.
+            </h2>
+            <p className="text-bg/60 text-base md:text-lg leading-relaxed mb-10">
+              Join the Fendo Collective for member-only content, early access to new guides,
+              and a community that takes improvement seriously.
+            </p>
+            <Link href="/collective" className="btn-accent">
+              Get First Access
+            </Link>
+          </div>
+        )}
       </section>
     </>
   )

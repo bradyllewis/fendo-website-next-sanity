@@ -14,6 +14,7 @@ import PlaybookCard from '@/app/components/playbook/PlaybookCard'
 import PlaybookProgressBar from '@/app/components/playbook/PlaybookProgressBar'
 import type {SanityPlaybookFull, SanityPlaybook} from '../types'
 import {CONTENT_TYPE_LABELS, CATEGORY_LABELS, DIFFICULTY_LABELS} from '../types'
+import {createClient} from '@/lib/supabase/server'
 
 type Props = {params: Promise<{slug: string}>}
 
@@ -183,6 +184,9 @@ export default async function PlaybookEntryPage(props: Props) {
   const post = entry as SanityPlaybookFull | null
 
   if (!post?._id) return notFound()
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
   const authorName =
     post.author?.firstName && post.author?.lastName
@@ -477,25 +481,45 @@ export default async function PlaybookEntryPage(props: Props) {
       )}
 
       {/* ── Bottom CTA ──────────────────────────────────────────────────── */}
-      <section className="relative bg-fg border-t border-bg/10 section-padding" aria-label="Join the Collective">
+      <section className="relative bg-fg border-t border-bg/10 section-padding" aria-label={user ? 'Keep Learning' : 'Join the Collective'}>
         <div
           className="absolute inset-0 bg-[url(/images/tile-grid-white.png)] opacity-[0.03]"
           style={{backgroundSize: '24px'}}
           aria-hidden="true"
         />
-        <div className="container relative text-center max-w-xl mx-auto">
-          <p className="label-mono text-bg/30 mb-6">The Collective</p>
-          <h2 className="display-md text-bg mb-5">
-            Want more content like this?
-          </h2>
-          <p className="text-bg/60 text-base leading-relaxed mb-10">
-            Join the Fendo Collective for member-only guides, early access to new content,
-            and a community that pushes each other to improve.
-          </p>
-          <Link href="/collective" className="btn-accent">
-            Get First Access
-          </Link>
-        </div>
+        {user ? (
+          <div className="container relative text-center max-w-xl mx-auto">
+            <p className="label-mono text-bg/30 mb-6">The Collective</p>
+            <h2 className="display-md text-bg mb-5">
+              Keep the reps going.
+            </h2>
+            <p className="text-bg/60 text-base leading-relaxed mb-10">
+              Explore more guides, drills, and resources — or put your skills to the test at an upcoming event.
+            </p>
+            <div className="flex items-center justify-center gap-4 flex-wrap">
+              <Link href="/playbook" className="btn-accent">
+                More Guides
+              </Link>
+              <Link href="/compete" className="btn-ghost">
+                Find an Event
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="container relative text-center max-w-xl mx-auto">
+            <p className="label-mono text-bg/30 mb-6">The Collective</p>
+            <h2 className="display-md text-bg mb-5">
+              Want more content like this?
+            </h2>
+            <p className="text-bg/60 text-base leading-relaxed mb-10">
+              Join the Fendo Collective for member-only guides, early access to new content,
+              and a community that pushes each other to improve.
+            </p>
+            <Link href="/collective" className="btn-accent">
+              Get First Access
+            </Link>
+          </div>
+        )}
       </section>
     </>
   )

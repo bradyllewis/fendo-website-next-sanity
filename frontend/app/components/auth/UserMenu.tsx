@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import UserAvatar from './UserAvatar'
-import { IconUser, IconLogOut, IconUsers, IconTicket } from '@/app/components/icons'
+import { IconUser, IconLogOut, IconUsers, IconTicket, IconShield } from '@/app/components/icons'
 import { signOut } from '@/app/auth/actions'
 import type { Profile } from '@/lib/supabase/types'
 
@@ -82,6 +82,16 @@ export default function UserMenu({ profile }: { profile: Profile | null }) {
               <IconUsers className="w-4 h-4" />
               The Collective
             </Link>
+            {profile?.role === 'admin' && (
+              <Link
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-fg hover:bg-surface transition-colors duration-150"
+              >
+                <IconShield className="w-4 h-4" />
+                Admin Panel
+              </Link>
+            )}
           </div>
 
           {/* Sign out */}
