@@ -156,6 +156,17 @@ export const featuredEventQuery = defineQuery(`
   }
 `)
 
+export const featuredEventsQuery = defineQuery(`
+  *[_type == "event" && isFeatured == true && status in ["upcoming", "registration_open", "waitlist"]] | order(startDate asc) [0..4] {
+    ${eventFields}
+    sponsors[] {
+      name,
+      logo,
+      url,
+    },
+  }
+`)
+
 export const eventQuery = defineQuery(`
   *[_type == "event" && slug.current == $slug] [0] {
     ${eventFields}

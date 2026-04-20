@@ -2,7 +2,7 @@ import type {Metadata} from 'next'
 import Link from 'next/link'
 
 import {sanityFetch} from '@/sanity/lib/live'
-import {allEventsQuery, featuredEventQuery} from '@/sanity/lib/queries'
+import {allEventsQuery, featuredEventsQuery} from '@/sanity/lib/queries'
 import {studioUrl} from '@/sanity/lib/api'
 
 import FeaturedEvent from '@/app/components/compete/FeaturedEvent'
@@ -29,12 +29,13 @@ const COMPETE_STATS = [
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function CompetePage() {
-  const [{data: allEvents}, {data: featuredEvent}] = await Promise.all([
+  const [{data: allEvents}, {data: featuredEventsRaw}] = await Promise.all([
     sanityFetch({query: allEventsQuery}),
-    sanityFetch({query: featuredEventQuery}),
+    sanityFetch({query: featuredEventsQuery}),
   ])
 
   const events = (allEvents ?? []) as SanityEvent[]
+  const featuredEvents = (featuredEventsRaw ?? []) as SanityEvent[]
 
   // Batch-query real paid counts from Supabase for in-app-registration events.
   // This ensures EventCard spots bars show live DB counts, not stale Sanity values.
@@ -143,11 +144,11 @@ export default async function CompetePage() {
       <section className="section-padding" id="events" aria-labelledby="events-heading">
         <div className="container">
 
-          {/* Featured event — only shown if flagged in Sanity */}
-          {featuredEvent && (
+          {/* Featured events — shows up to 5 as a slider, or single static card */}
+          {featuredEvents.length > 0 && (
             <FeaturedEvent
-              event={featuredEvent as any}
-              isRegistered={!!(featuredEvent as any)?._id && registeredEventIds.has((featuredEvent as any)._id)}
+              events={featuredEvents}
+              registeredIds={Array.from(registeredEventIds)}
             />
           )}
 
