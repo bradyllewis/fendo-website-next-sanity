@@ -359,6 +359,16 @@ export type Event = {
     url?: string;
     _key: string;
   }>;
+  sponsorshipsEnabled?: boolean;
+  sponsorshipTiers?: Array<{
+    id?: Slug;
+    name: string;
+    price: number;
+    description?: string;
+    benefits?: Array<string>;
+    includedPlayerSpots?: number;
+    _key: string;
+  }>;
   tags?: Array<string>;
 };
 

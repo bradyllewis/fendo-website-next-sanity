@@ -95,7 +95,7 @@ Items not yet delivered. Context and research notes included to accelerate futur
 
 ---
 
-## 4. Add-On Pricing (Registration Enhancement) (NOT STARTED)
+## 4. Add-On Pricing (Registration Enhancement) (COMPLETED)
 
 **What:** Add actual pricing to the optional add-ons in the registration flow (currently captured as free checkboxes, with pricing "confirmed separately").
 

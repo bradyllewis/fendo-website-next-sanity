@@ -48,7 +48,7 @@ export type SanityImageAssetReference = {
 export type CallToAction = {
   _type: "callToAction";
   eyebrow?: string;
-  heading?: string;
+  heading: string;
   body?: BlockContentTextOnly;
   button?: Button;
   image?: {
@@ -151,9 +151,9 @@ export type Playbook = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  title?: string;
-  slug?: Slug;
-  contentType?: "article" | "video" | "guide" | "drill" | "tutorial";
+  title: string;
+  slug: Slug;
+  contentType: "article" | "video" | "guide" | "drill" | "tutorial";
   category?: "short-game" | "putting" | "chipping" | "bunker-play" | "full-swing" | "course-management" | "mental-game" | "fitness" | "equipment" | "rules" | "general";
   difficulty?: "all-levels" | "beginner" | "intermediate" | "advanced";
   tags?: Array<string>;
@@ -179,10 +179,10 @@ export type Playbook = {
     duration?: string;
   };
   attachments?: Array<{
-    title?: string;
+    title: string;
     description?: string;
     fileType?: "pdf" | "worksheet" | "scorecard" | "drill-sheet" | "checklist" | "spreadsheet" | "other";
-    file?: {
+    file: {
       asset?: SanityFileAssetReference;
       media?: unknown;
       _type: "file";
@@ -204,23 +204,23 @@ export type Playbook = {
 
 export type SanityImageCrop = {
   _type: "sanity.imageCrop";
-  top?: number;
-  bottom?: number;
-  left?: number;
-  right?: number;
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
 };
 
 export type SanityImageHotspot = {
   _type: "sanity.imageHotspot";
-  x?: number;
-  y?: number;
-  height?: number;
-  width?: number;
+  x: number;
+  y: number;
+  height: number;
+  width: number;
 };
 
 export type Slug = {
   _type: "slug";
-  current?: string;
+  current: string;
   source?: string;
 };
 
@@ -230,21 +230,21 @@ export type Gear = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  name?: string;
-  slug?: Slug;
+  name: string;
+  slug: Slug;
   tagline?: string;
   category?: string;
   badge?: string;
   shortDescription?: string;
   features?: Array<string>;
   price?: number;
-  shopUrl?: string;
-  image?: {
+  shopUrl: string;
+  image: {
     asset?: SanityImageAssetReference;
     media?: unknown;
     hotspot?: SanityImageHotspot;
     crop?: SanityImageCrop;
-    alt?: string;
+    alt: string;
     _type: "image";
   };
   isFeatured?: boolean;
@@ -257,8 +257,8 @@ export type Testimonial = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  quote?: string;
-  authorName?: string;
+  quote: string;
+  authorName: string;
   authorDetail?: string;
   authorPhoto?: {
     asset?: SanityImageAssetReference;
@@ -280,8 +280,8 @@ export type MediaAsset = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  title?: string;
-  mediaType?: "image" | "video";
+  title: string;
+  mediaType: "image" | "video";
   uploadedImage?: {
     asset?: SanityImageAssetReference;
     media?: unknown;
@@ -319,11 +319,11 @@ export type Event = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  title?: string;
-  slug?: Slug;
-  eventType?: "tournament" | "clinic" | "community_round" | "sponsored_championship" | "meetup";
-  status?: "upcoming" | "registration_open" | "waitlist" | "completed" | "cancelled";
-  startDate?: string;
+  title: string;
+  slug: Slug;
+  eventType: "tournament" | "clinic" | "community_round" | "sponsored_championship" | "meetup";
+  status: "upcoming" | "registration_open" | "waitlist" | "completed" | "cancelled";
+  startDate: string;
   endDate?: string;
   location?: {
     venueName?: string;
@@ -362,8 +362,8 @@ export type Event = {
   sponsorshipsEnabled?: boolean;
   sponsorshipTiers?: Array<{
     id?: Slug;
-    name?: string;
-    price?: number;
+    name: string;
+    price: number;
     description?: string;
     benefits?: Array<string>;
     includedPlayerSpots?: number;
@@ -378,7 +378,7 @@ export type Settings = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  title?: string;
+  title: string;
   description?: Array<{
     children?: Array<{
       marks?: Array<string>;
@@ -418,9 +418,9 @@ export type Page = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  name?: string;
-  slug?: Slug;
-  heading?: string;
+  name: string;
+  slug: Slug;
+  heading: string;
   subheading?: string;
   pageBuilder?: Array<{
     _key: string;
@@ -435,8 +435,8 @@ export type Post = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  title?: string;
-  slug?: Slug;
+  title: string;
+  slug: Slug;
   content?: BlockContent;
   excerpt?: string;
   coverImage?: {
@@ -457,9 +457,9 @@ export type Person = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  firstName?: string;
-  lastName?: string;
-  picture?: {
+  firstName: string;
+  lastName: string;
+  picture: {
     asset?: SanityImageAssetReference;
     media?: unknown;
     hotspot?: SanityImageHotspot;
@@ -512,7 +512,7 @@ export type AssistInstructionContextReference = {
 
 export type SanityAssistInstructionContext = {
   _type: "sanity.assist.instruction.context";
-  reference?: AssistInstructionContextReference;
+  reference: AssistInstructionContextReference;
 };
 
 export type AssistInstructionContext = {
@@ -540,7 +540,7 @@ export type AssistInstructionContext = {
 
 export type SanityAssistInstructionUserInput = {
   _type: "sanity.assist.instruction.userInput";
-  message?: string;
+  message: string;
   description?: string;
 };
 
@@ -613,9 +613,9 @@ export type SanityImagePalette = {
 
 export type SanityImageDimensions = {
   _type: "sanity.imageDimensions";
-  height?: number;
-  width?: number;
-  aspectRatio?: number;
+  height: number;
+  width: number;
+  aspectRatio: number;
 };
 
 export type SanityImageMetadata = {
@@ -625,7 +625,6 @@ export type SanityImageMetadata = {
   palette?: SanityImagePalette;
   lqip?: string;
   blurHash?: string;
-  thumbHash?: string;
   hasAlpha?: boolean;
   isOpaque?: boolean;
 };
@@ -700,7 +699,7 @@ export type SettingsQueryResult = {
   _createdAt: string;
   _updatedAt: string;
   _rev: string;
-  title?: string;
+  title: string;
   description?: Array<{
     children?: Array<{
       marks?: Array<string>;
@@ -740,15 +739,15 @@ export type SettingsQueryResult = {
 export type GetPageQueryResult = {
   _id: string;
   _type: "page";
-  name: string | null;
-  slug: Slug | null;
-  heading: string | null;
+  name: string;
+  slug: Slug;
+  heading: string;
   subheading: string | null;
   pageBuilder: Array<{
     _key: string;
     _type: "callToAction";
     eyebrow?: string;
-    heading?: string;
+    heading: string;
     body?: BlockContentTextOnly;
     button: {
       _type: "button";
@@ -813,11 +812,11 @@ export type GetPageQueryResult = {
 // Variable: sitemapData
 // Query: *[_type == "page" || _type == "post" && defined(slug.current)] | order(_type asc) {    "slug": slug.current,    _type,    _updatedAt,  }
 export type SitemapDataResult = Array<{
-  slug: string | null;
+  slug: string;
   _type: "page";
   _updatedAt: string;
 } | {
-  slug: string | null;
+  slug: string;
   _type: "post";
   _updatedAt: string;
 }>;
@@ -828,8 +827,8 @@ export type SitemapDataResult = Array<{
 export type AllPostsQueryResult = Array<{
   _id: string;
   status: "draft" | "published";
-  title: string | "Untitled";
-  slug: string | null;
+  title: string;
+  slug: string;
   excerpt: string | null;
   coverImage: {
     asset?: SanityImageAssetReference;
@@ -841,8 +840,8 @@ export type AllPostsQueryResult = Array<{
   } | null;
   date: string;
   author: {
-    firstName: string | null;
-    lastName: string | null;
+    firstName: string;
+    lastName: string;
     picture: {
       asset?: SanityImageAssetReference;
       media?: unknown;
@@ -850,7 +849,7 @@ export type AllPostsQueryResult = Array<{
       crop?: SanityImageCrop;
       alt?: string;
       _type: "image";
-    } | null;
+    };
   } | null;
 }>;
 
@@ -860,8 +859,8 @@ export type AllPostsQueryResult = Array<{
 export type MorePostsQueryResult = Array<{
   _id: string;
   status: "draft" | "published";
-  title: string | "Untitled";
-  slug: string | null;
+  title: string;
+  slug: string;
   excerpt: string | null;
   coverImage: {
     asset?: SanityImageAssetReference;
@@ -873,8 +872,8 @@ export type MorePostsQueryResult = Array<{
   } | null;
   date: string;
   author: {
-    firstName: string | null;
-    lastName: string | null;
+    firstName: string;
+    lastName: string;
     picture: {
       asset?: SanityImageAssetReference;
       media?: unknown;
@@ -882,7 +881,7 @@ export type MorePostsQueryResult = Array<{
       crop?: SanityImageCrop;
       alt?: string;
       _type: "image";
-    } | null;
+    };
   } | null;
 }>;
 
@@ -922,8 +921,8 @@ export type PostQueryResult = {
   }> | null;
   _id: string;
   status: "draft" | "published";
-  title: string | "Untitled";
-  slug: string | null;
+  title: string;
+  slug: string;
   excerpt: string | null;
   coverImage: {
     asset?: SanityImageAssetReference;
@@ -935,8 +934,8 @@ export type PostQueryResult = {
   } | null;
   date: string;
   author: {
-    firstName: string | null;
-    lastName: string | null;
+    firstName: string;
+    lastName: string;
     picture: {
       asset?: SanityImageAssetReference;
       media?: unknown;
@@ -944,7 +943,7 @@ export type PostQueryResult = {
       crop?: SanityImageCrop;
       alt?: string;
       _type: "image";
-    } | null;
+    };
   } | null;
 } | null;
 
@@ -952,14 +951,14 @@ export type PostQueryResult = {
 // Variable: postPagesSlugs
 // Query: *[_type == "post" && defined(slug.current)]  {"slug": slug.current}
 export type PostPagesSlugsResult = Array<{
-  slug: string | null;
+  slug: string;
 }>;
 
 // Source: sanity/lib/queries.ts
 // Variable: pagesSlugs
 // Query: *[_type == "page" && defined(slug.current)]  {"slug": slug.current}
 export type PagesSlugsResult = Array<{
-  slug: string | null;
+  slug: string;
 }>;
 
 // Source: sanity/lib/queries.ts
@@ -968,11 +967,11 @@ export type PagesSlugsResult = Array<{
 export type AllEventsQueryResult = Array<{
   _id: string;
   docStatus: "draft" | "published";
-  title: string | null;
-  slug: string | null;
-  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament" | null;
-  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist" | null;
-  startDate: string | null;
+  title: string;
+  slug: string;
+  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament";
+  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist";
+  startDate: string;
   endDate: string | null;
   location: {
     venueName?: string;
@@ -997,8 +996,8 @@ export type AllEventsQueryResult = Array<{
   sponsorshipsEnabled: boolean | null;
   sponsorshipTiers: Array<{
     id: string | null;
-    name: string | null;
-    price: number | null;
+    name: string;
+    price: number;
     description: string | null;
     benefits: Array<string> | null;
     includedPlayerSpots: number | null;
@@ -1013,11 +1012,11 @@ export type AllEventsQueryResult = Array<{
 export type UpcomingEventsQueryResult = Array<{
   _id: string;
   docStatus: "draft" | "published";
-  title: string | null;
-  slug: string | null;
-  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament" | null;
-  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist" | null;
-  startDate: string | null;
+  title: string;
+  slug: string;
+  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament";
+  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist";
+  startDate: string;
   endDate: string | null;
   location: {
     venueName?: string;
@@ -1042,8 +1041,8 @@ export type UpcomingEventsQueryResult = Array<{
   sponsorshipsEnabled: boolean | null;
   sponsorshipTiers: Array<{
     id: string | null;
-    name: string | null;
-    price: number | null;
+    name: string;
+    price: number;
     description: string | null;
     benefits: Array<string> | null;
     includedPlayerSpots: number | null;
@@ -1058,11 +1057,11 @@ export type UpcomingEventsQueryResult = Array<{
 export type FeaturedEventQueryResult = {
   _id: string;
   docStatus: "draft" | "published";
-  title: string | null;
-  slug: string | null;
-  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament" | null;
-  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist" | null;
-  startDate: string | null;
+  title: string;
+  slug: string;
+  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament";
+  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist";
+  startDate: string;
   endDate: string | null;
   location: {
     venueName?: string;
@@ -1087,8 +1086,8 @@ export type FeaturedEventQueryResult = {
   sponsorshipsEnabled: boolean | null;
   sponsorshipTiers: Array<{
     id: string | null;
-    name: string | null;
-    price: number | null;
+    name: string;
+    price: number;
     description: string | null;
     benefits: Array<string> | null;
     includedPlayerSpots: number | null;
@@ -1115,11 +1114,11 @@ export type FeaturedEventQueryResult = {
 export type EventQueryResult = {
   _id: string;
   docStatus: "draft" | "published";
-  title: string | null;
-  slug: string | null;
-  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament" | null;
-  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist" | null;
-  startDate: string | null;
+  title: string;
+  slug: string;
+  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament";
+  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist";
+  startDate: string;
   endDate: string | null;
   location: {
     venueName?: string;
@@ -1144,8 +1143,8 @@ export type EventQueryResult = {
   sponsorshipsEnabled: boolean | null;
   sponsorshipTiers: Array<{
     id: string | null;
-    name: string | null;
-    price: number | null;
+    name: string;
+    price: number;
     description: string | null;
     benefits: Array<string> | null;
     includedPlayerSpots: number | null;
@@ -1170,7 +1169,7 @@ export type EventQueryResult = {
 // Variable: eventSlugQuery
 // Query: *[_type == "event" && defined(slug.current)]  {"slug": slug.current}
 export type EventSlugQueryResult = Array<{
-  slug: string | null;
+  slug: string;
 }>;
 
 // Source: sanity/lib/queries.ts
@@ -1178,23 +1177,23 @@ export type EventSlugQueryResult = Array<{
 // Query: *[_type == "gear"] | order(displayOrder asc, name asc) {      _id,  name,  "slug": slug.current,  tagline,  category,  badge,  shortDescription,  features,  price,  shopUrl,  image,  isFeatured,  displayOrder,  }
 export type AllGearQueryResult = Array<{
   _id: string;
-  name: string | null;
-  slug: string | null;
+  name: string;
+  slug: string;
   tagline: string | null;
   category: string | null;
   badge: string | null;
   shortDescription: string | null;
   features: Array<string> | null;
   price: number | null;
-  shopUrl: string | null;
+  shopUrl: string;
   image: {
     asset?: SanityImageAssetReference;
     media?: unknown;
     hotspot?: SanityImageHotspot;
     crop?: SanityImageCrop;
-    alt?: string;
+    alt: string;
     _type: "image";
-  } | null;
+  };
   isFeatured: boolean | null;
   displayOrder: number | null;
 }>;
@@ -1204,23 +1203,23 @@ export type AllGearQueryResult = Array<{
 // Query: *[_type == "gear" && isFeatured == true] | order(displayOrder asc) [0] {      _id,  name,  "slug": slug.current,  tagline,  category,  badge,  shortDescription,  features,  price,  shopUrl,  image,  isFeatured,  displayOrder,  }
 export type FeaturedGearQueryResult = {
   _id: string;
-  name: string | null;
-  slug: string | null;
+  name: string;
+  slug: string;
   tagline: string | null;
   category: string | null;
   badge: string | null;
   shortDescription: string | null;
   features: Array<string> | null;
   price: number | null;
-  shopUrl: string | null;
+  shopUrl: string;
   image: {
     asset?: SanityImageAssetReference;
     media?: unknown;
     hotspot?: SanityImageHotspot;
     crop?: SanityImageCrop;
-    alt?: string;
+    alt: string;
     _type: "image";
-  } | null;
+  };
   isFeatured: true;
   displayOrder: number | null;
 } | null;
@@ -1230,9 +1229,9 @@ export type FeaturedGearQueryResult = {
 // Query: *[_type == "playbook"] | order(publishedAt desc) {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,  }
 export type AllPlaybooksQueryResult = Array<{
   _id: string;
-  title: string | null;
-  slug: string | null;
-  contentType: "article" | "drill" | "guide" | "tutorial" | "video" | null;
+  title: string;
+  slug: string;
+  contentType: "article" | "drill" | "guide" | "tutorial" | "video";
   category: "bunker-play" | "chipping" | "course-management" | "equipment" | "fitness" | "full-swing" | "general" | "mental-game" | "putting" | "rules" | "short-game" | null;
   difficulty: "advanced" | "all-levels" | "beginner" | "intermediate" | null;
   tags: Array<string> | null;
@@ -1247,8 +1246,8 @@ export type AllPlaybooksQueryResult = Array<{
   excerpt: string | null;
   publishedAt: string | null;
   author: {
-    firstName: string | null;
-    lastName: string | null;
+    firstName: string;
+    lastName: string;
     picture: {
       asset?: SanityImageAssetReference;
       media?: unknown;
@@ -1256,7 +1255,7 @@ export type AllPlaybooksQueryResult = Array<{
       crop?: SanityImageCrop;
       alt?: string;
       _type: "image";
-    } | null;
+    };
   } | null;
   isFeatured: boolean | null;
   isPremium: boolean | null;
@@ -1268,9 +1267,9 @@ export type AllPlaybooksQueryResult = Array<{
 // Query: *[_type == "playbook" && isFeatured == true] | order(displayOrder asc, publishedAt desc) [0] {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,  }
 export type FeaturedPlaybookQueryResult = {
   _id: string;
-  title: string | null;
-  slug: string | null;
-  contentType: "article" | "drill" | "guide" | "tutorial" | "video" | null;
+  title: string;
+  slug: string;
+  contentType: "article" | "drill" | "guide" | "tutorial" | "video";
   category: "bunker-play" | "chipping" | "course-management" | "equipment" | "fitness" | "full-swing" | "general" | "mental-game" | "putting" | "rules" | "short-game" | null;
   difficulty: "advanced" | "all-levels" | "beginner" | "intermediate" | null;
   tags: Array<string> | null;
@@ -1285,8 +1284,8 @@ export type FeaturedPlaybookQueryResult = {
   excerpt: string | null;
   publishedAt: string | null;
   author: {
-    firstName: string | null;
-    lastName: string | null;
+    firstName: string;
+    lastName: string;
     picture: {
       asset?: SanityImageAssetReference;
       media?: unknown;
@@ -1294,7 +1293,7 @@ export type FeaturedPlaybookQueryResult = {
       crop?: SanityImageCrop;
       alt?: string;
       _type: "image";
-    } | null;
+    };
   } | null;
   isFeatured: true;
   isPremium: boolean | null;
@@ -1306,9 +1305,9 @@ export type FeaturedPlaybookQueryResult = {
 // Query: *[_type == "playbook" && slug.current == $slug] [0] {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,    body,    "contributors": contributors[]->{firstName, lastName, picture},    video {      platform,      embedId,      url,      "fileUrl": uploadedFile.asset->url,      duration,    },    attachments[] {      _key,      title,      description,      fileType,      "fileUrl": file.asset->url,    },    "relatedPlaybooks": relatedPlaybooks[]->{        _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,    },  }
 export type PlaybookQueryResult = {
   _id: string;
-  title: string | null;
-  slug: string | null;
-  contentType: "article" | "drill" | "guide" | "tutorial" | "video" | null;
+  title: string;
+  slug: string;
+  contentType: "article" | "drill" | "guide" | "tutorial" | "video";
   category: "bunker-play" | "chipping" | "course-management" | "equipment" | "fitness" | "full-swing" | "general" | "mental-game" | "putting" | "rules" | "short-game" | null;
   difficulty: "advanced" | "all-levels" | "beginner" | "intermediate" | null;
   tags: Array<string> | null;
@@ -1323,8 +1322,8 @@ export type PlaybookQueryResult = {
   excerpt: string | null;
   publishedAt: string | null;
   author: {
-    firstName: string | null;
-    lastName: string | null;
+    firstName: string;
+    lastName: string;
     picture: {
       asset?: SanityImageAssetReference;
       media?: unknown;
@@ -1332,15 +1331,15 @@ export type PlaybookQueryResult = {
       crop?: SanityImageCrop;
       alt?: string;
       _type: "image";
-    } | null;
+    };
   } | null;
   isFeatured: boolean | null;
   isPremium: boolean | null;
   displayOrder: number | null;
   body: BlockContent | null;
   contributors: Array<{
-    firstName: string | null;
-    lastName: string | null;
+    firstName: string;
+    lastName: string;
     picture: {
       asset?: SanityImageAssetReference;
       media?: unknown;
@@ -1348,7 +1347,7 @@ export type PlaybookQueryResult = {
       crop?: SanityImageCrop;
       alt?: string;
       _type: "image";
-    } | null;
+    };
   }> | null;
   video: {
     platform: "uploaded" | "vimeo" | "youtube" | null;
@@ -1359,16 +1358,16 @@ export type PlaybookQueryResult = {
   } | null;
   attachments: Array<{
     _key: string;
-    title: string | null;
+    title: string;
     description: string | null;
     fileType: "checklist" | "drill-sheet" | "other" | "pdf" | "scorecard" | "spreadsheet" | "worksheet" | null;
     fileUrl: string | null;
   }> | null;
   relatedPlaybooks: Array<{
     _id: string;
-    title: string | null;
-    slug: string | null;
-    contentType: "article" | "drill" | "guide" | "tutorial" | "video" | null;
+    title: string;
+    slug: string;
+    contentType: "article" | "drill" | "guide" | "tutorial" | "video";
     category: "bunker-play" | "chipping" | "course-management" | "equipment" | "fitness" | "full-swing" | "general" | "mental-game" | "putting" | "rules" | "short-game" | null;
     difficulty: "advanced" | "all-levels" | "beginner" | "intermediate" | null;
     tags: Array<string> | null;
@@ -1383,8 +1382,8 @@ export type PlaybookQueryResult = {
     excerpt: string | null;
     publishedAt: string | null;
     author: {
-      firstName: string | null;
-      lastName: string | null;
+      firstName: string;
+      lastName: string;
       picture: {
         asset?: SanityImageAssetReference;
         media?: unknown;
@@ -1392,7 +1391,7 @@ export type PlaybookQueryResult = {
         crop?: SanityImageCrop;
         alt?: string;
         _type: "image";
-      } | null;
+      };
     } | null;
     isFeatured: boolean | null;
     isPremium: boolean | null;
@@ -1404,7 +1403,7 @@ export type PlaybookQueryResult = {
 // Variable: playbookSlugQuery
 // Query: *[_type == "playbook" && defined(slug.current)]  {"slug": slug.current}
 export type PlaybookSlugQueryResult = Array<{
-  slug: string | null;
+  slug: string;
 }>;
 
 // Source: sanity/lib/queries.ts
@@ -1412,8 +1411,8 @@ export type PlaybookSlugQueryResult = Array<{
 // Query: *[_type == "testimonial" && isFeatured == true] | order(publishedAt desc) {    _id,    quote,    authorName,    authorDetail,    authorPhoto,    category,    rating,  }
 export type FeaturedTestimonialsQueryResult = Array<{
   _id: string;
-  quote: string | null;
-  authorName: string | null;
+  quote: string;
+  authorName: string;
   authorDetail: string | null;
   authorPhoto: {
     asset?: SanityImageAssetReference;
