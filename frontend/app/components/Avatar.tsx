@@ -6,11 +6,11 @@ type Props = {
     firstName: string | null
     lastName: string | null
     picture?: {
-      asset?: {_ref: string}
-      hotspot?: {x: number; y: number}
-      crop?: {top: number; bottom: number; left: number; right: number}
-      alt?: string
-    }
+      asset?: {_ref: string; _type?: string} | null
+      hotspot?: {x: number; y: number} | null
+      crop?: {top: number; bottom: number; left: number; right: number} | null
+      alt?: string | null
+    } | null
   }
   date?: string
   small?: boolean
@@ -29,8 +29,8 @@ export default function Avatar({person, date, small = false}: Props) {
             className="h-full rounded-full"
             height={small ? 32 : 48}
             width={small ? 32 : 48}
-            hotspot={picture.hotspot}
-            crop={picture.crop}
+            hotspot={picture.hotspot ?? undefined}
+            crop={picture.crop ?? undefined}
             mode="cover"
           />
         </div>

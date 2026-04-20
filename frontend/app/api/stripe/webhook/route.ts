@@ -36,8 +36,48 @@ export async function POST(request: NextRequest) {
 
         if (session.payment_status !== 'paid') break
 
-        const { userId, eventSanityId, eventSlug, eventTitle, eventDate } =
-          session.metadata as Record<string, string>
+        const meta = session.metadata as Record<string, string>
+
+        // ── Sponsor checkout ───────────────────────────────────────────────────
+        if (meta.type === 'sponsor') {
+          const { data: existingSponsor } = await supabase
+            .from('sponsor_registrations')
+            .select('id, status')
+            .eq('stripe_checkout_session_id', session.id)
+            .maybeSingle()
+
+          if (existingSponsor?.status === 'paid') {
+            console.log(`[webhook] Sponsor session ${session.id} already paid — skipping`)
+            break
+          }
+
+          const { data: updatedSponsor, error: sponsorUpdateError } = await supabase
+            .from('sponsor_registrations')
+            .update({
+              status: 'paid',
+              stripe_payment_intent_id: (session.payment_intent as string) ?? null,
+              amount_paid: session.amount_total,
+              currency: session.currency ?? 'usd',
+            })
+            .eq('stripe_checkout_session_id', session.id)
+            .eq('status', 'pending')
+            .select('id')
+
+          if (sponsorUpdateError) {
+            console.error('[webhook] Failed to update sponsor registration:', sponsorUpdateError)
+            return NextResponse.json({ error: 'Failed to update sponsor registration' }, { status: 500 })
+          }
+
+          if (!updatedSponsor?.length) {
+            console.warn(`[webhook] No pending sponsor row for session ${session.id} — skipping fallback insert`)
+          } else {
+            console.log(`[webhook] Confirmed paid sponsor registration / event ${meta.eventSlug}`)
+          }
+          break
+        }
+
+        // ── Player registration checkout ───────────────────────────────────────
+        const { userId, eventSanityId, eventSlug, eventTitle, eventDate } = meta
 
         // Idempotency: skip if already paid
         const { data: existing } = await supabase
@@ -100,12 +140,21 @@ export async function POST(request: NextRequest) {
 
       case 'checkout.session.expired': {
         const session = event.data.object as Stripe.Checkout.Session
+        const meta = session.metadata as Record<string, string>
 
-        await supabase
-          .from('event_registrations')
-          .update({ status: 'cancelled' })
-          .eq('stripe_checkout_session_id', session.id)
-          .eq('status', 'pending')
+        if (meta?.type === 'sponsor') {
+          await supabase
+            .from('sponsor_registrations')
+            .update({ status: 'cancelled' })
+            .eq('stripe_checkout_session_id', session.id)
+            .eq('status', 'pending')
+        } else {
+          await supabase
+            .from('event_registrations')
+            .update({ status: 'cancelled' })
+            .eq('stripe_checkout_session_id', session.id)
+            .eq('status', 'pending')
+        }
 
         break
       }
@@ -116,6 +165,11 @@ export async function POST(request: NextRequest) {
         if (charge.payment_intent) {
           await supabase
             .from('event_registrations')
+            .update({ status: 'refunded' })
+            .eq('stripe_payment_intent_id', charge.payment_intent as string)
+
+          await supabase
+            .from('sponsor_registrations')
             .update({ status: 'refunded' })
             .eq('stripe_payment_intent_id', charge.payment_intent as string)
         }

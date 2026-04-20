@@ -362,7 +362,7 @@ export default async function EventDetailPage(props: Props) {
                 )}
               </div>
 
-              {/* CTA */}
+              {/* Player registration CTA */}
               {entry.requiresRegistration ? (
                 <RegisterButton
                   event={{
@@ -379,6 +379,18 @@ export default async function EventDetailPage(props: Props) {
                 />
               ) : (
                 registrationCTA(entry)
+              )}
+
+              {/* Sponsorship CTA */}
+              {entry.sponsorshipsEnabled && !isComplete && (
+                <div className="pt-4 border-t border-border">
+                  <Link
+                    href={`/compete/${entry.slug}/sponsor`}
+                    className="btn-outline w-full justify-center text-sm"
+                  >
+                    Become a Sponsor
+                  </Link>
+                </div>
               )}
             </div>
 

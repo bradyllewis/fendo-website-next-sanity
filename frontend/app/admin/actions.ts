@@ -67,6 +67,30 @@ export async function updateRegistrationStatus(
   return {}
 }
 
+// ─── Sponsorship management ───────────────────────────────────────────────────
+
+export async function updateSponsorshipStatus(
+  sponsorshipId: string,
+  status: string,
+): Promise<AdminActionResult> {
+  const check = await requireAdmin()
+  if ('error' in check) return { error: check.error }
+
+  const validStatuses = ['pending', 'paid', 'invoiced', 'cancelled', 'refunded']
+  if (!validStatuses.includes(status)) return { error: 'Invalid status' }
+
+  const adminDb = createAdminClient()
+  const { error } = await adminDb
+    .from('sponsor_registrations')
+    .update({ status })
+    .eq('id', sponsorshipId)
+
+  if (error) return { error: 'Failed to update status' }
+
+  revalidatePath('/admin/sponsorships')
+  return {}
+}
+
 export async function addRegistrationNote(
   registrationId: string,
   note: string,

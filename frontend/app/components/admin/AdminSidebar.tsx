@@ -2,12 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { IconGrid, IconUsers, IconTicket, IconShield } from '@/app/components/icons'
+import { IconGrid, IconUsers, IconTicket, IconShield, IconStar } from '@/app/components/icons'
 
 const NAV_ITEMS = [
-  { label: 'Dashboard',     href: '/admin',              icon: IconGrid    },
-  { label: 'Users',         href: '/admin/users',        icon: IconUsers   },
-  { label: 'Registrations', href: '/admin/registrations', icon: IconTicket  },
+  { label: 'Dashboard',     href: '/admin',                  icon: IconGrid   },
+  { label: 'Users',         href: '/admin/users',            icon: IconUsers  },
+  { label: 'Registrations', href: '/admin/registrations',    icon: IconTicket },
+  { label: 'Sponsorships',  href: '/admin/sponsorships',     icon: IconStar   },
 ]
 
 export default function AdminSidebar() {

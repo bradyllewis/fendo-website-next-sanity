@@ -37,8 +37,19 @@ export interface SanityEvent {
   entryFee: number | null
   registrationUrl: string | null
   requiresRegistration: boolean | null
+  sponsorshipsEnabled: boolean | null
+  sponsorshipTiers: SponsorshipTier[] | null
   isFeatured: boolean | null
   tags: string[] | null
+}
+
+export interface SponsorshipTier {
+  id: string | null
+  name: string | null
+  price: number | null
+  description: string | null
+  benefits: string[] | null
+  includedPlayerSpots: number | null
 }
 
 /** Full event detail — extends card shape with description + sponsors. */

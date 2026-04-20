@@ -76,7 +76,17 @@ export default async function PostPage(props: Props) {
               </div>
               <div className="max-w-3xl flex gap-4 items-center">
                 {post.author && post.author.firstName && post.author.lastName && (
-                  <Avatar person={post.author} date={post.date} />
+                  <Avatar
+                    person={{
+                      firstName: post.author.firstName,
+                      lastName: post.author.lastName,
+                      picture: post.author.picture ? {
+                        asset: post.author.picture.asset ? { _ref: post.author.picture.asset._ref } : undefined,
+                        alt: post.author.picture.alt,
+                      } : undefined,
+                    }}
+                    date={post.date ?? undefined}
+                  />
                 )}
               </div>
             </div>
@@ -90,8 +100,8 @@ export default async function PostPage(props: Props) {
                     width={1024}
                     height={538}
                     mode="cover"
-                    hotspot={post.coverImage.hotspot}
-                    crop={post.coverImage.crop}
+                    hotspot={post.coverImage.hotspot as { x: number; y: number } | undefined}
+                    crop={post.coverImage.crop as { top: number; bottom: number; left: number; right: number } | undefined}
                   />
                 )}
               </div>

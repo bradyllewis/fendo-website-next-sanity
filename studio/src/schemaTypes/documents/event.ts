@@ -182,6 +182,44 @@ export const event = defineType({
       ],
     }),
     defineField({
+      name: 'sponsorshipsEnabled',
+      title: 'Enable Sponsorship Registration',
+      type: 'boolean',
+      description: 'If enabled, a "Become a Sponsor" CTA appears on the event page.',
+      initialValue: false,
+    }),
+    defineField({
+      name: 'sponsorshipTiers',
+      title: 'Sponsorship Tiers',
+      type: 'array',
+      hidden: ({document}) => !document?.sponsorshipsEnabled,
+      of: [
+        {
+          type: 'object',
+          fields: [
+            defineField({name: 'id', title: 'Tier ID (slug)', type: 'slug', options: {source: 'name'}}),
+            defineField({name: 'name', title: 'Tier Name', type: 'string', validation: (r) => r.required()}),
+            defineField({name: 'price', title: 'Price (USD)', type: 'number', validation: (r) => r.required().min(0)}),
+            defineField({name: 'description', title: 'Description', type: 'text', rows: 2}),
+            defineField({
+              name: 'benefits',
+              title: 'Benefits',
+              type: 'array',
+              of: [{type: 'string'}],
+              description: 'One benefit per line.',
+            }),
+            defineField({name: 'includedPlayerSpots', title: 'Included Player Spots', type: 'number', initialValue: 0, validation: (r) => r.min(0).integer()}),
+          ],
+          preview: {
+            select: {title: 'name', subtitle: 'price'},
+            prepare({title, subtitle}) {
+              return {title, subtitle: subtitle != null ? `$${subtitle}` : ''}
+            },
+          },
+        },
+      ],
+    }),
+    defineField({
       name: 'tags',
       title: 'Tags',
       type: 'array',

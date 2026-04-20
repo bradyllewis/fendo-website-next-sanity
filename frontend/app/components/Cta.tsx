@@ -59,7 +59,7 @@ export default function CTA({block}: CtaProps) {
               id={image.asset._ref}
               alt="Demo image"
               width={704}
-              crop={image.crop}
+              crop={image.crop as { top: number; bottom: number; left: number; right: number } | undefined}
               mode="cover"
               className="rounded-sm"
             />

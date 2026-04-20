@@ -15,6 +15,36 @@ export type Profile = {
 
 export type EventRegistrationStatus = 'pending' | 'paid' | 'cancelled' | 'refunded' | 'waitlisted'
 
+export type SponsorRegistrationStatus = 'pending' | 'paid' | 'invoiced' | 'cancelled' | 'refunded'
+
+export type SponsorRegistration = {
+  id: string
+  user_id: string | null
+  event_sanity_id: string
+  event_slug: string
+  event_title: string
+  event_date: string | null
+  company_name: string
+  primary_contact: string
+  email: string
+  phone: string | null
+  sponsorship_level: string
+  sponsorship_level_price: number | null
+  payment_method: 'stripe' | 'invoice'
+  stripe_checkout_session_id: string | null
+  stripe_payment_intent_id: string | null
+  amount_paid: number | null
+  currency: string
+  status: SponsorRegistrationStatus
+  logo_url: string | null
+  activation_notes: string | null
+  marketing_requests: string | null
+  metadata: Record<string, unknown>
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type EventRegistration = {
   id: string
   user_id: string
@@ -29,6 +59,8 @@ export type EventRegistration = {
   status: EventRegistrationStatus
   notes: string | null
   metadata: Record<string, unknown>
+  registration_type: 'individual' | 'duo' | 'team' | null
+  team_name: string | null
   created_at: string
   updated_at: string
 }

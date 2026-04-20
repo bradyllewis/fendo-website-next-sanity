@@ -119,6 +119,15 @@ const eventFields = /* groq */ `
   entryFee,
   registrationUrl,
   requiresRegistration,
+  sponsorshipsEnabled,
+  "sponsorshipTiers": sponsorshipTiers[] {
+    "id": id.current,
+    name,
+    price,
+    description,
+    benefits,
+    includedPlayerSpots,
+  },
   isFeatured,
   tags,
 `

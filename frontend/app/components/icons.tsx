@@ -199,6 +199,12 @@ export const IconTrendUp = ({className = 'w-4 h-4'}: {className?: string}) => (
   </svg>
 )
 
+export const IconStar = ({className = 'w-4 h-4'}: {className?: string}) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+  </svg>
+)
+
 export const IconFootprints = ({className = 'w-4 h-4'}: {className?: string}) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M4 16v-2.38C4 11.5 2.97 10.43 3 8c.03-2.69 1.88-5 4.38-5.38 2.72-.4 4.72 1.44 5.12 3.88.34 2.1.3 3.6-2.03 4.5C8.13 12 7 12.74 7 15.38V16H4Z" />

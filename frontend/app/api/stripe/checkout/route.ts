@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { eventSlug } = await request.json()
+    const { eventSlug, registrationData } = await request.json()
 
     if (!eventSlug) {
       return NextResponse.json({ error: 'Missing eventSlug' }, { status: 400 })
@@ -85,13 +85,16 @@ export async function POST(request: NextRequest) {
           user_id: user.id,
           event_sanity_id: event._id,
           event_slug: eventSlug,
-          event_title: event.title,
+          event_title: event.title ?? '',
           event_date: event.startDate ?? null,
           stripe_checkout_session_id: null,
           stripe_payment_intent_id: null,
           amount_paid: 0,
           currency: 'usd',
           status: 'paid',
+          registration_type: registrationData?.registrationType ?? null,
+          team_name: registrationData?.teamName ?? null,
+          metadata: registrationData ?? {},
         })
 
       if (freeRegError) {
@@ -134,6 +137,7 @@ export async function POST(request: NextRequest) {
     const entryFeeInCents = event.entryFee ? Math.round(event.entryFee * 100) : 0
 
     // Create Stripe Checkout Session
+    const eventTitle = event.title ?? ''
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
@@ -144,8 +148,8 @@ export async function POST(request: NextRequest) {
             currency: 'usd',
             unit_amount: entryFeeInCents,
             product_data: {
-              name: event.title,
-              description: event.shortDescription ?? `Registration for ${event.title}`,
+              name: eventTitle,
+              description: event.shortDescription ?? `Registration for ${eventTitle}`,
             },
           },
           quantity: 1,
@@ -157,7 +161,7 @@ export async function POST(request: NextRequest) {
         userId: user.id,
         eventSanityId: event._id,
         eventSlug,
-        eventTitle: event.title,
+        eventTitle,
         eventDate: event.startDate ?? '',
       },
       payment_intent_data: {
@@ -177,13 +181,16 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         event_sanity_id: event._id,
         event_slug: eventSlug,
-        event_title: event.title,
+        event_title: event.title ?? '',
         event_date: event.startDate ?? null,
         stripe_checkout_session_id: session.id,
         stripe_payment_intent_id: null,
         amount_paid: 0,
         currency: 'usd',
         status: 'pending',
+        registration_type: registrationData?.registrationType ?? null,
+        team_name: registrationData?.teamName ?? null,
+        metadata: registrationData ?? {},
       })
 
     if (pendingError) {

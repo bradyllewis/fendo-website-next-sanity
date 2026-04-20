@@ -29,60 +29,31 @@ export default function RegisterButton({
 }: RegisterButtonProps) {
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
-  const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [confirmingCancel, setConfirmingCancel] = useState(false)
   const [isUnregistering, setIsUnregistering] = useState(false)
+  const [confirmingCancel, setConfirmingCancel] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const isFull = event.spotsTotal != null && paidCount >= event.spotsTotal
   const isRegistered = userRegistration?.status === 'paid'
   const isComplete = event.status === 'completed' || event.status === 'cancelled'
 
-  const startCheckout = useCallback(async () => {
-    setError(null)
-    setIsCheckingOut(true)
-
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventSlug: event.slug }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        if (data.alreadyRegistered) {
-          router.refresh()
-          return
-        }
-        setError(data.error || 'Unable to start checkout. Please try again.')
-        return
-      }
-
-      if (data.url) {
-        window.location.href = data.url
-      }
-    } catch {
-      setError('Something went wrong. Please try again.')
-    } finally {
-      setIsCheckingOut(false)
-    }
+  const goToRegister = useCallback(() => {
+    router.push(`/compete/${event.slug}/register`)
   }, [event.slug, router])
 
   const handleRegisterClick = useCallback(() => {
     if (!user) {
       setShowAuthModal(true)
     } else {
-      startCheckout()
+      goToRegister()
     }
-  }, [user, startCheckout])
+  }, [user, goToRegister])
 
   const handleAuthSuccess = useCallback(() => {
     setShowAuthModal(false)
-    startCheckout()
-  }, [startCheckout])
+    goToRegister()
+  }, [goToRegister])
 
   const handleUnregister = useCallback(async () => {
     if (!userRegistration?.id) return
@@ -108,9 +79,7 @@ export default function RegisterButton({
   if (isComplete) {
     return (
       <div className={`pt-4 border-t border-border ${className}`}>
-        <p className="text-sm text-muted-2 font-mono italic text-center">
-          This event has ended
-        </p>
+        <p className="text-sm text-muted-2 font-mono italic text-center">This event has ended</p>
       </div>
     )
   }
@@ -118,7 +87,6 @@ export default function RegisterButton({
   if (isRegistered) {
     const isFree = !event.entryFee || event.entryFee === 0
 
-    // Free event + not completed → show unregister affordance
     if (isFree && !isComplete) {
       if (confirmingCancel) {
         return (
@@ -147,9 +115,7 @@ export default function RegisterButton({
                 )}
               </button>
             </div>
-            {error && (
-              <p className="mt-2 text-xs text-danger text-center">{error}</p>
-            )}
+            {error && <p className="mt-2 text-xs text-danger text-center">{error}</p>}
           </div>
         )
       }
@@ -158,7 +124,11 @@ export default function RegisterButton({
         <div className={`pt-4 border-t border-border ${className}`}>
           <div className="flex items-center justify-center gap-2 py-3 rounded-xl bg-green/10 border border-green/20">
             <svg className="w-4 h-4 text-green" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+              <path
+                fillRule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+                clipRule="evenodd"
+              />
             </svg>
             <span className="text-sm font-medium text-green">You&apos;re registered</span>
           </div>
@@ -172,12 +142,15 @@ export default function RegisterButton({
       )
     }
 
-    // Paid event or completed event → static badge only
     return (
       <div className={`pt-4 border-t border-border ${className}`}>
         <div className="flex items-center justify-center gap-2 py-3 rounded-xl bg-green/10 border border-green/20">
           <svg className="w-4 h-4 text-green" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
+              clipRule="evenodd"
+            />
           </svg>
           <span className="text-sm font-medium text-green">You&apos;re registered</span>
         </div>
@@ -195,19 +168,13 @@ export default function RegisterButton({
     )
   }
 
-  const isDisabled = isCheckingOut || authLoading
-  const buttonLabel = isCheckingOut
-    ? 'Please wait…'
-    : event.status === 'waitlist'
-      ? 'Join Waitlist'
-      : 'Register Now'
+  const isDisabled = authLoading
+  const buttonLabel = event.status === 'waitlist' ? 'Join Waitlist' : 'Register Now'
 
   return (
     <>
       <div className={className}>
-        {error && (
-          <p className="mb-3 text-xs text-danger text-center">{error}</p>
-        )}
+        {error && <p className="mb-3 text-xs text-danger text-center">{error}</p>}
         <button
           onClick={handleRegisterClick}
           disabled={isDisabled}

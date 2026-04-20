@@ -33,9 +33,16 @@ const Post = ({post}: {post: AllPostsQueryResult[number]}) => {
       </div>
 
       <div className="flex items-center justify-between pt-4 border-t border-border">
-        {author?.firstName && author?.lastName && (
-          <Avatar person={author} small={true} />
-        )}
+        {author?.firstName && author?.lastName && (() => {
+          const pic = author.picture
+          const avatarPicture = pic ? {
+            asset: pic.asset ? { _ref: pic.asset._ref, _type: pic.asset._type } : undefined,
+            alt: pic.alt,
+            hotspot: undefined,
+            crop: undefined,
+          } : undefined
+          return <Avatar person={{ firstName: author.firstName, lastName: author.lastName, picture: avatarPicture }} small={true} />
+        })()}
         <time className="text-muted-2 text-xs font-mono ml-auto" dateTime={date ?? undefined}>
           <DateComponent dateString={date} />
         </time>
