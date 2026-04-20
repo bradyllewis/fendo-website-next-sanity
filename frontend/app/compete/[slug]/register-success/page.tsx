@@ -94,6 +94,10 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
   }
 
   const isConfirmed = registration?.status === 'paid'
+  const inviteCode =
+    isConfirmed && registration?.metadata?.isTeamCaptain
+      ? (registration.metadata.inviteCode as string | undefined)
+      : undefined
 
   return (
     <>
@@ -217,6 +221,31 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
                   <span className="text-sm text-green font-mono font-medium">Confirmed</span>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Invite code for team captains */}
+      {inviteCode && (
+        <section className="section-padding border-b border-border">
+          <div className="container max-w-md mx-auto">
+            <div className="card-base p-6 space-y-4">
+              <h2 className="font-semibold text-fg">Invite Your Teammates</h2>
+              <p className="text-sm text-muted">
+                Share this code with your teammates. Each player selects &quot;Join Existing
+                Team&quot; during registration and enters this code.
+              </p>
+              <div className="bg-surface border border-border rounded-xl p-5 text-center">
+                <p className="label-mono text-[0.6rem] text-muted mb-2">Team Invite Code</p>
+                <p className="text-4xl font-mono font-bold tracking-[0.25em] text-fg">
+                  {inviteCode}
+                </p>
+              </div>
+              <p className="text-xs text-muted">
+                Your teammates can register at{' '}
+                <strong className="text-fg">/compete/{slug}/register</strong>
+              </p>
             </div>
           </div>
         </section>

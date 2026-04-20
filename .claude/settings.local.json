@@ -22,7 +22,8 @@
       "Bash(pnpm run:*)",
       "Bash(curl -s --max-time 5 \"https://ezgimntosyyqevcyarfg.supabase.co/rest/v1/\" -o /dev/null -w \"%{http_code}\")",
       "Bash(grep -E \"\\(layout|^.*page\\\\.tsx$\\)\")",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(pnpm build *)"
     ]
   }
 }

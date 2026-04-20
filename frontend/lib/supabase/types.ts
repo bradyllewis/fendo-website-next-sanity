@@ -45,6 +45,19 @@ export type SponsorRegistration = {
   updated_at: string
 }
 
+export type TeamRecord = {
+  id: string
+  event_sanity_id: string
+  event_slug: string
+  team_name: string
+  invite_code: string
+  created_by: string | null
+  registration_type: 'duo' | 'team'
+  max_members: number
+  walk_up_song: string | null
+  created_at: string
+}
+
 export type EventRegistration = {
   id: string
   user_id: string
@@ -61,6 +74,7 @@ export type EventRegistration = {
   metadata: Record<string, unknown>
   registration_type: 'individual' | 'duo' | 'team' | null
   team_name: string | null
+  team_id: string | null
   created_at: string
   updated_at: string
 }

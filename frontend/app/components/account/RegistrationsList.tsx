@@ -36,6 +36,19 @@ export default function RegistrationsList({ registrations }: Props) {
                 Paid: ${(reg.amount_paid / 100).toFixed(2)} USD
               </p>
             )}
+            {reg.team_name && (
+              <p className="text-xs font-mono text-muted mt-0.5">
+                Team: <span className="text-fg">{reg.team_name}</span>
+              </p>
+            )}
+            {!!reg.metadata?.isTeamCaptain && !!reg.metadata?.inviteCode && (
+              <p className="text-xs font-mono text-accent mt-0.5">
+                Invite code:{' '}
+                <span className="tracking-widest font-bold">
+                  {String(reg.metadata.inviteCode)}
+                </span>
+              </p>
+            )}
           </div>
           <div className="flex flex-col items-end gap-0.5 shrink-0">
             <Link

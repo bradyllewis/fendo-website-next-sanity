@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { stripe } from '@/lib/stripe/client'
 import { getOrCreateStripeCustomer } from '@/lib/stripe/customer'
 import { client } from '@/sanity/lib/client'
 import { eventQuery } from '@/sanity/lib/queries'
+
+// Generates a 6-character invite code, skipping visually ambiguous characters
+function generateInviteCode(): string {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +23,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { eventSlug, registrationData } = await request.json()
+    const body = await request.json()
+    const eventSlug: string = body.eventSlug
+    let registrationData = body.registrationData
 
     if (!eventSlug) {
       return NextResponse.json({ error: 'Missing eventSlug' }, { status: 400 })
@@ -77,6 +86,133 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── Team handling ────────────────────────────────────────────────────────
+    // Resolve team context before inserting any registration row.
+    // dbRegistrationType: what to store in the registration_type column.
+    // teamId / inviteCode: populated for team/duo registrations and joiners.
+
+    const formRegistrationType: string | undefined = registrationData?.registrationType
+    let dbRegistrationType: string | null = formRegistrationType ?? null
+    let teamId: string | null = null
+    let inviteCode: string | null = null
+    const admin = createAdminClient()
+
+    if (formRegistrationType === 'join') {
+      // Joiner: validate invite code server-side
+      const joinCode = (registrationData?.joinTeamCode as string | undefined)?.toUpperCase().trim()
+      if (!joinCode) {
+        return NextResponse.json({ error: 'Missing team invite code' }, { status: 400 })
+      }
+
+      const { data: team } = await admin
+        .from('teams')
+        .select('id, team_name, registration_type, max_members, created_by')
+        .eq('invite_code', joinCode)
+        .eq('event_sanity_id', event._id)
+        .maybeSingle()
+
+      if (!team) {
+        return NextResponse.json({ error: 'Invalid invite code' }, { status: 404 })
+      }
+
+      // Ensure captain has paid
+      const { data: captainReg } = await admin
+        .from('event_registrations')
+        .select('id')
+        .eq('team_id', team.id)
+        .eq('user_id', team.created_by)
+        .eq('status', 'paid')
+        .maybeSingle()
+
+      if (!captainReg) {
+        return NextResponse.json(
+          { error: 'This team is not yet confirmed. Ask your captain to complete payment first.' },
+          { status: 400 },
+        )
+      }
+
+      // Enforce capacity
+      const { count: memberCount } = await admin
+        .from('event_registrations')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', team.id)
+        .neq('status', 'cancelled')
+
+      if (memberCount !== null && memberCount >= team.max_members) {
+        return NextResponse.json({ error: 'This team is already full' }, { status: 409 })
+      }
+
+      // Ensure user isn't already on this team
+      const { data: existingMembership } = await admin
+        .from('event_registrations')
+        .select('id')
+        .eq('team_id', team.id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (existingMembership) {
+        return NextResponse.json(
+          { error: 'Already a member of this team', alreadyRegistered: true },
+          { status: 409 },
+        )
+      }
+
+      teamId = team.id
+      dbRegistrationType = team.registration_type
+      // Merge team info into registrationData for metadata storage
+      registrationData = {
+        ...registrationData,
+        registrationType: team.registration_type,
+        teamName: team.team_name,
+        isJoiner: true,
+      }
+    } else if (formRegistrationType === 'duo' || formRegistrationType === 'team') {
+      // Captain creating a new team
+      const maxMembers = formRegistrationType === 'duo' ? 2 : 4
+      const teamName = (registrationData?.teamName as string | undefined)?.trim()
+
+      if (!teamName) {
+        return NextResponse.json({ error: 'Team name is required' }, { status: 400 })
+      }
+
+      let teamData: { id: string; invite_code: string } | null = null
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const code = generateInviteCode()
+        const { data, error } = await admin
+          .from('teams')
+          .insert({
+            event_sanity_id: event._id,
+            event_slug: eventSlug,
+            team_name: teamName,
+            invite_code: code,
+            created_by: user.id,
+            registration_type: formRegistrationType,
+            max_members: maxMembers,
+            walk_up_song: (registrationData?.walkUpSong as string | undefined) || null,
+          })
+          .select('id, invite_code')
+          .single()
+
+        if (!error && data) {
+          teamData = data
+          break
+        }
+        if (error?.code !== '23505') {
+          console.error('[stripe/checkout] Failed to create team:', error)
+          return NextResponse.json({ error: 'Failed to create team' }, { status: 500 })
+        }
+      }
+
+      if (!teamData) {
+        return NextResponse.json({ error: 'Failed to generate unique team code' }, { status: 500 })
+      }
+
+      teamId = teamData.id
+      inviteCode = teamData.invite_code
+      // Store invite code in metadata so the success page can display it
+      registrationData = { ...registrationData, inviteCode, isTeamCaptain: true }
+    }
+
     // ── Free event: bypass Stripe entirely ──────────────────────────────────
     if (!event.entryFee || event.entryFee === 0) {
       const { error: freeRegError } = await supabase
@@ -92,8 +228,9 @@ export async function POST(request: NextRequest) {
           amount_paid: 0,
           currency: 'usd',
           status: 'paid',
-          registration_type: registrationData?.registrationType ?? null,
-          team_name: registrationData?.teamName ?? null,
+          registration_type: dbRegistrationType,
+          team_name: (registrationData?.teamName as string | undefined) ?? null,
+          team_id: teamId,
           metadata: registrationData ?? {},
         })
 
@@ -188,8 +325,9 @@ export async function POST(request: NextRequest) {
         amount_paid: 0,
         currency: 'usd',
         status: 'pending',
-        registration_type: registrationData?.registrationType ?? null,
-        team_name: registrationData?.teamName ?? null,
+        registration_type: dbRegistrationType,
+        team_name: (registrationData?.teamName as string | undefined) ?? null,
+        team_id: teamId,
         metadata: registrationData ?? {},
       })
 

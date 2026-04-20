@@ -4,7 +4,7 @@ Items not yet delivered. Context and research notes included to accelerate futur
 
 ---
 
-## 1. Klaviyo — Newsletter Signup Integration (NOT STARTED)
+## 1. Klaviyo — Newsletter Signup Integration (COMPLETED)
 
 **What:** Connect the existing newsletter signup form to Klaviyo for email list management.
 
@@ -22,7 +22,7 @@ Items not yet delivered. Context and research notes included to accelerate futur
 
 ---
 
-## 2. Sponsorship Registration — Supabase Table + UI (NOT STARTED)
+## 2. Sponsorship Registration — Supabase Table + UI (COMPLETED)
 
 **What:** Full sponsor registration flow linked to Sanity event records. This is a separate flow from player registration.
 
@@ -77,7 +77,7 @@ Items not yet delivered. Context and research notes included to accelerate futur
 
 ---
 
-## 3. Team Join-via-Code (Registration Enhancement) (NOT STARTED)
+## 3. Team Join-via-Code (Registration Enhancement) (COMPLETED)
 
 **What:** Allow players to join an existing team's registration using an invite link or team code, rather than having one person enter all teammate info.
 
@@ -104,7 +104,7 @@ Items not yet delivered. Context and research notes included to accelerate futur
 - Prices are not yet configured anywhere
 
 **Options:**
-- **A (Simpler):** Add an `addOns` array to the Sanity `event` schema where each add-on has a name, description, and price. Registration form reads these dynamically and adds line items to the Stripe checkout session.
+- **A (Simpler - RECOMMENDED):** Add an `addOns` array to the Sanity `event` schema where each add-on has a name, description, and price. Registration form reads these dynamically and adds line items to the Stripe checkout session.
 - **B (Hardcoded):** Define fixed prices in code and add them as additional Stripe line items.
 
 **Recommended:** Option A — configure per-event in Sanity Studio so the Fendo team can manage pricing without a code deploy.

@@ -4,14 +4,8 @@ import React, { Fragment, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { IconLoader } from '@/app/components/icons'
 
-type RegistrationType = 'individual' | 'duo' | 'team'
-type Step = 'type' | 'playerInfo' | 'teammates' | 'teamDetails' | 'addOns' | 'review'
-
-interface Teammate {
-  name: string
-  email: string
-  shirtSize: string
-}
+type RegistrationType = 'individual' | 'duo' | 'team' | 'join'
+type Step = 'type' | 'joinCode' | 'playerInfo' | 'teamDetails' | 'addOns' | 'review'
 
 interface AddOns {
   longestPutt: boolean
@@ -19,6 +13,14 @@ interface AddOns {
   mulligans: boolean
   vipLounge: boolean
   postRoundHospitality: boolean
+}
+
+interface JoinedTeam {
+  id: string
+  teamName: string
+  registrationType: string
+  maxMembers: number
+  memberCount: number
 }
 
 interface FormState {
@@ -31,11 +33,11 @@ interface FormState {
   ageConfirmed: boolean
   handicap: string
   referral: string
-  teammates: Teammate[]
   teamName: string
   walkUpSong: string
-  designatedPutter: string
   addOns: AddOns
+  joinCode: string
+  joinedTeam: JoinedTeam | null
 }
 
 interface Props {
@@ -65,8 +67,8 @@ const REFERRAL_OPTIONS = [
 
 const STEP_LABELS: Record<Step, string> = {
   type: 'Type',
+  joinCode: 'Team Code',
   playerInfo: 'Your Info',
-  teammates: 'Teammates',
   teamDetails: 'Team',
   addOns: 'Add-Ons',
   review: 'Review',
@@ -84,7 +86,8 @@ const ADD_ON_LABELS: Record<keyof AddOns, string> = {
 
 function getActiveSteps(type: RegistrationType | null): Step[] {
   if (!type || type === 'individual') return ['type', 'playerInfo', 'addOns', 'review']
-  return ['type', 'playerInfo', 'teammates', 'teamDetails', 'addOns', 'review']
+  if (type === 'join') return ['type', 'joinCode', 'playerInfo', 'addOns', 'review']
+  return ['type', 'playerInfo', 'teamDetails', 'addOns', 'review']
 }
 
 function validateStep(step: Step, form: FormState): Record<string, string> {
@@ -92,6 +95,9 @@ function validateStep(step: Step, form: FormState): Record<string, string> {
   switch (step) {
     case 'type':
       if (!form.registrationType) e.registrationType = 'Please select a registration type.'
+      break
+    case 'joinCode':
+      if (!form.joinedTeam) e.joinCode = 'Please find and confirm a valid team first.'
       break
     case 'playerInfo':
       if (!form.name.trim()) e.name = 'Full name is required.'
@@ -101,14 +107,6 @@ function validateStep(step: Step, form: FormState): Record<string, string> {
       if (!form.state.trim()) e.state = 'State is required.'
       if (!form.shirtSize) e.shirtSize = 'Shirt size is required.'
       if (!form.ageConfirmed) e.ageConfirmed = 'You must confirm you are 18 or older to register.'
-      break
-    case 'teammates':
-      form.teammates.forEach((t, i) => {
-        if (!t.name.trim()) e[`t${i}name`] = 'Name is required.'
-        if (!t.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t.email))
-          e[`t${i}email`] = 'Valid email is required.'
-        if (!t.shirtSize) e[`t${i}shirtSize`] = 'Shirt size is required.'
-      })
       break
     case 'teamDetails':
       if (!form.teamName.trim()) e.teamName = 'Team name is required.'
@@ -133,6 +131,8 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
+  const [lookingUpCode, setLookingUpCode] = useState(false)
+  const [codeError, setCodeError] = useState<string | null>(null)
 
   const [form, setForm] = useState<FormState>({
     registrationType: null,
@@ -144,10 +144,8 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
     ageConfirmed: false,
     handicap: initialHandicap != null ? String(initialHandicap) : '',
     referral: '',
-    teammates: [],
     teamName: '',
     walkUpSong: '',
-    designatedPutter: '',
     addOns: {
       longestPutt: false,
       closestToPin: false,
@@ -155,6 +153,8 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
       vipLounge: false,
       postRoundHospitality: false,
     },
+    joinCode: '',
+    joinedTeam: null,
   })
 
   const activeSteps = getActiveSteps(form.registrationType)
@@ -169,24 +169,16 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
   }
 
   const handleTypeSelect = (type: RegistrationType) => {
-    const count = type === 'duo' ? 1 : type === 'team' ? 3 : 0
     setForm(prev => ({
       ...prev,
       registrationType: type,
-      teammates: Array.from({ length: count }, () => ({ name: '', email: '', shirtSize: '' })),
       teamName: '',
       walkUpSong: '',
-      designatedPutter: '',
+      joinCode: '',
+      joinedTeam: null,
     }))
     setErrors({})
-  }
-
-  const updateTeammate = (i: number, field: keyof Teammate, value: string) => {
-    setForm(prev => ({
-      ...prev,
-      teammates: prev.teammates.map((t, idx) => idx === i ? { ...t, [field]: value } : t),
-    }))
-    clearError(`t${i}${field}`)
+    setCodeError(null)
   }
 
   const handleNext = () => {
@@ -201,11 +193,36 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
     setStepIndex(i => i - 1)
   }
 
+  const handleLookupCode = async () => {
+    const code = form.joinCode.trim().toUpperCase()
+    if (!code) { setCodeError('Please enter a team code.'); return }
+
+    setLookingUpCode(true)
+    setCodeError(null)
+    setField('joinedTeam', null)
+
+    try {
+      const res = await fetch(
+        `/api/teams/lookup?code=${encodeURIComponent(code)}&eventSanityId=${encodeURIComponent(event._id)}`,
+      )
+      const data = await res.json()
+      if (!res.ok) {
+        setCodeError(data.error || 'Unable to find team.')
+        return
+      }
+      setForm(prev => ({ ...prev, joinedTeam: data, joinCode: code }))
+    } catch {
+      setCodeError('Something went wrong. Please try again.')
+    } finally {
+      setLookingUpCode(false)
+    }
+  }
+
   const handleSubmit = async () => {
     setSubmitting(true)
     setApiError(null)
     try {
-      const registrationData = {
+      const registrationData: Record<string, unknown> = {
         registrationType: form.registrationType,
         name: form.name,
         phone: form.phone,
@@ -215,11 +232,14 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
         ageConfirmed: form.ageConfirmed,
         handicap: form.handicap || null,
         referral: form.referral || null,
-        teammates: form.teammates.length > 0 ? form.teammates : undefined,
-        teamName: form.teamName || undefined,
-        walkUpSong: form.walkUpSong || undefined,
-        designatedPutter: form.designatedPutter || undefined,
         addOns: Object.values(form.addOns).some(Boolean) ? form.addOns : undefined,
+      }
+
+      if (form.registrationType === 'join') {
+        registrationData.joinTeamCode = form.joinCode
+      } else if (form.registrationType === 'duo' || form.registrationType === 'team') {
+        registrationData.teamName = form.teamName || undefined
+        registrationData.walkUpSong = form.walkUpSong || undefined
       }
 
       const res = await fetch('/api/stripe/checkout', {
@@ -253,8 +273,9 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
         {(
           [
             { type: 'individual' as const, label: 'Individual', sub: 'Solo entry — just you' },
-            { type: 'duo' as const, label: 'Duo', sub: '2-player team entry' },
-            { type: 'team' as const, label: 'Team', sub: '4-player team entry' },
+            { type: 'duo' as const, label: 'Duo', sub: 'Create a 2-player team' },
+            { type: 'team' as const, label: 'Team', sub: 'Create a 4-player team' },
+            { type: 'join' as const, label: 'Join Existing Team', sub: 'Enter your team invite code' },
           ] as const
         ).map(({ type, label, sub }) => {
           const selected = form.registrationType === type
@@ -295,6 +316,53 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
         })}
       </div>
       {errors.registrationType && <p className={ERR}>{errors.registrationType}</p>}
+    </div>
+  )
+
+  const renderJoinCodeStep = () => (
+    <div className="space-y-5">
+      <p className="text-sm text-muted">
+        Enter the 6-character invite code your team captain shared with you.
+      </p>
+      <div>
+        <label className={LABEL}>
+          Team Invite Code <span className="text-danger">*</span>
+        </label>
+        <div className="flex gap-2">
+          <input
+            className={`${INPUT} flex-1 uppercase tracking-widest font-mono ${errors.joinCode ? 'border-danger' : ''}`}
+            value={form.joinCode}
+            onChange={e => {
+              setField('joinCode', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))
+              setField('joinedTeam', null)
+              setCodeError(null)
+              clearError('joinCode')
+            }}
+            placeholder="GF7K2X"
+            maxLength={6}
+          />
+          <button
+            type="button"
+            onClick={handleLookupCode}
+            disabled={lookingUpCode || form.joinCode.length < 6}
+            className="btn-accent shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {lookingUpCode ? <IconLoader className="w-4 h-4" /> : 'Find Team'}
+          </button>
+        </div>
+        {codeError && <p className={ERR}>{codeError}</p>}
+        {errors.joinCode && !codeError && <p className={ERR}>{errors.joinCode}</p>}
+      </div>
+
+      {form.joinedTeam && (
+        <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 space-y-2">
+          <p className="text-xs font-mono text-accent uppercase tracking-wide">Team Found</p>
+          <p className="font-semibold text-fg">{form.joinedTeam.teamName}</p>
+          <p className="text-sm text-muted">
+            {form.joinedTeam.memberCount} of {form.joinedTeam.maxMembers} spots filled
+          </p>
+        </div>
+      )}
     </div>
   )
 
@@ -434,113 +502,36 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
     </div>
   )
 
-  const renderTeammatesStep = () => (
-    <div className="space-y-6">
+  const renderTeamDetailsStep = () => (
+    <div className="space-y-4">
       <p className="text-sm text-muted">
-        Enter details for each teammate. They can update their own profiles after creating accounts.
+        Set up your team. Your teammates will join using the invite code shown after registration.
       </p>
-      {form.teammates.map((t, i) => (
-        <div key={i} className="p-4 border border-border rounded-xl space-y-4">
-          <p className="text-sm font-semibold text-fg">Teammate {i + 1}</p>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className={LABEL}>
-                Name <span className="text-danger">*</span>
-              </label>
-              <input
-                className={`${INPUT} ${errors[`t${i}name`] ? 'border-danger' : ''}`}
-                value={t.name}
-                onChange={e => updateTeammate(i, 'name', e.target.value)}
-                placeholder="Alex Kim"
-              />
-              {errors[`t${i}name`] && <p className={ERR}>{errors[`t${i}name`]}</p>}
-            </div>
-            <div>
-              <label className={LABEL}>
-                Email <span className="text-danger">*</span>
-              </label>
-              <input
-                className={`${INPUT} ${errors[`t${i}email`] ? 'border-danger' : ''}`}
-                type="email"
-                value={t.email}
-                onChange={e => updateTeammate(i, 'email', e.target.value)}
-                placeholder="alex@example.com"
-              />
-              {errors[`t${i}email`] && <p className={ERR}>{errors[`t${i}email`]}</p>}
-            </div>
-          </div>
-          <div>
-            <label className={LABEL}>
-              Shirt Size <span className="text-danger">*</span>
-            </label>
-            <select
-              className={`${SELECT} ${errors[`t${i}shirtSize`] ? 'border-danger' : ''}`}
-              value={t.shirtSize}
-              onChange={e => updateTeammate(i, 'shirtSize', e.target.value)}
-            >
-              <option value="">Select a size</option>
-              {SHIRT_SIZES.map(s => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            {errors[`t${i}shirtSize`] && <p className={ERR}>{errors[`t${i}shirtSize`]}</p>}
-          </div>
-        </div>
-      ))}
+      <div>
+        <label className={LABEL}>
+          Team Name <span className="text-danger">*</span>
+        </label>
+        <input
+          className={`${INPUT} ${errors.teamName ? 'border-danger' : ''}`}
+          value={form.teamName}
+          onChange={e => { setField('teamName', e.target.value); clearError('teamName') }}
+          placeholder="The Eagles"
+        />
+        {errors.teamName && <p className={ERR}>{errors.teamName}</p>}
+      </div>
+      <div>
+        <label className={LABEL}>
+          Walk-Up Song <span className="text-muted text-xs">(optional)</span>
+        </label>
+        <input
+          className={INPUT}
+          value={form.walkUpSong}
+          onChange={e => setField('walkUpSong', e.target.value)}
+          placeholder="Song – Artist"
+        />
+      </div>
     </div>
   )
-
-  const renderTeamDetailsStep = () => {
-    const allMembers = [form.name, ...form.teammates.map(t => t.name)].filter(Boolean)
-    return (
-      <div className="space-y-4">
-        <div>
-          <label className={LABEL}>
-            Team Name <span className="text-danger">*</span>
-          </label>
-          <input
-            className={`${INPUT} ${errors.teamName ? 'border-danger' : ''}`}
-            value={form.teamName}
-            onChange={e => { setField('teamName', e.target.value); clearError('teamName') }}
-            placeholder="The Eagles"
-          />
-          {errors.teamName && <p className={ERR}>{errors.teamName}</p>}
-        </div>
-        <div>
-          <label className={LABEL}>
-            Walk-Up Song <span className="text-muted text-xs">(optional)</span>
-          </label>
-          <input
-            className={INPUT}
-            value={form.walkUpSong}
-            onChange={e => setField('walkUpSong', e.target.value)}
-            placeholder="Song – Artist"
-          />
-        </div>
-        {allMembers.length > 0 && (
-          <div>
-            <label className={LABEL}>
-              Designated Putter <span className="text-muted text-xs">(optional)</span>
-            </label>
-            <select
-              className={SELECT}
-              value={form.designatedPutter}
-              onChange={e => setField('designatedPutter', e.target.value)}
-            >
-              <option value="">Select a player</option>
-              {allMembers.map(m => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </div>
-    )
-  }
 
   const renderAddOnsStep = () => {
     const checkbox = (key: keyof AddOns, label: string) => (
@@ -588,8 +579,9 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
   const renderReviewStep = () => {
     const typeLabels: Record<RegistrationType, string> = {
       individual: 'Individual',
-      duo: 'Duo (2 players)',
-      team: 'Team (4 players)',
+      duo: 'Duo Captain (2 players)',
+      team: 'Team Captain (4 players)',
+      join: `Joining: ${form.joinedTeam?.teamName ?? '—'}`,
     }
     const selectedAddOns = (Object.entries(form.addOns) as [keyof AddOns, boolean][])
       .filter(([, v]) => v)
@@ -613,25 +605,19 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
           {form.referral && <ReviewRow label="Referred By" value={form.referral} />}
         </div>
 
-        {form.teammates.length > 0 && (
-          <div className="pt-4 border-t border-border space-y-2">
-            <p className="label-mono text-[0.6rem] mb-2">Teammates</p>
-            {form.teammates.map((t, i) => (
-              <p key={i} className="text-sm text-fg">
-                {t.name} — {t.email} · {t.shirtSize}
-              </p>
-            ))}
-          </div>
-        )}
-
-        {form.teamName && (
+        {(form.registrationType === 'duo' || form.registrationType === 'team') && form.teamName && (
           <div className="pt-4 border-t border-border space-y-3">
             <p className="label-mono text-[0.6rem] mb-2">Team Details</p>
             <ReviewRow label="Team Name" value={form.teamName} />
             {form.walkUpSong && <ReviewRow label="Walk-Up Song" value={form.walkUpSong} />}
-            {form.designatedPutter && (
-              <ReviewRow label="Designated Putter" value={form.designatedPutter} />
-            )}
+          </div>
+        )}
+
+        {form.registrationType === 'join' && form.joinedTeam && (
+          <div className="pt-4 border-t border-border space-y-3">
+            <p className="label-mono text-[0.6rem] mb-2">Team</p>
+            <ReviewRow label="Team Name" value={form.joinedTeam.teamName} />
+            <ReviewRow label="Invite Code" value={form.joinCode} />
           </div>
         )}
 
@@ -663,8 +649,8 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
 
   const stepContent: Record<Step, () => React.JSX.Element> = {
     type: renderTypeStep,
+    joinCode: renderJoinCodeStep,
     playerInfo: renderPlayerInfoStep,
-    teammates: renderTeammatesStep,
     teamDetails: renderTeamDetailsStep,
     addOns: renderAddOnsStep,
     review: renderReviewStep,
