@@ -18,16 +18,24 @@ export default function CheckEmailPage() {
         <span className="label-mono-accent">Almost There</span>
         <h1 className="display-md mt-3">Check Your Inbox</h1>
         <p className="text-muted mt-4 text-sm leading-relaxed max-w-sm mx-auto">
-          We sent you an email with a confirmation link.
-          Click the link to verify your account and get started.
+          We sent a confirmation link to your email address. Click that link to verify your account — it only takes a second.
         </p>
 
-        <div className="mt-8 flex flex-col gap-3 items-center">
+        <div className="mt-6 rounded-xl border border-border bg-surface px-5 py-4 text-left space-y-2 max-w-sm mx-auto">
+          <p className="text-xs font-semibold text-fg">What to look for:</p>
+          <ul className="text-xs text-muted space-y-1 list-disc list-inside">
+            <li>Subject: <span className="text-fg font-medium">Confirm your signup</span></li>
+            <li>Sent from: <span className="text-fg font-medium">noreply@mail.app.supabase.io</span></li>
+            <li>The link expires after <span className="text-fg font-medium">24 hours</span></li>
+          </ul>
+        </div>
+
+        <div className="mt-6 flex flex-col gap-3 items-center">
           <Link href="/auth/sign-in" className="btn-outline text-sm">
             Back to Sign In
           </Link>
           <p className="text-xs text-muted-2">
-            Didn&apos;t receive it? Check your spam folder.
+            Can&apos;t find it? Check your <span className="font-medium text-muted">spam or junk folder</span>.
           </p>
         </div>
       </div>

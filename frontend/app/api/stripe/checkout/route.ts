@@ -1,3 +1,4 @@
+import type Stripe from 'stripe'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
@@ -26,6 +27,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const eventSlug: string = body.eventSlug
     let registrationData = body.registrationData
+    const donationAmountCents = Math.max(0, Math.round(Number(body.donationAmount ?? 0) * 100))
 
     if (!eventSlug) {
       return NextResponse.json({ error: 'Missing eventSlug' }, { status: 400 })
@@ -213,6 +215,48 @@ export async function POST(request: NextRequest) {
       registrationData = { ...registrationData, inviteCode, isTeamCaptain: true }
     }
 
+    // ── Volunteer: bypass Stripe regardless of event fee ────────────────────
+    if (formRegistrationType === 'volunteer') {
+      const { error: volunteerRegError } = await supabase
+        .from('event_registrations')
+        .insert({
+          user_id: user.id,
+          event_sanity_id: event._id,
+          event_slug: eventSlug,
+          event_title: event.title ?? '',
+          event_date: event.startDate ?? null,
+          stripe_checkout_session_id: null,
+          stripe_payment_intent_id: null,
+          amount_paid: 0,
+          currency: 'usd',
+          status: 'paid',
+          registration_type: 'volunteer',
+          team_name: null,
+          team_id: null,
+          metadata: registrationData ?? {},
+        })
+
+      if (volunteerRegError) {
+        if (volunteerRegError.code === '23505') {
+          return NextResponse.json(
+            { error: 'Already registered', alreadyRegistered: true },
+            { status: 409 },
+          )
+        }
+        console.error('[stripe/checkout] Volunteer registration insert failed:', volunteerRegError)
+        return NextResponse.json({ error: 'Failed to register' }, { status: 500 })
+      }
+
+      const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
+      return NextResponse.json({
+        url: `${baseUrl}/compete/${eventSlug}/register-success?direct=1`,
+        free: true,
+      })
+    }
+
     // ── Free event: bypass Stripe entirely ──────────────────────────────────
     if (!event.entryFee || event.entryFee === 0) {
       const { error: freeRegError } = await supabase
@@ -275,23 +319,36 @@ export async function POST(request: NextRequest) {
 
     // Create Stripe Checkout Session
     const eventTitle = event.title ?? ''
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+      {
+        price_data: {
+          currency: 'usd',
+          unit_amount: entryFeeInCents,
+          product_data: {
+            name: eventTitle,
+            description: event.shortDescription ?? `Registration for ${eventTitle}`,
+          },
+        },
+        quantity: 1,
+      },
+    ]
+
+    if (donationAmountCents > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          unit_amount: donationAmountCents,
+          product_data: { name: 'Donation', description: 'Charitable donation to support the event' },
+        },
+        quantity: 1,
+      })
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
       mode: 'payment',
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            unit_amount: entryFeeInCents,
-            product_data: {
-              name: eventTitle,
-              description: event.shortDescription ?? `Registration for ${eventTitle}`,
-            },
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       success_url: `${baseUrl}/compete/${eventSlug}/register-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/compete/${eventSlug}`,
       metadata: {
@@ -300,6 +357,7 @@ export async function POST(request: NextRequest) {
         eventSlug,
         eventTitle,
         eventDate: event.startDate ?? '',
+        donationAmount: donationAmountCents > 0 ? String(donationAmountCents / 100) : '',
       },
       payment_intent_data: {
         metadata: {
@@ -312,6 +370,10 @@ export async function POST(request: NextRequest) {
 
     // Create a pending registration row so the expired handler and webhook update-path work correctly.
     // This is non-fatal — the webhook's defensive INSERT fallback handles missing pending rows.
+    const pendingMetadata = donationAmountCents > 0
+      ? { ...(registrationData ?? {}), donationAmount: donationAmountCents / 100 }
+      : (registrationData ?? {})
+
     const { error: pendingError } = await supabase
       .from('event_registrations')
       .insert({
@@ -328,7 +390,7 @@ export async function POST(request: NextRequest) {
         registration_type: dbRegistrationType,
         team_name: (registrationData?.teamName as string | undefined) ?? null,
         team_id: teamId,
-        metadata: registrationData ?? {},
+        metadata: pendingMetadata,
       })
 
     if (pendingError) {

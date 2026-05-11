@@ -625,6 +625,7 @@ export type SanityImageMetadata = {
   palette?: SanityImagePalette;
   lqip?: string;
   blurHash?: string;
+  thumbHash?: string;
   hasAlpha?: boolean;
   isOpaque?: boolean;
 };
@@ -640,14 +641,14 @@ export type SanityFileAsset = {
   title?: string;
   description?: string;
   altText?: string;
-  sha1hash?: string;
-  extension?: string;
-  mimeType?: string;
-  size?: number;
-  assetId?: string;
+  sha1hash: string;
+  extension: string;
+  mimeType: string;
+  size: number;
+  assetId: string;
   uploadId?: string;
-  path?: string;
-  url?: string;
+  path: string;
+  url: string;
   source?: SanityAssetSourceData;
 };
 
@@ -669,14 +670,14 @@ export type SanityImageAsset = {
   title?: string;
   description?: string;
   altText?: string;
-  sha1hash?: string;
-  extension?: string;
-  mimeType?: string;
-  size?: number;
-  assetId?: string;
+  sha1hash: string;
+  extension: string;
+  mimeType: string;
+  size: number;
+  assetId: string;
   uploadId?: string;
-  path?: string;
-  url?: string;
+  path: string;
+  url: string;
   metadata?: SanityImageMetadata;
   source?: SanityAssetSourceData;
 };
@@ -1109,6 +1110,62 @@ export type FeaturedEventQueryResult = {
 } | null;
 
 // Source: sanity/lib/queries.ts
+// Variable: featuredEventsQuery
+// Query: *[_type == "event" && isFeatured == true && status in ["upcoming", "registration_open", "waitlist"]] | order(startDate asc) [0..4] {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  sponsorshipsEnabled,  "sponsorshipTiers": sponsorshipTiers[] {    "id": id.current,    name,    price,    description,    benefits,    includedPlayerSpots,  },  isFeatured,  tags,    sponsors[] {      name,      logo,      url,    },  }
+export type FeaturedEventsQueryResult = Array<{
+  _id: string;
+  docStatus: "draft" | "published";
+  title: string;
+  slug: string;
+  eventType: "clinic" | "community_round" | "meetup" | "sponsored_championship" | "tournament";
+  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist";
+  startDate: string;
+  endDate: string | null;
+  location: {
+    venueName?: string;
+    city?: string;
+    state?: string;
+    addressLine?: string;
+  } | null;
+  coverImage: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  } | null;
+  shortDescription: string | null;
+  spotsTotal: number | null;
+  spotsFilled: number | null;
+  entryFee: number | null;
+  registrationUrl: string | null;
+  requiresRegistration: boolean | null;
+  sponsorshipsEnabled: boolean | null;
+  sponsorshipTiers: Array<{
+    id: string | null;
+    name: string;
+    price: number;
+    description: string | null;
+    benefits: Array<string> | null;
+    includedPlayerSpots: number | null;
+  }> | null;
+  isFeatured: boolean | null;
+  tags: Array<string> | null;
+  sponsors: Array<{
+    name: string | null;
+    logo: {
+      asset?: SanityImageAssetReference;
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      _type: "image";
+    } | null;
+    url: string | null;
+  }> | null;
+}>;
+
+// Source: sanity/lib/queries.ts
 // Variable: eventQuery
 // Query: *[_type == "event" && slug.current == $slug] [0] {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  sponsorshipsEnabled,  "sponsorshipTiers": sponsorshipTiers[] {    "id": id.current,    name,    price,    description,    benefits,    includedPlayerSpots,  },  isFeatured,  tags,    description,    sponsors[] {      name,      logo,      url,    },  }
 export type EventQueryResult = {
@@ -1441,6 +1498,7 @@ declare module "@sanity/client" {
     "\n  *[_type == \"event\"] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n\n  }\n": AllEventsQueryResult;
     "\n  *[_type == \"event\" && status in [\"upcoming\", \"registration_open\", \"waitlist\"]] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n\n  }\n": UpcomingEventsQueryResult;
     "\n  *[_type == \"event\" && isFeatured == true] | order(startDate asc) [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": FeaturedEventQueryResult;
+    "\n  *[_type == \"event\" && isFeatured == true && status in [\"upcoming\", \"registration_open\", \"waitlist\"]] | order(startDate asc) [0..4] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": FeaturedEventsQueryResult;
     "\n  *[_type == \"event\" && slug.current == $slug] [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": EventQueryResult;
     "\n  *[_type == \"event\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": EventSlugQueryResult;
     "\n  *[_type == \"gear\"] | order(displayOrder asc, name asc) {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": AllGearQueryResult;

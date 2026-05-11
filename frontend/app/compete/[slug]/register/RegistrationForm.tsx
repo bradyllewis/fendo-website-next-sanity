@@ -4,12 +4,12 @@ import React, { Fragment, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { IconLoader } from '@/app/components/icons'
 
-type RegistrationType = 'individual' | 'duo' | 'team' | 'join'
+type RegistrationType = 'individual' | 'duo' | 'team' | 'join' | 'volunteer'
 type Step = 'type' | 'joinCode' | 'playerInfo' | 'teamDetails' | 'addOns' | 'review'
 
 interface AddOns {
-  longestPutt: boolean
-  closestToPin: boolean
+  puttingContestDesignee: string
+  longDriveContestDesignee: string
   mulligans: boolean
   vipLounge: boolean
   postRoundHospitality: boolean
@@ -38,6 +38,8 @@ interface FormState {
   addOns: AddOns
   joinCode: string
   joinedTeam: JoinedTeam | null
+  donationAmount: number
+  donationCustom: string
 }
 
 interface Props {
@@ -74,17 +76,18 @@ const STEP_LABELS: Record<Step, string> = {
   review: 'Review',
 }
 
-const ADD_ON_LABELS: Record<keyof AddOns, string> = {
-  longestPutt: 'Longest Putt Contest',
-  closestToPin: 'Closest to the Pin Contest',
+const ADD_ON_LABELS: Partial<Record<keyof AddOns, string>> = {
   mulligans: 'Mulligans Pack (5)',
   vipLounge: 'VIP Lounge Access',
   postRoundHospitality: 'Post-Round Hospitality Upgrade',
 }
 
+const DONATION_PRESETS = [10, 25, 50] as const
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getActiveSteps(type: RegistrationType | null): Step[] {
+  if (type === 'volunteer') return ['type', 'playerInfo', 'review']
   if (!type || type === 'individual') return ['type', 'playerInfo', 'addOns', 'review']
   if (type === 'join') return ['type', 'joinCode', 'playerInfo', 'addOns', 'review']
   return ['type', 'playerInfo', 'teamDetails', 'addOns', 'review']
@@ -103,10 +106,12 @@ function validateStep(step: Step, form: FormState): Record<string, string> {
       if (!form.name.trim()) e.name = 'Full name is required.'
       if (!form.phone.trim() || form.phone.replace(/\D/g, '').length < 7)
         e.phone = 'A valid phone number is required.'
-      if (!form.city.trim()) e.city = 'City is required.'
-      if (!form.state.trim()) e.state = 'State is required.'
-      if (!form.shirtSize) e.shirtSize = 'Shirt size is required.'
-      if (!form.ageConfirmed) e.ageConfirmed = 'You must confirm you are 18 or older to register.'
+      if (form.registrationType !== 'volunteer') {
+        if (!form.city.trim()) e.city = 'City is required.'
+        if (!form.state.trim()) e.state = 'State is required.'
+        if (!form.shirtSize) e.shirtSize = 'Shirt size is required.'
+        if (!form.ageConfirmed) e.ageConfirmed = 'You must confirm you are 18 or older to register.'
+      }
       break
     case 'teamDetails':
       if (!form.teamName.trim()) e.teamName = 'Team name is required.'
@@ -147,14 +152,16 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
     teamName: '',
     walkUpSong: '',
     addOns: {
-      longestPutt: false,
-      closestToPin: false,
+      puttingContestDesignee: '',
+      longDriveContestDesignee: '',
       mulligans: false,
       vipLounge: false,
       postRoundHospitality: false,
     },
     joinCode: '',
     joinedTeam: null,
+    donationAmount: 0,
+    donationCustom: '',
   })
 
   const activeSteps = getActiveSteps(form.registrationType)
@@ -245,7 +252,7 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventSlug: event.slug, registrationData }),
+        body: JSON.stringify({ eventSlug: event.slug, registrationData, donationAmount: form.donationAmount }),
       })
 
       const data = await res.json()
@@ -276,6 +283,7 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
             { type: 'duo' as const, label: 'Duo', sub: 'Create a 2-player team' },
             { type: 'team' as const, label: 'Team', sub: 'Create a 4-player team' },
             { type: 'join' as const, label: 'Join Existing Team', sub: 'Enter your team invite code' },
+            { type: 'volunteer' as const, label: 'Volunteer', sub: 'Help run the event — no entry fee' },
           ] as const
         ).map(({ type, label, sub }) => {
           const selected = form.registrationType === type
@@ -366,141 +374,156 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
     </div>
   )
 
-  const renderPlayerInfoStep = () => (
-    <div className="space-y-4">
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label className={LABEL}>
-            Full Name <span className="text-danger">*</span>
-          </label>
-          <input
-            className={`${INPUT} ${errors.name ? 'border-danger' : ''}`}
-            value={form.name}
-            onChange={e => { setField('name', e.target.value); clearError('name') }}
-            placeholder="Jordan Reed"
-          />
-          {errors.name && <p className={ERR}>{errors.name}</p>}
-        </div>
-        <div>
-          <label className={LABEL}>Email</label>
-          <input className={`${INPUT} opacity-60 cursor-not-allowed`} value={userEmail} readOnly />
-        </div>
-      </div>
+  const renderPlayerInfoStep = () => {
+    const isVolunteer = form.registrationType === 'volunteer'
+    return (
+      <div className="space-y-4">
+        {isVolunteer && (
+          <p className="text-sm text-muted">
+            Thanks for volunteering! We just need a few quick details.
+          </p>
+        )}
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label className={LABEL}>
-            Phone <span className="text-danger">*</span>
-          </label>
-          <input
-            className={`${INPUT} ${errors.phone ? 'border-danger' : ''}`}
-            type="tel"
-            value={form.phone}
-            onChange={e => { setField('phone', e.target.value); clearError('phone') }}
-            placeholder="(555) 867-5309"
-          />
-          {errors.phone && <p className={ERR}>{errors.phone}</p>}
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className={LABEL}>
+              Full Name <span className="text-danger">*</span>
+            </label>
+            <input
+              className={`${INPUT} ${errors.name ? 'border-danger' : ''}`}
+              value={form.name}
+              onChange={e => { setField('name', e.target.value); clearError('name') }}
+              placeholder="Jordan Reed"
+            />
+            {errors.name && <p className={ERR}>{errors.name}</p>}
+          </div>
+          <div>
+            <label className={LABEL}>Email</label>
+            <input className={`${INPUT} opacity-60 cursor-not-allowed`} value={userEmail} readOnly />
+          </div>
         </div>
-        <div>
-          <label className={LABEL}>
-            Shirt Size <span className="text-danger">*</span>
-          </label>
-          <select
-            className={`${SELECT} ${errors.shirtSize ? 'border-danger' : ''}`}
-            value={form.shirtSize}
-            onChange={e => { setField('shirtSize', e.target.value); clearError('shirtSize') }}
-          >
-            <option value="">Select a size</option>
-            {SHIRT_SIZES.map(s => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-          {errors.shirtSize && <p className={ERR}>{errors.shirtSize}</p>}
-        </div>
-      </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label className={LABEL}>
-            City <span className="text-danger">*</span>
-          </label>
-          <input
-            className={`${INPUT} ${errors.city ? 'border-danger' : ''}`}
-            value={form.city}
-            onChange={e => { setField('city', e.target.value); clearError('city') }}
-            placeholder="Chicago"
-          />
-          {errors.city && <p className={ERR}>{errors.city}</p>}
+        <div className={isVolunteer ? '' : 'grid sm:grid-cols-2 gap-4'}>
+          <div>
+            <label className={LABEL}>
+              Phone <span className="text-danger">*</span>
+            </label>
+            <input
+              className={`${INPUT} ${errors.phone ? 'border-danger' : ''}`}
+              type="tel"
+              value={form.phone}
+              onChange={e => { setField('phone', e.target.value); clearError('phone') }}
+              placeholder="(555) 867-5309"
+            />
+            {errors.phone && <p className={ERR}>{errors.phone}</p>}
+          </div>
+          {!isVolunteer && (
+            <div>
+              <label className={LABEL}>
+                Shirt Size <span className="text-danger">*</span>
+              </label>
+              <select
+                className={`${SELECT} ${errors.shirtSize ? 'border-danger' : ''}`}
+                value={form.shirtSize}
+                onChange={e => { setField('shirtSize', e.target.value); clearError('shirtSize') }}
+              >
+                <option value="">Select a size</option>
+                {SHIRT_SIZES.map(s => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              {errors.shirtSize && <p className={ERR}>{errors.shirtSize}</p>}
+            </div>
+          )}
         </div>
-        <div>
-          <label className={LABEL}>
-            State <span className="text-danger">*</span>
-          </label>
-          <input
-            className={`${INPUT} ${errors.state ? 'border-danger' : ''}`}
-            value={form.state}
-            onChange={e => { setField('state', e.target.value); clearError('state') }}
-            placeholder="IL"
-            maxLength={30}
-          />
-          {errors.state && <p className={ERR}>{errors.state}</p>}
-        </div>
-      </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label className={LABEL}>
-            Handicap <span className="text-muted text-xs">(optional)</span>
-          </label>
-          <input
-            className={INPUT}
-            type="number"
-            min="-10"
-            max="54"
-            step="0.1"
-            value={form.handicap}
-            onChange={e => setField('handicap', e.target.value)}
-            placeholder="e.g. 12.4"
-          />
-        </div>
-        <div>
-          <label className={LABEL}>
-            How did you hear about us? <span className="text-muted text-xs">(optional)</span>
-          </label>
-          <select
-            className={SELECT}
-            value={form.referral}
-            onChange={e => setField('referral', e.target.value)}
-          >
-            <option value="">Select an option</option>
-            {REFERRAL_OPTIONS.map(r => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+        {!isVolunteer && (
+          <>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className={LABEL}>
+                  City <span className="text-danger">*</span>
+                </label>
+                <input
+                  className={`${INPUT} ${errors.city ? 'border-danger' : ''}`}
+                  value={form.city}
+                  onChange={e => { setField('city', e.target.value); clearError('city') }}
+                  placeholder="Chicago"
+                />
+                {errors.city && <p className={ERR}>{errors.city}</p>}
+              </div>
+              <div>
+                <label className={LABEL}>
+                  State <span className="text-danger">*</span>
+                </label>
+                <input
+                  className={`${INPUT} ${errors.state ? 'border-danger' : ''}`}
+                  value={form.state}
+                  onChange={e => { setField('state', e.target.value); clearError('state') }}
+                  placeholder="IL"
+                  maxLength={30}
+                />
+                {errors.state && <p className={ERR}>{errors.state}</p>}
+              </div>
+            </div>
 
-      <div>
-        <label className="flex items-start gap-3 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            className="mt-0.5 w-4 h-4 rounded accent-accent shrink-0"
-            checked={form.ageConfirmed}
-            onChange={e => { setField('ageConfirmed', e.target.checked); clearError('ageConfirmed') }}
-          />
-          <span className="text-sm text-muted">
-            I confirm that I am 18 years of age or older.{' '}
-            <span className="text-danger">*</span>
-          </span>
-        </label>
-        {errors.ageConfirmed && <p className={`${ERR} ml-7`}>{errors.ageConfirmed}</p>}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className={LABEL}>
+                  Handicap <span className="text-muted text-xs">(optional)</span>
+                </label>
+                <input
+                  className={INPUT}
+                  type="number"
+                  min="-10"
+                  max="54"
+                  step="0.1"
+                  value={form.handicap}
+                  onChange={e => setField('handicap', e.target.value)}
+                  placeholder="e.g. 12.4"
+                />
+              </div>
+              <div>
+                <label className={LABEL}>
+                  How did you hear about us? <span className="text-muted text-xs">(optional)</span>
+                </label>
+                <select
+                  className={SELECT}
+                  value={form.referral}
+                  onChange={e => setField('referral', e.target.value)}
+                >
+                  <option value="">Select an option</option>
+                  {REFERRAL_OPTIONS.map(r => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 w-4 h-4 rounded accent-accent shrink-0"
+                  checked={form.ageConfirmed}
+                  onChange={e => { setField('ageConfirmed', e.target.checked); clearError('ageConfirmed') }}
+                />
+                <span className="text-sm text-muted">
+                  I confirm that I am 18 years of age or older.{' '}
+                  <span className="text-danger">*</span>
+                </span>
+              </label>
+              {errors.ageConfirmed && <p className={`${ERR} ml-7`}>{errors.ageConfirmed}</p>}
+            </div>
+          </>
+        )}
       </div>
-    </div>
-  )
+    )
+  }
 
   const renderTeamDetailsStep = () => (
     <div className="space-y-4">
@@ -534,7 +557,7 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
   )
 
   const renderAddOnsStep = () => {
-    const checkbox = (key: keyof AddOns, label: string) => (
+    const checkbox = (key: 'mulligans' | 'vipLounge' | 'postRoundHospitality', label: string) => (
       <label key={key} className="flex items-center gap-3 cursor-pointer py-3">
         <input
           type="checkbox"
@@ -546,30 +569,104 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
       </label>
     )
 
+    const handleDonationPreset = (amount: number) => {
+      if (form.donationAmount === amount) {
+        setField('donationAmount', 0)
+      } else {
+        setField('donationAmount', amount)
+        setField('donationCustom', '')
+      }
+    }
+
+    const handleDonationCustom = (val: string) => {
+      setField('donationCustom', val)
+      const parsed = parseFloat(val)
+      setField('donationAmount', !isNaN(parsed) && parsed > 0 ? parsed : 0)
+    }
+
+    const isPresetSelected = (amount: number) =>
+      form.donationAmount === amount && form.donationCustom === ''
+
     return (
       <div className="space-y-6">
         <p className="text-sm text-muted">
-          Select any optional add-ons. Availability and pricing will be confirmed by the event team
-          after registration.
+          Enter contest designees and select any optional add-ons.
         </p>
+
         <div>
-          <p className="label-mono text-[0.6rem] mb-2">Side Games</p>
+          <p className="label-mono text-[0.6rem] mb-2">Contest Entries</p>
           <div className="border border-border rounded-xl px-4 divide-y divide-border/50">
-            {checkbox('longestPutt', 'Longest Putt Contest')}
-            {checkbox('closestToPin', 'Closest to the Pin Contest')}
+            <div className="py-3 space-y-1.5">
+              <label className={LABEL}>
+                Putting Contest <span className="text-muted text-xs">(optional)</span>
+              </label>
+              <input
+                className={INPUT}
+                value={form.addOns.puttingContestDesignee}
+                onChange={e => setField('addOns', { ...form.addOns, puttingContestDesignee: e.target.value })}
+                placeholder="Enter your name to compete"
+              />
+            </div>
+            <div className="py-3 space-y-1.5">
+              <label className={LABEL}>
+                Long Drive Contest <span className="text-muted text-xs">(optional)</span>
+              </label>
+              <input
+                className={INPUT}
+                value={form.addOns.longDriveContestDesignee}
+                onChange={e => setField('addOns', { ...form.addOns, longDriveContestDesignee: e.target.value })}
+                placeholder="Enter your name to compete"
+              />
+            </div>
           </div>
         </div>
+
         <div>
           <p className="label-mono text-[0.6rem] mb-2">Game Enhancers</p>
           <div className="border border-border rounded-xl px-4 divide-y divide-border/50">
             {checkbox('mulligans', 'Mulligans Pack (5)')}
           </div>
         </div>
+
         <div>
           <p className="label-mono text-[0.6rem] mb-2">Premium Experiences</p>
           <div className="border border-border rounded-xl px-4 divide-y divide-border/50">
             {checkbox('vipLounge', 'VIP Lounge Access')}
             {checkbox('postRoundHospitality', 'Post-Round Hospitality Upgrade')}
+          </div>
+        </div>
+
+        <div>
+          <p className="label-mono text-[0.6rem] mb-2">Donation</p>
+          <div className="border border-border rounded-xl px-4 py-4 space-y-3">
+            <p className="text-xs text-muted">Support the event with an optional donation.</p>
+            <div className="flex gap-2">
+              {DONATION_PRESETS.map(amount => (
+                <button
+                  key={amount}
+                  type="button"
+                  onClick={() => handleDonationPreset(amount)}
+                  className={`flex-1 py-2 rounded-lg border text-sm font-medium transition-all ${
+                    isPresetSelected(amount)
+                      ? 'border-accent bg-accent/10 text-accent'
+                      : 'border-border text-muted hover:border-fg/30 hover:text-fg'
+                  }`}
+                >
+                  ${amount}
+                </button>
+              ))}
+            </div>
+            <div>
+              <input
+                className={INPUT}
+                type="number"
+                min="1"
+                step="1"
+                placeholder="Other amount"
+                value={form.donationCustom}
+                onChange={e => handleDonationCustom(e.target.value)}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -582,13 +679,19 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
       duo: 'Duo Captain (2 players)',
       team: 'Team Captain (4 players)',
       join: `Joining: ${form.joinedTeam?.teamName ?? '—'}`,
+      volunteer: 'Volunteer',
     }
-    const selectedAddOns = (Object.entries(form.addOns) as [keyof AddOns, boolean][])
-      .filter(([, v]) => v)
-      .map(([k]) => ADD_ON_LABELS[k])
 
-    const entryFeeStr =
-      event.entryFee == null || event.entryFee === 0 ? 'Free' : `$${event.entryFee}`
+    const hasContests = form.addOns.puttingContestDesignee || form.addOns.longDriveContestDesignee
+    const booleanAddOns = (
+      ['mulligans', 'vipLounge', 'postRoundHospitality'] as const
+    ).filter(k => form.addOns[k]).map(k => ADD_ON_LABELS[k]!)
+
+    const isVolunteer = form.registrationType === 'volunteer'
+    const entryFee = isVolunteer ? 0 : (event.entryFee ?? 0)
+    const entryFeeStr = entryFee === 0 ? 'Free' : `$${entryFee}`
+    const hasDonation = form.donationAmount > 0
+    const totalStr = `$${entryFee + form.donationAmount}`
 
     return (
       <div className="space-y-5">
@@ -599,8 +702,12 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
           <ReviewRow label="Name" value={form.name} />
           <ReviewRow label="Email" value={userEmail} />
           <ReviewRow label="Phone" value={form.phone} />
-          <ReviewRow label="Location" value={`${form.city}, ${form.state}`} />
-          <ReviewRow label="Shirt Size" value={form.shirtSize} />
+          {!isVolunteer && form.city && (
+            <ReviewRow label="Location" value={`${form.city}, ${form.state}`} />
+          )}
+          {!isVolunteer && form.shirtSize && (
+            <ReviewRow label="Shirt Size" value={form.shirtSize} />
+          )}
           {form.handicap && <ReviewRow label="Handicap" value={form.handicap} />}
           {form.referral && <ReviewRow label="Referred By" value={form.referral} />}
         </div>
@@ -621,19 +728,29 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
           </div>
         )}
 
-        {selectedAddOns.length > 0 && (
+        {(hasContests || booleanAddOns.length > 0) && (
           <div className="pt-4 border-t border-border space-y-2">
             <p className="label-mono text-[0.6rem] mb-2">Add-Ons</p>
-            {selectedAddOns.map(a => (
-              <p key={a} className="text-sm text-fg">
-                {a}
-              </p>
+            {form.addOns.puttingContestDesignee && (
+              <ReviewRow label="Putting Contest" value={form.addOns.puttingContestDesignee} />
+            )}
+            {form.addOns.longDriveContestDesignee && (
+              <ReviewRow label="Long Drive Contest" value={form.addOns.longDriveContestDesignee} />
+            )}
+            {booleanAddOns.map(a => (
+              <p key={a} className="text-sm text-fg">{a}</p>
             ))}
           </div>
         )}
 
-        <div className="pt-4 border-t border-border">
+        <div className="pt-4 border-t border-border space-y-2">
           <ReviewRow label="Entry Fee" value={entryFeeStr} />
+          {hasDonation && <ReviewRow label="Donation" value={`$${form.donationAmount}`} />}
+          {hasDonation && entryFee > 0 && (
+            <div className="pt-2 border-t border-border/50">
+              <ReviewRow label="Total" value={totalStr} />
+            </div>
+          )}
         </div>
 
         {apiError && (
@@ -657,7 +774,7 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
   }
 
   const isLastStep = stepIndex === activeSteps.length - 1
-  const isFree = !event.entryFee || event.entryFee === 0
+  const isFree = !event.entryFee || event.entryFee === 0 || form.registrationType === 'volunteer'
 
   return (
     <div className="max-w-xl mx-auto">

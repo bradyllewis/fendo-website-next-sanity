@@ -1,16 +1,13 @@
 # Tasks
 
-- Integrate Supabase and create tables for sponsorship registrations (linked to Sanity events records)
+Use plan mode to review the feedback below that we recieved from the business owner and need to address, and then review all relevant parts of our codebase using subagents for efficiency. 
 
-- Integrate Klaviyo and connect it to newsletter signup
+**Feedback:**
+- Email Registration - Now that I've already made an account I haven't re-registered. Have had similar feedback to myself that the actual verification email is a little confusing/wonky. Didn't know if you looked a that.
+- 'Type' Section: If simple, could we add an option to sign up as a volunteer?
+- 'Add-Ons Section': This may be a case by case situation and I'm trying to sound it out in my head. Basically we'll ask the teams to pick a teammate to compete in certain challenges day of like the Putting Contest and Long Drive Contest. Things like a 'mulligan pack' and 'VIP lounge access' may be a possibility at some point... but not every event. Thoughts on this? For this first event let's at least have a section for the team's to enter the name of who will be competing in each. 
+- In the payment workflow, can we have a way to separate out/tack on donations? Have a good chance of collecting more if people have the option to donate at registration stage.
 
-- Update tournament registration with additional attributes in file (see /CLAUDE_DOCS/Tasks/tournament_detaials.md) and fixes to address Connor's feedback:
+---
 
-User Accounts: Users can now create an account in the app, manage the basics of their profile, login/logout, etc., with a profile dropdown icon in the header for logged-in users.
-
-    **Feedback:** Great feature - the 'verification email' that came from 'Supabase' was a little funky and didn't work for me just an FYI.
-
-Events (aka 'Complete' or 'Tournaments'):
-
-    - Built the actual registration process functionality (database, UI, etc.). Users can now register for events and everything is tracked in our records.
-        **Feedback:** My 'registration process' takes me just directly to the payment page. I attached the email with the proposed registration flow/information we'll need to collect for each person registering for an event. (see /CLAUDE_DOCS/Tasks/tournament_detaials.md)
+Gain a complete understanding of how the feedback requests align with the current state of our codebase, and precisely what is the best way to address the feedback. Ask me any clarifying questions that will help you create a better plan. Once you have brilliantly designed the optimal plan, provide me a concise overview of the plan so I can approve it before you execute the plan precisely, flawlessly, methodically, and systematically.
