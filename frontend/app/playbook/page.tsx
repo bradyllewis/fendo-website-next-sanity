@@ -120,11 +120,7 @@ export default async function PlaybookPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const items = (allPlaybooks ?? []) as SanityPlaybook[]
-
-  // Exclude the featured item from the grid to avoid duplication
-  const featuredId = (featuredPlaybook as SanityPlaybook | null)?._id
-  const gridItems = featuredId ? items.filter((i) => i._id !== featuredId) : items
+  const gridItems = (allPlaybooks ?? []) as SanityPlaybook[]
 
   return (
     <>

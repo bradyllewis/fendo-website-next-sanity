@@ -1320,6 +1320,44 @@ export type AllPlaybooksQueryResult = Array<{
 }>;
 
 // Source: sanity/lib/queries.ts
+// Variable: gridPlaybooksQuery
+// Query: *[_type == "playbook" && isFeatured != true] | order(displayOrder asc, publishedAt desc) {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,  }
+export type GridPlaybooksQueryResult = Array<{
+  _id: string;
+  title: string;
+  slug: string;
+  contentType: "article" | "drill" | "guide" | "tutorial" | "video";
+  category: "bunker-play" | "chipping" | "course-management" | "equipment" | "fitness" | "full-swing" | "general" | "mental-game" | "putting" | "rules" | "short-game" | null;
+  difficulty: "advanced" | "all-levels" | "beginner" | "intermediate" | null;
+  tags: Array<string> | null;
+  coverImage: {
+    asset?: SanityImageAssetReference;
+    media?: unknown;
+    hotspot?: SanityImageHotspot;
+    crop?: SanityImageCrop;
+    alt?: string;
+    _type: "image";
+  } | null;
+  excerpt: string | null;
+  publishedAt: string | null;
+  author: {
+    firstName: string;
+    lastName: string;
+    picture: {
+      asset?: SanityImageAssetReference;
+      media?: unknown;
+      hotspot?: SanityImageHotspot;
+      crop?: SanityImageCrop;
+      alt?: string;
+      _type: "image";
+    };
+  } | null;
+  isFeatured: boolean | null;
+  isPremium: boolean | null;
+  displayOrder: number | null;
+}>;
+
+// Source: sanity/lib/queries.ts
 // Variable: featuredPlaybookQuery
 // Query: *[_type == "playbook" && isFeatured == true] | order(displayOrder asc, publishedAt desc) [0] {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,  }
 export type FeaturedPlaybookQueryResult = {
@@ -1504,6 +1542,7 @@ declare module "@sanity/client" {
     "\n  *[_type == \"gear\"] | order(displayOrder asc, name asc) {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": AllGearQueryResult;
     "\n  *[_type == \"gear\" && isFeatured == true] | order(displayOrder asc) [0] {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": FeaturedGearQueryResult;
     "\n  *[_type == \"playbook\"] | order(publishedAt desc) {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n  }\n": AllPlaybooksQueryResult;
+    "\n  *[_type == \"playbook\" && isFeatured != true] | order(displayOrder asc, publishedAt desc) {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n  }\n": GridPlaybooksQueryResult;
     "\n  *[_type == \"playbook\" && isFeatured == true] | order(displayOrder asc, publishedAt desc) [0] {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n  }\n": FeaturedPlaybookQueryResult;
     "\n  *[_type == \"playbook\" && slug.current == $slug] [0] {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n    body,\n    \"contributors\": contributors[]->{firstName, lastName, picture},\n    video {\n      platform,\n      embedId,\n      url,\n      \"fileUrl\": uploadedFile.asset->url,\n      duration,\n    },\n    attachments[] {\n      _key,\n      title,\n      description,\n      fileType,\n      \"fileUrl\": file.asset->url,\n    },\n    \"relatedPlaybooks\": relatedPlaybooks[]->{\n      \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n    },\n  }\n": PlaybookQueryResult;
     "\n  *[_type == \"playbook\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": PlaybookSlugQueryResult;
