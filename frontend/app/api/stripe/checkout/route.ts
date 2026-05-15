@@ -333,6 +333,28 @@ export async function POST(request: NextRequest) {
       },
     ]
 
+    // Add priced add-ons as line items (prices sourced from Sanity, not the client)
+    const selectedAddOnIds = Object.entries(
+      (registrationData?.selectedAddOns as Record<string, string | boolean> | undefined) ?? {},
+    )
+      .filter(([, v]) => v === true || (typeof v === 'string' && (v as string).trim() !== ''))
+      .map(([id]) => id)
+
+    const pricedAddOns = ((event.addOns ?? []) as Array<{ _id: string; name: string; price?: number }>).filter(
+      (a) => selectedAddOnIds.includes(a._id) && (a.price ?? 0) > 0,
+    )
+
+    for (const addOn of pricedAddOns) {
+      lineItems.push({
+        price_data: {
+          currency: 'usd',
+          unit_amount: Math.round((addOn.price ?? 0) * 100),
+          product_data: { name: addOn.name },
+        },
+        quantity: 1,
+      })
+    }
+
     if (donationAmountCents > 0) {
       lineItems.push({
         price_data: {

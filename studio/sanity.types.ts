@@ -313,6 +313,27 @@ export type MediaAsset = {
   isFeatured?: boolean;
 };
 
+export type EventAddOn = {
+  _id: string;
+  _type: "eventAddOn";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  name: string;
+  description?: string;
+  inputType: "checkbox" | "text";
+  placeholder?: string;
+  category?: string;
+  price?: number;
+};
+
+export type EventAddOnReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "eventAddOn";
+};
+
 export type Event = {
   _id: string;
   _type: "event";
@@ -346,6 +367,9 @@ export type Event = {
   entryFee?: number;
   registrationUrl?: string;
   requiresRegistration?: boolean;
+  addOns?: Array<{
+    _key: string;
+  } & EventAddOnReference>;
   isFeatured?: boolean;
   sponsors?: Array<{
     name?: string;
@@ -689,5 +713,5 @@ export type Geopoint = {
   alt?: number;
 };
 
-export type AllSanitySchemaTypes = PageReference | PostReference | Link | SanityImageAssetReference | CallToAction | InfoSection | BlockContentTextOnly | BlockContent | Button | SanityFileAssetReference | PersonReference | PlaybookReference | Playbook | SanityImageCrop | SanityImageHotspot | Slug | Gear | Testimonial | MediaAsset | Event | Settings | Page | Post | Person | SanityAssistInstructionTask | SanityAssistTaskStatus | SanityAssistSchemaTypeAnnotations | SanityAssistOutputType | SanityAssistOutputField | AssistInstructionContextReference | SanityAssistInstructionContext | AssistInstructionContext | SanityAssistInstructionUserInput | SanityAssistInstructionPrompt | SanityAssistInstructionFieldRef | SanityAssistInstruction | SanityAssistSchemaTypeField | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset | Geopoint;
+export type AllSanitySchemaTypes = PageReference | PostReference | Link | SanityImageAssetReference | CallToAction | InfoSection | BlockContentTextOnly | BlockContent | Button | SanityFileAssetReference | PersonReference | PlaybookReference | Playbook | SanityImageCrop | SanityImageHotspot | Slug | Gear | Testimonial | MediaAsset | EventAddOn | EventAddOnReference | Event | Settings | Page | Post | Person | SanityAssistInstructionTask | SanityAssistTaskStatus | SanityAssistSchemaTypeAnnotations | SanityAssistOutputType | SanityAssistOutputField | AssistInstructionContextReference | SanityAssistInstructionContext | AssistInstructionContext | SanityAssistInstructionUserInput | SanityAssistInstructionPrompt | SanityAssistInstructionFieldRef | SanityAssistInstruction | SanityAssistSchemaTypeField | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset | Geopoint;
 

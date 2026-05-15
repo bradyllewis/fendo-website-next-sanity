@@ -107,6 +107,7 @@ export default async function RegisterPage({ params }: Props) {
               entryFee: event.entryFee ?? null,
               status: event.status ?? null,
             }}
+            addOns={event.addOns ?? null}
             userEmail={user.email ?? ''}
             initialName={profile?.full_name ?? ''}
             initialHandicap={profile?.handicap ?? null}

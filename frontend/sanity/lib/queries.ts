@@ -130,6 +130,15 @@ const eventFields = /* groq */ `
   },
   isFeatured,
   tags,
+  "addOns": addOns[]->{
+    _id,
+    name,
+    description,
+    inputType,
+    placeholder,
+    category,
+    price,
+  },
 `
 
 export const allEventsQuery = defineQuery(`

@@ -153,6 +153,14 @@ export const event = defineType({
       initialValue: false,
     }),
     defineField({
+      name: 'addOns',
+      title: 'Registration Add-Ons',
+      type: 'array',
+      description: 'Optional extras available to registrants. Only shown when In-App Registration is enabled.',
+      hidden: ({document}) => !document?.requiresRegistration,
+      of: [{type: 'reference', to: [{type: 'eventAddOn'}]}],
+    }),
+    defineField({
       name: 'isFeatured',
       title: 'Feature on /compete page hero',
       type: 'boolean',

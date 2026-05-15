@@ -313,6 +313,27 @@ export type MediaAsset = {
   isFeatured?: boolean;
 };
 
+export type EventAddOn = {
+  _id: string;
+  _type: "eventAddOn";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  name: string;
+  description?: string;
+  inputType: "checkbox" | "text";
+  placeholder?: string;
+  category?: string;
+  price?: number;
+};
+
+export type EventAddOnReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "eventAddOn";
+};
+
 export type Event = {
   _id: string;
   _type: "event";
@@ -346,6 +367,9 @@ export type Event = {
   entryFee?: number;
   registrationUrl?: string;
   requiresRegistration?: boolean;
+  addOns?: Array<{
+    _key: string;
+  } & EventAddOnReference>;
   isFeatured?: boolean;
   sponsors?: Array<{
     name?: string;
@@ -689,7 +713,7 @@ export type Geopoint = {
   alt?: number;
 };
 
-export type AllSanitySchemaTypes = PageReference | PostReference | Link | SanityImageAssetReference | CallToAction | InfoSection | BlockContentTextOnly | BlockContent | Button | SanityFileAssetReference | PersonReference | PlaybookReference | Playbook | SanityImageCrop | SanityImageHotspot | Slug | Gear | Testimonial | MediaAsset | Event | Settings | Page | Post | Person | SanityAssistInstructionTask | SanityAssistTaskStatus | SanityAssistSchemaTypeAnnotations | SanityAssistOutputType | SanityAssistOutputField | AssistInstructionContextReference | SanityAssistInstructionContext | AssistInstructionContext | SanityAssistInstructionUserInput | SanityAssistInstructionPrompt | SanityAssistInstructionFieldRef | SanityAssistInstruction | SanityAssistSchemaTypeField | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset | Geopoint;
+export type AllSanitySchemaTypes = PageReference | PostReference | Link | SanityImageAssetReference | CallToAction | InfoSection | BlockContentTextOnly | BlockContent | Button | SanityFileAssetReference | PersonReference | PlaybookReference | Playbook | SanityImageCrop | SanityImageHotspot | Slug | Gear | Testimonial | MediaAsset | EventAddOn | EventAddOnReference | Event | Settings | Page | Post | Person | SanityAssistInstructionTask | SanityAssistTaskStatus | SanityAssistSchemaTypeAnnotations | SanityAssistOutputType | SanityAssistOutputField | AssistInstructionContextReference | SanityAssistInstructionContext | AssistInstructionContext | SanityAssistInstructionUserInput | SanityAssistInstructionPrompt | SanityAssistInstructionFieldRef | SanityAssistInstruction | SanityAssistSchemaTypeField | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset | Geopoint;
 
 // Source: sanity/lib/queries.ts
 // Variable: settingsQuery
@@ -964,7 +988,7 @@ export type PagesSlugsResult = Array<{
 
 // Source: sanity/lib/queries.ts
 // Variable: allEventsQuery
-// Query: *[_type == "event"] | order(startDate asc) {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  sponsorshipsEnabled,  "sponsorshipTiers": sponsorshipTiers[] {    "id": id.current,    name,    price,    description,    benefits,    includedPlayerSpots,  },  isFeatured,  tags,  }
+// Query: *[_type == "event"] | order(startDate asc) {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  sponsorshipsEnabled,  "sponsorshipTiers": sponsorshipTiers[] {    "id": id.current,    name,    price,    description,    benefits,    includedPlayerSpots,  },  isFeatured,  tags,  "addOns": addOns[]->{    _id,    name,    description,    inputType,    placeholder,    category,    price,  },  }
 export type AllEventsQueryResult = Array<{
   _id: string;
   docStatus: "draft" | "published";
@@ -1005,11 +1029,20 @@ export type AllEventsQueryResult = Array<{
   }> | null;
   isFeatured: boolean | null;
   tags: Array<string> | null;
+  addOns: Array<{
+    _id: string;
+    name: string;
+    description: string | null;
+    inputType: "checkbox" | "text";
+    placeholder: string | null;
+    category: string | null;
+    price: number | null;
+  }> | null;
 }>;
 
 // Source: sanity/lib/queries.ts
 // Variable: upcomingEventsQuery
-// Query: *[_type == "event" && status in ["upcoming", "registration_open", "waitlist"]] | order(startDate asc) {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  sponsorshipsEnabled,  "sponsorshipTiers": sponsorshipTiers[] {    "id": id.current,    name,    price,    description,    benefits,    includedPlayerSpots,  },  isFeatured,  tags,  }
+// Query: *[_type == "event" && status in ["upcoming", "registration_open", "waitlist"]] | order(startDate asc) {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  sponsorshipsEnabled,  "sponsorshipTiers": sponsorshipTiers[] {    "id": id.current,    name,    price,    description,    benefits,    includedPlayerSpots,  },  isFeatured,  tags,  "addOns": addOns[]->{    _id,    name,    description,    inputType,    placeholder,    category,    price,  },  }
 export type UpcomingEventsQueryResult = Array<{
   _id: string;
   docStatus: "draft" | "published";
@@ -1050,11 +1083,20 @@ export type UpcomingEventsQueryResult = Array<{
   }> | null;
   isFeatured: boolean | null;
   tags: Array<string> | null;
+  addOns: Array<{
+    _id: string;
+    name: string;
+    description: string | null;
+    inputType: "checkbox" | "text";
+    placeholder: string | null;
+    category: string | null;
+    price: number | null;
+  }> | null;
 }>;
 
 // Source: sanity/lib/queries.ts
 // Variable: featuredEventQuery
-// Query: *[_type == "event" && isFeatured == true] | order(startDate asc) [0] {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  sponsorshipsEnabled,  "sponsorshipTiers": sponsorshipTiers[] {    "id": id.current,    name,    price,    description,    benefits,    includedPlayerSpots,  },  isFeatured,  tags,    description,    sponsors[] {      name,      logo,      url,    },  }
+// Query: *[_type == "event" && isFeatured == true] | order(startDate asc) [0] {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  sponsorshipsEnabled,  "sponsorshipTiers": sponsorshipTiers[] {    "id": id.current,    name,    price,    description,    benefits,    includedPlayerSpots,  },  isFeatured,  tags,  "addOns": addOns[]->{    _id,    name,    description,    inputType,    placeholder,    category,    price,  },    description,    sponsors[] {      name,      logo,      url,    },  }
 export type FeaturedEventQueryResult = {
   _id: string;
   docStatus: "draft" | "published";
@@ -1095,6 +1137,15 @@ export type FeaturedEventQueryResult = {
   }> | null;
   isFeatured: true;
   tags: Array<string> | null;
+  addOns: Array<{
+    _id: string;
+    name: string;
+    description: string | null;
+    inputType: "checkbox" | "text";
+    placeholder: string | null;
+    category: string | null;
+    price: number | null;
+  }> | null;
   description: BlockContentTextOnly | null;
   sponsors: Array<{
     name: string | null;
@@ -1111,7 +1162,7 @@ export type FeaturedEventQueryResult = {
 
 // Source: sanity/lib/queries.ts
 // Variable: featuredEventsQuery
-// Query: *[_type == "event" && isFeatured == true && status in ["upcoming", "registration_open", "waitlist"]] | order(startDate asc) [0..4] {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  sponsorshipsEnabled,  "sponsorshipTiers": sponsorshipTiers[] {    "id": id.current,    name,    price,    description,    benefits,    includedPlayerSpots,  },  isFeatured,  tags,    sponsors[] {      name,      logo,      url,    },  }
+// Query: *[_type == "event" && isFeatured == true && status in ["upcoming", "registration_open", "waitlist"]] | order(startDate asc) [0..4] {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  sponsorshipsEnabled,  "sponsorshipTiers": sponsorshipTiers[] {    "id": id.current,    name,    price,    description,    benefits,    includedPlayerSpots,  },  isFeatured,  tags,  "addOns": addOns[]->{    _id,    name,    description,    inputType,    placeholder,    category,    price,  },    sponsors[] {      name,      logo,      url,    },  }
 export type FeaturedEventsQueryResult = Array<{
   _id: string;
   docStatus: "draft" | "published";
@@ -1152,6 +1203,15 @@ export type FeaturedEventsQueryResult = Array<{
   }> | null;
   isFeatured: boolean | null;
   tags: Array<string> | null;
+  addOns: Array<{
+    _id: string;
+    name: string;
+    description: string | null;
+    inputType: "checkbox" | "text";
+    placeholder: string | null;
+    category: string | null;
+    price: number | null;
+  }> | null;
   sponsors: Array<{
     name: string | null;
     logo: {
@@ -1167,7 +1227,7 @@ export type FeaturedEventsQueryResult = Array<{
 
 // Source: sanity/lib/queries.ts
 // Variable: eventQuery
-// Query: *[_type == "event" && slug.current == $slug] [0] {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  sponsorshipsEnabled,  "sponsorshipTiers": sponsorshipTiers[] {    "id": id.current,    name,    price,    description,    benefits,    includedPlayerSpots,  },  isFeatured,  tags,    description,    sponsors[] {      name,      logo,      url,    },  }
+// Query: *[_type == "event" && slug.current == $slug] [0] {      _id,  "docStatus": select(_originalId in path("drafts.**") => "draft", "published"),  title,  "slug": slug.current,  eventType,  status,  startDate,  endDate,  location,  coverImage,  shortDescription,  spotsTotal,  spotsFilled,  entryFee,  registrationUrl,  requiresRegistration,  sponsorshipsEnabled,  "sponsorshipTiers": sponsorshipTiers[] {    "id": id.current,    name,    price,    description,    benefits,    includedPlayerSpots,  },  isFeatured,  tags,  "addOns": addOns[]->{    _id,    name,    description,    inputType,    placeholder,    category,    price,  },    description,    sponsors[] {      name,      logo,      url,    },  }
 export type EventQueryResult = {
   _id: string;
   docStatus: "draft" | "published";
@@ -1208,6 +1268,15 @@ export type EventQueryResult = {
   }> | null;
   isFeatured: boolean | null;
   tags: Array<string> | null;
+  addOns: Array<{
+    _id: string;
+    name: string;
+    description: string | null;
+    inputType: "checkbox" | "text";
+    placeholder: string | null;
+    category: string | null;
+    price: number | null;
+  }> | null;
   description: BlockContentTextOnly | null;
   sponsors: Array<{
     name: string | null;
@@ -1285,44 +1354,6 @@ export type FeaturedGearQueryResult = {
 // Variable: allPlaybooksQuery
 // Query: *[_type == "playbook"] | order(publishedAt desc) {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,  }
 export type AllPlaybooksQueryResult = Array<{
-  _id: string;
-  title: string;
-  slug: string;
-  contentType: "article" | "drill" | "guide" | "tutorial" | "video";
-  category: "bunker-play" | "chipping" | "course-management" | "equipment" | "fitness" | "full-swing" | "general" | "mental-game" | "putting" | "rules" | "short-game" | null;
-  difficulty: "advanced" | "all-levels" | "beginner" | "intermediate" | null;
-  tags: Array<string> | null;
-  coverImage: {
-    asset?: SanityImageAssetReference;
-    media?: unknown;
-    hotspot?: SanityImageHotspot;
-    crop?: SanityImageCrop;
-    alt?: string;
-    _type: "image";
-  } | null;
-  excerpt: string | null;
-  publishedAt: string | null;
-  author: {
-    firstName: string;
-    lastName: string;
-    picture: {
-      asset?: SanityImageAssetReference;
-      media?: unknown;
-      hotspot?: SanityImageHotspot;
-      crop?: SanityImageCrop;
-      alt?: string;
-      _type: "image";
-    };
-  } | null;
-  isFeatured: boolean | null;
-  isPremium: boolean | null;
-  displayOrder: number | null;
-}>;
-
-// Source: sanity/lib/queries.ts
-// Variable: gridPlaybooksQuery
-// Query: *[_type == "playbook" && isFeatured != true] | order(displayOrder asc, publishedAt desc) {      _id,  title,  "slug": slug.current,  contentType,  category,  difficulty,  tags,  coverImage,  excerpt,  publishedAt,  "author": author->{firstName, lastName, picture},  isFeatured,  isPremium,  displayOrder,  }
-export type GridPlaybooksQueryResult = Array<{
   _id: string;
   title: string;
   slug: string;
@@ -1533,16 +1564,15 @@ declare module "@sanity/client" {
     "\n  *[_type == \"post\" && slug.current == $slug] [0] {\n    content[]{\n    ...,\n    markDefs[]{\n      ...,\n      \n  _type == \"link\" => {\n    \"page\": page->slug.current,\n    \"post\": post->slug.current\n  }\n\n    }\n  },\n    \n  _id,\n  \"status\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  \"title\": coalesce(title, \"Untitled\"),\n  \"slug\": slug.current,\n  excerpt,\n  coverImage,\n  \"date\": coalesce(date, _updatedAt),\n  \"author\": author->{firstName, lastName, picture},\n\n  }\n": PostQueryResult;
     "\n  *[_type == \"post\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": PostPagesSlugsResult;
     "\n  *[_type == \"page\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": PagesSlugsResult;
-    "\n  *[_type == \"event\"] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n\n  }\n": AllEventsQueryResult;
-    "\n  *[_type == \"event\" && status in [\"upcoming\", \"registration_open\", \"waitlist\"]] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n\n  }\n": UpcomingEventsQueryResult;
-    "\n  *[_type == \"event\" && isFeatured == true] | order(startDate asc) [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": FeaturedEventQueryResult;
-    "\n  *[_type == \"event\" && isFeatured == true && status in [\"upcoming\", \"registration_open\", \"waitlist\"]] | order(startDate asc) [0..4] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": FeaturedEventsQueryResult;
-    "\n  *[_type == \"event\" && slug.current == $slug] [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": EventQueryResult;
+    "\n  *[_type == \"event\"] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n  \"addOns\": addOns[]->{\n    _id,\n    name,\n    description,\n    inputType,\n    placeholder,\n    category,\n    price,\n  },\n\n  }\n": AllEventsQueryResult;
+    "\n  *[_type == \"event\" && status in [\"upcoming\", \"registration_open\", \"waitlist\"]] | order(startDate asc) {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n  \"addOns\": addOns[]->{\n    _id,\n    name,\n    description,\n    inputType,\n    placeholder,\n    category,\n    price,\n  },\n\n  }\n": UpcomingEventsQueryResult;
+    "\n  *[_type == \"event\" && isFeatured == true] | order(startDate asc) [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n  \"addOns\": addOns[]->{\n    _id,\n    name,\n    description,\n    inputType,\n    placeholder,\n    category,\n    price,\n  },\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": FeaturedEventQueryResult;
+    "\n  *[_type == \"event\" && isFeatured == true && status in [\"upcoming\", \"registration_open\", \"waitlist\"]] | order(startDate asc) [0..4] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n  \"addOns\": addOns[]->{\n    _id,\n    name,\n    description,\n    inputType,\n    placeholder,\n    category,\n    price,\n  },\n\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": FeaturedEventsQueryResult;
+    "\n  *[_type == \"event\" && slug.current == $slug] [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[] {\n    \"id\": id.current,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n  \"addOns\": addOns[]->{\n    _id,\n    name,\n    description,\n    inputType,\n    placeholder,\n    category,\n    price,\n  },\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": EventQueryResult;
     "\n  *[_type == \"event\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": EventSlugQueryResult;
     "\n  *[_type == \"gear\"] | order(displayOrder asc, name asc) {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": AllGearQueryResult;
     "\n  *[_type == \"gear\" && isFeatured == true] | order(displayOrder asc) [0] {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": FeaturedGearQueryResult;
     "\n  *[_type == \"playbook\"] | order(publishedAt desc) {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n  }\n": AllPlaybooksQueryResult;
-    "\n  *[_type == \"playbook\" && isFeatured != true] | order(displayOrder asc, publishedAt desc) {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n  }\n": GridPlaybooksQueryResult;
     "\n  *[_type == \"playbook\" && isFeatured == true] | order(displayOrder asc, publishedAt desc) [0] {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n  }\n": FeaturedPlaybookQueryResult;
     "\n  *[_type == \"playbook\" && slug.current == $slug] [0] {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n    body,\n    \"contributors\": contributors[]->{firstName, lastName, picture},\n    video {\n      platform,\n      embedId,\n      url,\n      \"fileUrl\": uploadedFile.asset->url,\n      duration,\n    },\n    attachments[] {\n      _key,\n      title,\n      description,\n      fileType,\n      \"fileUrl\": file.asset->url,\n    },\n    \"relatedPlaybooks\": relatedPlaybooks[]->{\n      \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n    },\n  }\n": PlaybookQueryResult;
     "\n  *[_type == \"playbook\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": PlaybookSlugQueryResult;

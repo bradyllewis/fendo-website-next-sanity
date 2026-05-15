@@ -41,6 +41,17 @@ export interface SanityEvent {
   sponsorshipTiers: SponsorshipTier[] | null
   isFeatured: boolean | null
   tags: string[] | null
+  addOns: SanityEventAddOn[] | null
+}
+
+export interface SanityEventAddOn {
+  _id: string
+  name: string | null
+  description: string | null
+  inputType: 'checkbox' | 'text' | null
+  placeholder: string | null
+  category: string | null
+  price: number | null
 }
 
 export interface SponsorshipTier {
@@ -60,6 +71,7 @@ export interface SanityEventFull extends SanityEvent {
     logo?: {asset?: {_ref: string; _type: string} | null} | null
     url?: string | null
   }[] | null
+  addOns: SanityEventAddOn[] | null
 }
 
 export const EVENT_TYPE_LABELS: Record<string, string> = {

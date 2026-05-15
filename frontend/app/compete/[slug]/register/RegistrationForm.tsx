@@ -3,17 +3,10 @@
 import React, { Fragment, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { IconLoader } from '@/app/components/icons'
+import type { SanityEventAddOn } from '@/app/compete/types'
 
 type RegistrationType = 'individual' | 'duo' | 'team' | 'join' | 'volunteer'
 type Step = 'type' | 'joinCode' | 'playerInfo' | 'teamDetails' | 'addOns' | 'review'
-
-interface AddOns {
-  puttingContestDesignee: string
-  longDriveContestDesignee: string
-  mulligans: boolean
-  vipLounge: boolean
-  postRoundHospitality: boolean
-}
 
 interface JoinedTeam {
   id: string
@@ -35,7 +28,7 @@ interface FormState {
   referral: string
   teamName: string
   walkUpSong: string
-  addOns: AddOns
+  selectedAddOns: Record<string, string | boolean>
   joinCode: string
   joinedTeam: JoinedTeam | null
   donationAmount: number
@@ -50,6 +43,7 @@ interface Props {
     entryFee: number | null
     status: string | null
   }
+  addOns: SanityEventAddOn[] | null
   userEmail: string
   initialName: string
   initialHandicap: number | null
@@ -74,12 +68,6 @@ const STEP_LABELS: Record<Step, string> = {
   teamDetails: 'Team',
   addOns: 'Add-Ons',
   review: 'Review',
-}
-
-const ADD_ON_LABELS: Partial<Record<keyof AddOns, string>> = {
-  mulligans: 'Mulligans Pack (5)',
-  vipLounge: 'VIP Lounge Access',
-  postRoundHospitality: 'Post-Round Hospitality Upgrade',
 }
 
 const DONATION_PRESETS = [10, 25, 50] as const
@@ -130,7 +118,7 @@ const ERR = 'mt-1.5 text-xs text-danger'
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function RegistrationForm({ event, userEmail, initialName, initialHandicap }: Props) {
+export default function RegistrationForm({ event, addOns, userEmail, initialName, initialHandicap }: Props) {
   const router = useRouter()
   const [stepIndex, setStepIndex] = useState(0)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -151,13 +139,7 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
     referral: '',
     teamName: '',
     walkUpSong: '',
-    addOns: {
-      puttingContestDesignee: '',
-      longDriveContestDesignee: '',
-      mulligans: false,
-      vipLounge: false,
-      postRoundHospitality: false,
-    },
+    selectedAddOns: {},
     joinCode: '',
     joinedTeam: null,
     donationAmount: 0,
@@ -239,7 +221,7 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
         ageConfirmed: form.ageConfirmed,
         handicap: form.handicap || null,
         referral: form.referral || null,
-        addOns: Object.values(form.addOns).some(Boolean) ? form.addOns : undefined,
+        selectedAddOns: Object.keys(form.selectedAddOns).length > 0 ? form.selectedAddOns : undefined,
       }
 
       if (form.registrationType === 'join') {
@@ -557,17 +539,13 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
   )
 
   const renderAddOnsStep = () => {
-    const checkbox = (key: 'mulligans' | 'vipLounge' | 'postRoundHospitality', label: string) => (
-      <label key={key} className="flex items-center gap-3 cursor-pointer py-3">
-        <input
-          type="checkbox"
-          className="w-4 h-4 rounded accent-accent shrink-0"
-          checked={form.addOns[key]}
-          onChange={e => setField('addOns', { ...form.addOns, [key]: e.target.checked })}
-        />
-        <span className="text-sm text-fg">{label}</span>
-      </label>
-    )
+    // Group add-ons by category
+    const groups: Record<string, SanityEventAddOn[]> = {}
+    for (const addOn of addOns ?? []) {
+      const cat = addOn.category ?? 'Add-Ons'
+      if (!groups[cat]) groups[cat] = []
+      groups[cat].push(addOn)
+    }
 
     const handleDonationPreset = (amount: number) => {
       if (form.donationAmount === amount) {
@@ -589,52 +567,65 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
 
     return (
       <div className="space-y-6">
-        <p className="text-sm text-muted">
-          Enter contest designees and select any optional add-ons.
-        </p>
+        {(addOns?.length ?? 0) > 0 && (
+          <p className="text-sm text-muted">Select any optional add-ons for this event.</p>
+        )}
 
-        <div>
-          <p className="label-mono text-[0.6rem] mb-2">Contest Entries</p>
-          <div className="border border-border rounded-xl px-4 divide-y divide-border/50">
-            <div className="py-3 space-y-1.5">
-              <label className={LABEL}>
-                Putting Contest <span className="text-muted text-xs">(optional)</span>
-              </label>
-              <input
-                className={INPUT}
-                value={form.addOns.puttingContestDesignee}
-                onChange={e => setField('addOns', { ...form.addOns, puttingContestDesignee: e.target.value })}
-                placeholder="Enter your name to compete"
-              />
+        {Object.entries(groups).map(([category, items]) => (
+          <div key={category}>
+            <p className="label-mono text-[0.6rem] mb-2">{category}</p>
+            <div className="border border-border rounded-xl px-4 divide-y divide-border/50">
+              {items.map(addOn => {
+                if (addOn.inputType === 'text') {
+                  return (
+                    <div key={addOn._id} className="py-3 space-y-1.5">
+                      <label className={LABEL}>
+                        {addOn.name ?? ''}{' '}
+                        <span className="text-muted text-xs">(optional)</span>
+                      </label>
+                      <input
+                        className={INPUT}
+                        value={(form.selectedAddOns[addOn._id] as string) || ''}
+                        onChange={e =>
+                          setField('selectedAddOns', {
+                            ...form.selectedAddOns,
+                            [addOn._id]: e.target.value,
+                          })
+                        }
+                        placeholder={addOn.placeholder ?? ''}
+                      />
+                      {addOn.description && (
+                        <p className="text-xs text-muted">{addOn.description}</p>
+                      )}
+                    </div>
+                  )
+                }
+                // checkbox (default)
+                return (
+                  <label key={addOn._id} className="flex items-center gap-3 cursor-pointer py-3">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded accent-accent shrink-0"
+                      checked={!!form.selectedAddOns[addOn._id]}
+                      onChange={e =>
+                        setField('selectedAddOns', {
+                          ...form.selectedAddOns,
+                          [addOn._id]: e.target.checked,
+                        })
+                      }
+                    />
+                    <span className="text-sm text-fg flex-1">
+                      {addOn.name ?? ''}
+                      {addOn.price != null && addOn.price > 0 && (
+                        <span className="text-muted ml-2">(+${addOn.price})</span>
+                      )}
+                    </span>
+                  </label>
+                )
+              })}
             </div>
-            <div className="py-3 space-y-1.5">
-              <label className={LABEL}>
-                Long Drive Contest <span className="text-muted text-xs">(optional)</span>
-              </label>
-              <input
-                className={INPUT}
-                value={form.addOns.longDriveContestDesignee}
-                onChange={e => setField('addOns', { ...form.addOns, longDriveContestDesignee: e.target.value })}
-                placeholder="Enter your name to compete"
-              />
-            </div>
           </div>
-        </div>
-
-        <div>
-          <p className="label-mono text-[0.6rem] mb-2">Game Enhancers</p>
-          <div className="border border-border rounded-xl px-4 divide-y divide-border/50">
-            {checkbox('mulligans', 'Mulligans Pack (5)')}
-          </div>
-        </div>
-
-        <div>
-          <p className="label-mono text-[0.6rem] mb-2">Premium Experiences</p>
-          <div className="border border-border rounded-xl px-4 divide-y divide-border/50">
-            {checkbox('vipLounge', 'VIP Lounge Access')}
-            {checkbox('postRoundHospitality', 'Post-Round Hospitality Upgrade')}
-          </div>
-        </div>
+        ))}
 
         <div>
           <p className="label-mono text-[0.6rem] mb-2">Donation</p>
@@ -682,16 +673,23 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
       volunteer: 'Volunteer',
     }
 
-    const hasContests = form.addOns.puttingContestDesignee || form.addOns.longDriveContestDesignee
-    const booleanAddOns = (
-      ['mulligans', 'vipLounge', 'postRoundHospitality'] as const
-    ).filter(k => form.addOns[k]).map(k => ADD_ON_LABELS[k]!)
+    // Collect selected add-ons for display
+    const selectedAddOnItems = (addOns ?? []).filter(a => {
+      const val = form.selectedAddOns[a._id]
+      return a.inputType === 'text'
+        ? typeof val === 'string' && val.trim() !== ''
+        : val === true
+    })
 
     const isVolunteer = form.registrationType === 'volunteer'
     const entryFee = isVolunteer ? 0 : (event.entryFee ?? 0)
     const entryFeeStr = entryFee === 0 ? 'Free' : `$${entryFee}`
     const hasDonation = form.donationAmount > 0
-    const totalStr = `$${entryFee + form.donationAmount}`
+    const pricedAddOnsTotal = selectedAddOnItems.reduce(
+      (sum, a) => sum + (a.inputType !== 'text' && a.price != null ? a.price : 0),
+      0,
+    )
+    const totalStr = `$${entryFee + form.donationAmount + pricedAddOnsTotal}`
 
     return (
       <div className="space-y-5">
@@ -728,25 +726,29 @@ export default function RegistrationForm({ event, userEmail, initialName, initia
           </div>
         )}
 
-        {(hasContests || booleanAddOns.length > 0) && (
+        {selectedAddOnItems.length > 0 && (
           <div className="pt-4 border-t border-border space-y-2">
             <p className="label-mono text-[0.6rem] mb-2">Add-Ons</p>
-            {form.addOns.puttingContestDesignee && (
-              <ReviewRow label="Putting Contest" value={form.addOns.puttingContestDesignee} />
-            )}
-            {form.addOns.longDriveContestDesignee && (
-              <ReviewRow label="Long Drive Contest" value={form.addOns.longDriveContestDesignee} />
-            )}
-            {booleanAddOns.map(a => (
-              <p key={a} className="text-sm text-fg">{a}</p>
-            ))}
+            {selectedAddOnItems.map(a => {
+              const val = form.selectedAddOns[a._id]
+              const displayVal =
+                a.inputType === 'text'
+                  ? (val as string)
+                  : (a.price ?? 0) > 0
+                    ? `+$${a.price}`
+                    : 'Selected'
+              return <ReviewRow key={a._id} label={a.name ?? ''} value={displayVal} />
+            })}
           </div>
         )}
 
         <div className="pt-4 border-t border-border space-y-2">
           <ReviewRow label="Entry Fee" value={entryFeeStr} />
+          {pricedAddOnsTotal > 0 && (
+            <ReviewRow label="Add-Ons" value={`$${pricedAddOnsTotal}`} />
+          )}
           {hasDonation && <ReviewRow label="Donation" value={`$${form.donationAmount}`} />}
-          {hasDonation && entryFee > 0 && (
+          {(hasDonation || pricedAddOnsTotal > 0) && entryFee > 0 && (
             <div className="pt-2 border-t border-border/50">
               <ReviewRow label="Total" value={totalStr} />
             </div>
