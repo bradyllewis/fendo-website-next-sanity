@@ -1,28 +1,58 @@
 'use client'
 
-import { useActionState } from 'react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AuthFormCard from '@/app/components/auth/AuthFormCard'
 import FormInput from '@/app/components/auth/FormInput'
 import SubmitButton from '@/app/components/auth/SubmitButton'
 import { signUp } from '@/app/auth/actions'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SignUpPage() {
-  const [state, formAction] = useActionState(
-    async (_prev: { error?: string } | null, formData: FormData) => {
-      const password = formData.get('password') as string
-      const confirm = formData.get('confirm_password') as string
-      if (password !== confirm) {
-        return { error: 'Passwords do not match' }
-      }
-      if (password.length < 6) {
-        return { error: 'Password must be at least 6 characters' }
-      }
-      const result = await signUp(formData)
-      return result ?? null
-    },
-    null
-  )
+  const router = useRouter()
+  const [error, setError] = useState<string | null>(null)
+  const [isPending, setIsPending] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setError(null)
+    setIsPending(true)
+
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
+    const confirm = formData.get('confirm_password') as string
+
+    if (password !== confirm) {
+      setError('Passwords do not match')
+      setIsPending(false)
+      return
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
+      setIsPending(false)
+      return
+    }
+
+    const result = await signUp(formData)
+    if (result?.error) {
+      setError(result.error)
+      setIsPending(false)
+      return
+    }
+
+    // Sign in on the browser client so onAuthStateChange fires → header updates immediately
+    const supabase = createClient()
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    if (signInError) {
+      setError(signInError.message)
+      setIsPending(false)
+      return
+    }
+
+    router.push('/collective')
+  }
 
   return (
     <AuthFormCard
@@ -30,10 +60,10 @@ export default function SignUpPage() {
       heading="Create Your Account"
       description="Join a community of golfers who play with intention."
     >
-      <form action={formAction} className="flex flex-col gap-4">
-        {state?.error && (
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {error && (
           <div className="rounded-xl bg-danger/10 border border-danger/20 px-4 py-3 text-sm text-danger">
-            {state.error}
+            {error}
           </div>
         )}
 
@@ -76,7 +106,7 @@ export default function SignUpPage() {
           autoComplete="new-password"
         />
 
-        <SubmitButton>Create Account</SubmitButton>
+        <SubmitButton pending={isPending}>Create Account</SubmitButton>
 
         <p className="text-center text-sm text-muted">
           Already have an account?{' '}

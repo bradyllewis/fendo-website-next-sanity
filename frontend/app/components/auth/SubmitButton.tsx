@@ -6,11 +6,14 @@ import { IconLoader } from '@/app/components/icons'
 export default function SubmitButton({
   children,
   className = '',
+  pending: pendingProp,
 }: {
   children: React.ReactNode
   className?: string
+  pending?: boolean
 }) {
-  const { pending } = useFormStatus()
+  const { pending: formPending } = useFormStatus()
+  const pending = pendingProp ?? formPending
 
   return (
     <button

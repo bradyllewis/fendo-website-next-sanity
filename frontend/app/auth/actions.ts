@@ -23,33 +23,7 @@ export async function signUp(formData: FormData) {
     return { error: createError.message }
   }
 
-  // Sign the user in so they get a session immediately
-  const supabase = await createClient()
-  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-
-  if (signInError) {
-    return { error: signInError.message }
-  }
-
-  revalidatePath('/', 'layout')
-  redirect('/collective')
-}
-
-export async function signIn(formData: FormData) {
-  const supabase = await createClient()
-
-  const email = formData.get('email') as string
-  const password = formData.get('password') as string
-  const next = (formData.get('next') as string) || '/collective'
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
-
-  if (error) {
-    return { error: error.message }
-  }
-
-  revalidatePath('/', 'layout')
-  redirect(next)
+  return { success: true }
 }
 
 export async function signOut() {
