@@ -8,8 +8,8 @@ import SubmitButton from '@/app/components/auth/SubmitButton'
 import { forgotPassword } from '@/app/auth/actions'
 
 export default function ForgotPasswordPage() {
-  const [state, formAction] = useActionState(
-    async (_prev: { error?: string } | null, formData: FormData) => {
+  const [state, formAction] = useActionState<{ error?: string } | null, FormData>(
+    async (_prev, formData) => {
       const result = await forgotPassword(formData)
       return result ?? null
     },
