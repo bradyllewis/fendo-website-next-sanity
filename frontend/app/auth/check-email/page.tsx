@@ -18,15 +18,15 @@ export default function CheckEmailPage() {
         <span className="label-mono-accent">Almost There</span>
         <h1 className="display-md mt-3">Check Your Inbox</h1>
         <p className="text-muted mt-4 text-sm leading-relaxed max-w-sm mx-auto">
-          We sent a confirmation link to your email address. Click that link to verify your account — it only takes a second.
+          We sent a password reset link to your email address. Click that link to choose a new password — it only takes a second.
         </p>
 
         <div className="mt-6 rounded-xl border border-border bg-surface px-5 py-4 text-left space-y-2 max-w-sm mx-auto">
           <p className="text-xs font-semibold text-fg">What to look for:</p>
           <ul className="text-xs text-muted space-y-1 list-disc list-inside">
-            <li>Subject: <span className="text-fg font-medium">Confirm your signup</span></li>
-            <li>Sent from: <span className="text-fg font-medium">noreply@mail.app.supabase.io</span></li>
-            <li>The link expires after <span className="text-fg font-medium">24 hours</span></li>
+            <li>Subject: <span className="text-fg font-medium">Reset your Fendo Golf password</span></li>
+            <li>Sent from: <span className="text-fg font-medium">noreply@fendogolf.com</span></li>
+            <li>The link expires after <span className="text-fg font-medium">1 hour</span></li>
           </ul>
         </div>
 

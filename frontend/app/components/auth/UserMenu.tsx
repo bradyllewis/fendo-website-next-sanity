@@ -99,7 +99,6 @@ export default function UserMenu({ profile }: { profile: Profile | null }) {
             <form action={signOut}>
               <button
                 type="submit"
-                onClick={() => setOpen(false)}
                 className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-muted hover:text-danger transition-colors duration-150"
               >
                 <IconLogOut className="w-4 h-4" />

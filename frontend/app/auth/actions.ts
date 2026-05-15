@@ -3,28 +3,36 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function signUp(formData: FormData) {
-  const supabase = await createClient()
-
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const fullName = formData.get('full_name') as string
 
-  const { error } = await supabase.auth.signUp({
+  // Create user via admin client with email auto-confirmed (bypasses Supabase mailer)
+  const adminClient = createAdminClient()
+  const { error: createError } = await adminClient.auth.admin.createUser({
     email,
     password,
-    options: {
-      data: { full_name: fullName },
-      emailRedirectTo: `${getBaseUrl()}/auth/callback`,
-    },
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
   })
 
-  if (error) {
-    return { error: error.message }
+  if (createError) {
+    return { error: createError.message }
   }
 
-  redirect('/auth/check-email')
+  // Sign the user in so they get a session immediately
+  const supabase = await createClient()
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+
+  if (signInError) {
+    return { error: signInError.message }
+  }
+
+  revalidatePath('/', 'layout')
+  redirect('/collective')
 }
 
 export async function signIn(formData: FormData) {
@@ -52,18 +60,40 @@ export async function signOut() {
 }
 
 export async function forgotPassword(formData: FormData) {
-  const supabase = await createClient()
-
   const email = formData.get('email') as string
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${getBaseUrl()}/auth/callback?next=/auth/reset-password`,
+  const adminClient = createAdminClient()
+  const { data, error } = await adminClient.auth.admin.generateLink({
+    type: 'recovery',
+    email,
+    options: {
+      redirectTo: `${getBaseUrl()}/auth/callback?next=/auth/reset-password`,
+    },
   })
 
-  if (error) {
-    return { error: error.message }
+  // Only send if the user exists — silently skip otherwise to prevent enumeration
+  if (!error && data?.properties?.action_link) {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM_EMAIL,
+        to: [email],
+        subject: 'Reset your Fendo Golf password',
+        html: `
+          <p>Hi,</p>
+          <p>We received a request to reset the password for your Fendo Golf account.</p>
+          <p><a href="${data.properties.action_link}">Click here to reset your password</a></p>
+          <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+        `,
+      }),
+    })
   }
 
+  // Always redirect — never reveal whether the address is registered
   redirect('/auth/check-email')
 }
 
