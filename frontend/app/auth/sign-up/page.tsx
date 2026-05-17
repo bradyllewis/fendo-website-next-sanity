@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import AuthFormCard from '@/app/components/auth/AuthFormCard'
 import FormInput from '@/app/components/auth/FormInput'
@@ -10,7 +10,19 @@ import { signUp } from '@/app/auth/actions'
 import { createClient } from '@/lib/supabase/client'
 
 export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpForm />
+    </Suspense>
+  )
+}
+
+function SignUpForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const claimToken = searchParams.get('claimToken')
+  const prefillEmail = searchParams.get('email') ?? ''
+
   const [error, setError] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
 
@@ -51,14 +63,18 @@ export default function SignUpPage() {
       return
     }
 
-    router.push('/collective')
+    router.push(claimToken ? `/account/claim/${claimToken}` : '/collective')
   }
 
   return (
     <AuthFormCard
-      tag="Join the Collective"
+      tag={claimToken ? 'Claim Your Spot' : 'Join the Collective'}
       heading="Create Your Account"
-      description="Join a community of golfers who play with intention."
+      description={
+        claimToken
+          ? 'Create a Fendo Golf account to claim your tournament spot.'
+          : 'Join a community of golfers who play with intention.'
+      }
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {error && (
@@ -82,6 +98,8 @@ export default function SignUpPage() {
           type="email"
           label="Email"
           placeholder="you@example.com"
+          defaultValue={prefillEmail}
+          readOnly={!!prefillEmail}
           required
           autoComplete="email"
         />
@@ -110,7 +128,10 @@ export default function SignUpPage() {
 
         <p className="text-center text-sm text-muted">
           Already have an account?{' '}
-          <Link href="/auth/sign-in" className="text-fg font-medium hover:text-accent transition-colors">
+          <Link
+            href={claimToken ? `/auth/sign-in?next=/account/claim/${claimToken}` : '/auth/sign-in'}
+            className="text-fg font-medium hover:text-accent transition-colors"
+          >
             Sign in
           </Link>
         </p>

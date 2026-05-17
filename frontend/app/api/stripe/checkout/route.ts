@@ -1,16 +1,32 @@
 import type Stripe from 'stripe'
 import { NextRequest, NextResponse } from 'next/server'
+import { randomBytes } from 'crypto'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stripe } from '@/lib/stripe/client'
 import { getOrCreateStripeCustomer } from '@/lib/stripe/customer'
 import { client } from '@/sanity/lib/client'
 import { eventQuery } from '@/sanity/lib/queries'
+import { sendEmail, getBaseUrl } from '@/lib/email/resend'
+import { buildInviteEmail } from '@/lib/email/templates/invite'
+import { format, parseISO } from 'date-fns'
 
 // Generates a 6-character invite code, skipping visually ambiguous characters
 function generateInviteCode(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+}
+
+// Generates a cryptographically secure 64-char hex invite token
+function generateInviteToken(): string {
+  return randomBytes(32).toString('hex')
+}
+
+interface Invitee {
+  firstName: string
+  lastName: string
+  email: string
+  phone?: string
 }
 
 export async function POST(request: NextRequest) {
@@ -72,7 +88,304 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check spots availability (only if spotsTotal is set)
+    const formRegistrationType: string | undefined = registrationData?.registrationType
+    const paymentMode: string | undefined = registrationData?.paymentMode
+    const admin = createAdminClient()
+
+    // ── INDIVIDUAL PAYMENT MODE (self-pay team) ──────────────────────────────
+    // When the captain chooses "each player pays for themselves", we create
+    // registration_slots for each player instead of a normal registration row.
+    if (
+      paymentMode === 'individual' &&
+      (formRegistrationType === 'duo' || formRegistrationType === 'team')
+    ) {
+      const invitees: Invitee[] = Array.isArray(registrationData?.invitees)
+        ? registrationData.invitees
+        : []
+
+      const maxMembers = formRegistrationType === 'duo' ? 2 : 4
+      const expectedInvitees = maxMembers - 1 // captain fills 1 spot
+
+      // Validate invitees
+      if (invitees.length !== expectedInvitees) {
+        return NextResponse.json(
+          { error: `Expected ${expectedInvitees} invited player(s) for a ${formRegistrationType}` },
+          { status: 400 },
+        )
+      }
+
+      for (const inv of invitees) {
+        if (!inv.firstName?.trim() || !inv.lastName?.trim() || !inv.email?.trim()) {
+          return NextResponse.json(
+            { error: 'Each invited player requires first name, last name, and email' },
+            { status: 400 },
+          )
+        }
+      }
+
+      const teamName = (registrationData?.teamName as string | undefined)?.trim()
+      if (!teamName) {
+        return NextResponse.json({ error: 'Team name is required' }, { status: 400 })
+      }
+
+      // Capacity check: paid slots + active slots + team size must not exceed spotsTotal
+      if (event.spotsTotal) {
+        const { count: paidCount } = await admin
+          .from('event_registrations')
+          .select('*', { count: 'exact', head: true })
+          .eq('event_sanity_id', event._id)
+          .eq('status', 'paid')
+
+        const { count: activeSlotCount } = await admin
+          .from('registration_slots')
+          .select('*', { count: 'exact', head: true })
+          .eq('event_sanity_id', event._id)
+          .not('status', 'in', '("expired","cancelled")')
+
+        const used = (paidCount ?? 0) + (activeSlotCount ?? 0)
+        if (used + maxMembers > event.spotsTotal) {
+          return NextResponse.json(
+            { error: 'Not enough spots available for your team size', eventFull: true },
+            { status: 409 },
+          )
+        }
+      }
+
+      // Create the team with individual payment mode
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+
+      let teamData: { id: string; invite_code: string } | null = null
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const code = generateInviteCode()
+        const { data, error: teamErr } = await admin
+          .from('teams')
+          .insert({
+            event_sanity_id: event._id,
+            event_slug: eventSlug,
+            team_name: teamName,
+            invite_code: code,
+            created_by: user.id,
+            registration_type: formRegistrationType,
+            max_members: maxMembers,
+            walk_up_song: (registrationData?.walkUpSong as string | undefined) || null,
+            payment_mode: 'individual',
+            team_status: 'pending',
+            expires_at: expiresAt,
+          })
+          .select('id, invite_code')
+          .single()
+
+        if (!teamErr && data) {
+          teamData = data
+          break
+        }
+        if (teamErr?.code !== '23505') {
+          console.error('[stripe/checkout/individual] Failed to create team:', teamErr)
+          return NextResponse.json({ error: 'Failed to create team' }, { status: 500 })
+        }
+      }
+
+      if (!teamData) {
+        return NextResponse.json({ error: 'Failed to generate unique team code' }, { status: 500 })
+      }
+
+      const entryFeeInCents = event.entryFee ? Math.round(event.entryFee * 100) : 0
+
+      // Get captain profile for name
+      const { data: captainProfile } = await supabase
+        .from('profiles')
+        .select('full_name, display_name')
+        .eq('id', user.id)
+        .maybeSingle()
+      const captainName = captainProfile?.full_name || captainProfile?.display_name || 'Captain'
+      const captainFirstName = captainName.split(' ')[0]
+
+      // Build all slots: captain first, then invitees
+      const captainToken = generateInviteToken()
+      const allSlots = [
+        {
+          team_id: teamData.id,
+          event_sanity_id: event._id,
+          event_slug: eventSlug,
+          is_captain: true,
+          player_first_name: captainName.split(' ')[0],
+          player_last_name: captainName.split(' ').slice(1).join(' ') || '',
+          player_email: user.email!,
+          player_phone: null as string | null,
+          app_user_id: user.id,
+          invited_by_user_id: user.id,
+          invite_token: captainToken,
+          status: 'captain_pending' as const,
+          amount_due: entryFeeInCents,
+          currency: 'usd',
+          expires_at: expiresAt,
+        },
+        ...invitees.map((inv) => ({
+          team_id: teamData!.id,
+          event_sanity_id: event._id,
+          event_slug: eventSlug,
+          is_captain: false,
+          player_first_name: inv.firstName.trim(),
+          player_last_name: inv.lastName.trim(),
+          player_email: inv.email.trim().toLowerCase(),
+          player_phone: inv.phone?.trim() || null as string | null,
+          app_user_id: null as string | null,
+          invited_by_user_id: user.id,
+          invite_token: generateInviteToken(),
+          status: 'invited' as const,
+          amount_due: entryFeeInCents,
+          currency: 'usd',
+          expires_at: expiresAt,
+        })),
+      ]
+
+      const { data: insertedSlots, error: slotsError } = await admin
+        .from('registration_slots')
+        .insert(allSlots)
+        .select('id, is_captain, player_first_name, player_last_name, player_email, invite_token, status')
+
+      if (slotsError || !insertedSlots) {
+        console.error('[stripe/checkout/individual] Failed to create slots:', slotsError)
+        // Roll back team
+        await admin.from('teams').delete().eq('id', teamData.id)
+        return NextResponse.json({ error: 'Failed to create player slots' }, { status: 500 })
+      }
+
+      const captainSlot = insertedSlots.find((s) => s.is_captain)
+      if (!captainSlot) {
+        return NextResponse.json({ error: 'Captain slot not found after insert' }, { status: 500 })
+      }
+
+      // Send invite emails to non-captain players (non-blocking)
+      const baseUrl = getBaseUrl()
+      const eventLocation = event.location
+        ? [event.location.venueName, event.location.city, event.location.state].filter(Boolean).join(', ')
+        : null
+      const eventDateStr = event.startDate
+        ? format(parseISO(event.startDate), 'EEEE, MMMM d, yyyy')
+        : ''
+      const expiresAtStr = format(new Date(expiresAt), 'MMMM d, yyyy')
+      const teamType = formRegistrationType === 'duo' ? 'Duo' : 'Foursome'
+
+      const invitedSlots = insertedSlots.filter((s) => !s.is_captain)
+
+      Promise.all(
+        invitedSlots.map((slot) =>
+          sendEmail({
+            to: slot.player_email,
+            subject: `${captainFirstName} invited you to join their ${teamType.toLowerCase()} — ${event.title ?? ''}`,
+            html: buildInviteEmail({
+              playerFirstName: slot.player_first_name,
+              captainName,
+              eventTitle: event.title ?? eventSlug,
+              eventDate: eventDateStr,
+              eventLocation,
+              teamType,
+              amountDue: entryFeeInCents,
+              expiresAt: expiresAtStr,
+              inviteUrl: `${baseUrl}/compete/invite/${slot.invite_token}`,
+            }),
+          }).then(() =>
+            admin
+              .from('registration_slots')
+              .update({ email_sent_at: new Date().toISOString() })
+              .eq('id', slot.id),
+          ),
+        ),
+      ).catch((err) => console.error('[stripe/checkout/individual] Email send error:', err))
+
+      // If entry fee is $0, mark captain's slot paid immediately and skip Stripe
+      if (entryFeeInCents === 0) {
+        await admin
+          .from('registration_slots')
+          .update({ status: 'paid', paid_at: new Date().toISOString() })
+          .eq('id', captainSlot.id)
+
+        await supabase
+          .from('event_registrations')
+          .insert({
+            user_id: user.id,
+            event_sanity_id: event._id,
+            event_slug: eventSlug,
+            event_title: event.title ?? '',
+            event_date: event.startDate ?? null,
+            stripe_checkout_session_id: null,
+            stripe_payment_intent_id: null,
+            amount_paid: 0,
+            currency: 'usd',
+            status: 'paid',
+            registration_type: formRegistrationType,
+            team_name: teamName,
+            team_id: teamData.id,
+            metadata: { ...registrationData, isTeamCaptain: true, paymentMode: 'individual', inviteCode: teamData.invite_code },
+          })
+
+        return NextResponse.json({
+          url: `${baseUrl}/compete/${eventSlug}/register-success?direct=1`,
+          free: true,
+        })
+      }
+
+      // Create Stripe Checkout Session for captain's own slot
+      const customerId = await getOrCreateStripeCustomer(user.id, user.email!, captainName)
+
+      const captainSession = await stripe.checkout.sessions.create({
+        customer: customerId,
+        payment_method_types: ['card'],
+        mode: 'payment',
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              unit_amount: entryFeeInCents,
+              product_data: {
+                name: `${teamType} Entry — ${teamName}`,
+                description: `Captain entry fee for ${event.title ?? eventSlug}`,
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `${baseUrl}/compete/${eventSlug}/register-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/compete/${eventSlug}`,
+        metadata: {
+          type: 'slot',
+          registrationSlotId: captainSlot.id,
+          teamId: teamData.id,
+          userId: user.id,
+          eventSanityId: event._id,
+          eventSlug,
+          eventTitle: event.title ?? '',
+          eventDate: event.startDate ?? '',
+          teamName,
+          inviteCode: teamData.invite_code,
+          paymentMode: 'individual',
+        },
+        payment_intent_data: {
+          metadata: {
+            type: 'slot',
+            registrationSlotId: captainSlot.id,
+            userId: user.id,
+            eventSanityId: event._id,
+            eventSlug,
+          },
+        },
+      })
+
+      // Update captain slot with session id
+      await admin
+        .from('registration_slots')
+        .update({ stripe_checkout_session_id: captainSession.id, status: 'payment_started' })
+        .eq('id', captainSlot.id)
+
+      return NextResponse.json({
+        url: captainSession.url,
+        sessionId: captainSession.id,
+        invitedCount: invitedSlots.length,
+      })
+    }
+
+    // ── Check spots availability for standard flows ──────────────────────────
     if (event.spotsTotal) {
       const { count: paidCount } = await supabase
         .from('event_registrations')
@@ -88,19 +401,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Team handling ────────────────────────────────────────────────────────
-    // Resolve team context before inserting any registration row.
-    // dbRegistrationType: what to store in the registration_type column.
-    // teamId / inviteCode: populated for team/duo registrations and joiners.
-
-    const formRegistrationType: string | undefined = registrationData?.registrationType
+    // ── Standard team handling ───────────────────────────────────────────────
     let dbRegistrationType: string | null = formRegistrationType ?? null
     let teamId: string | null = null
     let inviteCode: string | null = null
-    const admin = createAdminClient()
 
     if (formRegistrationType === 'join') {
-      // Joiner: validate invite code server-side
       const joinCode = (registrationData?.joinTeamCode as string | undefined)?.toUpperCase().trim()
       if (!joinCode) {
         return NextResponse.json({ error: 'Missing team invite code' }, { status: 400 })
@@ -117,7 +423,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid invite code' }, { status: 404 })
       }
 
-      // Ensure captain has paid
       const { data: captainReg } = await admin
         .from('event_registrations')
         .select('id')
@@ -133,7 +438,6 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Enforce capacity
       const { count: memberCount } = await admin
         .from('event_registrations')
         .select('*', { count: 'exact', head: true })
@@ -144,7 +448,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'This team is already full' }, { status: 409 })
       }
 
-      // Ensure user isn't already on this team
       const { data: existingMembership } = await admin
         .from('event_registrations')
         .select('id')
@@ -161,7 +464,6 @@ export async function POST(request: NextRequest) {
 
       teamId = team.id
       dbRegistrationType = team.registration_type
-      // Merge team info into registrationData for metadata storage
       registrationData = {
         ...registrationData,
         registrationType: team.registration_type,
@@ -169,7 +471,6 @@ export async function POST(request: NextRequest) {
         isJoiner: true,
       }
     } else if (formRegistrationType === 'duo' || formRegistrationType === 'team') {
-      // Captain creating a new team
       const maxMembers = formRegistrationType === 'duo' ? 2 : 4
       const teamName = (registrationData?.teamName as string | undefined)?.trim()
 
@@ -191,6 +492,7 @@ export async function POST(request: NextRequest) {
             registration_type: formRegistrationType,
             max_members: maxMembers,
             walk_up_song: (registrationData?.walkUpSong as string | undefined) || null,
+            payment_mode: 'captain_pays_all',
           })
           .select('id, invite_code')
           .single()
@@ -211,7 +513,6 @@ export async function POST(request: NextRequest) {
 
       teamId = teamData.id
       inviteCode = teamData.invite_code
-      // Store invite code in metadata so the success page can display it
       registrationData = { ...registrationData, inviteCode, isTeamCaptain: true }
     }
 
@@ -247,9 +548,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to register' }, { status: 500 })
       }
 
-      const baseUrl =
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+      const baseUrl = getBaseUrl()
 
       return NextResponse.json({
         url: `${baseUrl}/compete/${eventSlug}/register-success?direct=1`,
@@ -289,9 +588,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to register' }, { status: 500 })
       }
 
-      const baseUrl =
-        process.env.NEXT_PUBLIC_SITE_URL ||
-        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+      const baseUrl = getBaseUrl()
 
       return NextResponse.json({
         url: `${baseUrl}/compete/${eventSlug}/register-success?direct=1`,
@@ -299,7 +596,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Get profile for display name
+    // ── Standard Stripe Checkout ─────────────────────────────────────────────
     const { data: profile } = await supabase
       .from('profiles')
       .select('full_name, display_name')
@@ -307,18 +604,12 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     const customerName = profile?.full_name || profile?.display_name || undefined
-
-    // Get or create Stripe Customer
     const customerId = await getOrCreateStripeCustomer(user.id, user.email!, customerName)
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-
+    const baseUrl = getBaseUrl()
     const entryFeeInCents = event.entryFee ? Math.round(event.entryFee * 100) : 0
-
-    // Create Stripe Checkout Session
     const eventTitle = event.title ?? ''
+
     const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
       {
         price_data: {
@@ -333,7 +624,6 @@ export async function POST(request: NextRequest) {
       },
     ]
 
-    // Add priced add-ons as line items (prices sourced from Sanity, not the client)
     const selectedAddOnIds = Object.entries(
       (registrationData?.selectedAddOns as Record<string, string | boolean> | undefined) ?? {},
     )
@@ -390,8 +680,6 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Create a pending registration row so the expired handler and webhook update-path work correctly.
-    // This is non-fatal — the webhook's defensive INSERT fallback handles missing pending rows.
     const pendingMetadata = donationAmountCents > 0
       ? { ...(registrationData ?? {}), donationAmount: donationAmountCents / 100 }
       : (registrationData ?? {})

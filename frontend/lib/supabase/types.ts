@@ -55,6 +55,63 @@ export type TeamRecord = {
   registration_type: 'duo' | 'team'
   max_members: number
   walk_up_song: string | null
+  payment_mode: 'captain_pays_all' | 'individual'
+  team_status: 'pending' | 'partially_paid' | 'complete' | 'expired' | 'cancelled'
+  expires_at: string | null
+  created_at: string
+}
+
+export type RegistrationSlotStatus =
+  | 'captain_pending'
+  | 'invited'
+  | 'payment_started'
+  | 'paid'
+  | 'claimed'
+  | 'expired'
+  | 'cancelled'
+
+export type RegistrationSlot = {
+  id: string
+  team_id: string
+  event_sanity_id: string
+  event_slug: string
+  is_captain: boolean
+  player_first_name: string
+  player_last_name: string
+  player_email: string
+  player_phone: string | null
+  app_user_id: string | null
+  invited_by_user_id: string | null
+  invite_token: string
+  status: RegistrationSlotStatus
+  amount_due: number
+  currency: string
+  expires_at: string
+  stripe_checkout_session_id: string | null
+  stripe_payment_intent_id: string | null
+  stripe_customer_id: string | null
+  paid_at: string | null
+  email_sent_at: string | null
+  event_registration_id: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+  updated_at: string
+}
+
+export type RegistrationPayment = {
+  id: string
+  registration_slot_id: string | null
+  team_id: string | null
+  event_sanity_id: string
+  stripe_event_id: string
+  stripe_checkout_session_id: string | null
+  stripe_payment_intent_id: string | null
+  stripe_customer_id: string | null
+  amount: number
+  currency: string
+  status: string
+  paid_at: string
+  raw_payload: Record<string, unknown> | null
   created_at: string
 }
 

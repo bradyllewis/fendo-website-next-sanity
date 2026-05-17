@@ -103,7 +103,7 @@ export default function AuthGateModal({
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="bg-transparent p-0 max-w-md w-full m-auto backdrop:bg-fg/60 backdrop:backdrop-blur-sm"
+      className="bg-transparent p-0 w-[calc(100vw-2rem)] max-w-md m-auto max-h-[calc(100dvh-2rem)] overflow-y-auto backdrop:bg-fg/60 backdrop:backdrop-blur-sm"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
@@ -304,7 +304,7 @@ function ModalInput({
         placeholder={placeholder}
         required={required}
         autoComplete={autoComplete}
-        className="w-full bg-bg border border-border rounded-xl px-4 py-3 text-sm transition-colors placeholder:text-muted-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+        className="w-full bg-bg border border-border rounded-xl px-4 py-3 text-base sm:text-sm transition-colors placeholder:text-muted-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
       />
     </div>
   )

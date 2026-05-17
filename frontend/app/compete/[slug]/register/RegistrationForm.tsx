@@ -6,7 +6,8 @@ import { IconLoader } from '@/app/components/icons'
 import type { SanityEventAddOn } from '@/app/compete/types'
 
 type RegistrationType = 'individual' | 'duo' | 'team' | 'join' | 'volunteer'
-type Step = 'type' | 'joinCode' | 'playerInfo' | 'teamDetails' | 'addOns' | 'review'
+type PaymentMode = 'captain_pays_all' | 'individual'
+type Step = 'type' | 'joinCode' | 'playerInfo' | 'teamDetails' | 'paymentMode' | 'invitees' | 'addOns' | 'review'
 
 interface JoinedTeam {
   id: string
@@ -14,6 +15,13 @@ interface JoinedTeam {
   registrationType: string
   maxMembers: number
   memberCount: number
+}
+
+interface Invitee {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
 }
 
 interface FormState {
@@ -33,6 +41,8 @@ interface FormState {
   joinedTeam: JoinedTeam | null
   donationAmount: number
   donationCustom: string
+  paymentMode: PaymentMode
+  invitees: Invitee[]
 }
 
 interface Props {
@@ -66,6 +76,8 @@ const STEP_LABELS: Record<Step, string> = {
   joinCode: 'Team Code',
   playerInfo: 'Your Info',
   teamDetails: 'Team',
+  paymentMode: 'Payment',
+  invitees: 'Teammates',
   addOns: 'Add-Ons',
   review: 'Review',
 }
@@ -74,11 +86,28 @@ const DONATION_PRESETS = [10, 25, 50] as const
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getActiveSteps(type: RegistrationType | null): Step[] {
+function getActiveSteps(type: RegistrationType | null, paymentMode: PaymentMode): Step[] {
   if (type === 'volunteer') return ['type', 'playerInfo', 'review']
   if (!type || type === 'individual') return ['type', 'playerInfo', 'addOns', 'review']
   if (type === 'join') return ['type', 'joinCode', 'playerInfo', 'addOns', 'review']
-  return ['type', 'playerInfo', 'teamDetails', 'addOns', 'review']
+  // duo/team — always show paymentMode step; add invitees only for individual mode
+  if (paymentMode === 'individual') {
+    return ['type', 'playerInfo', 'teamDetails', 'paymentMode', 'invitees', 'addOns', 'review']
+  }
+  return ['type', 'playerInfo', 'teamDetails', 'paymentMode', 'addOns', 'review']
+}
+
+function emptyInvitee(): Invitee {
+  return { firstName: '', lastName: '', email: '', phone: '' }
+}
+
+function buildInviteesArray(type: RegistrationType | null, existing: Invitee[]): Invitee[] {
+  const count = type === 'duo' ? 1 : type === 'team' ? 3 : 0
+  const arr: Invitee[] = []
+  for (let i = 0; i < count; i++) {
+    arr.push(existing[i] ?? emptyInvitee())
+  }
+  return arr
 }
 
 function validateStep(step: Step, form: FormState): Record<string, string> {
@@ -103,6 +132,14 @@ function validateStep(step: Step, form: FormState): Record<string, string> {
       break
     case 'teamDetails':
       if (!form.teamName.trim()) e.teamName = 'Team name is required.'
+      break
+    case 'invitees':
+      form.invitees.forEach((inv, i) => {
+        if (!inv.firstName.trim()) e[`invitee_${i}_firstName`] = 'First name is required.'
+        if (!inv.lastName.trim()) e[`invitee_${i}_lastName`] = 'Last name is required.'
+        if (!inv.email.trim() || !inv.email.includes('@'))
+          e[`invitee_${i}_email`] = 'A valid email is required.'
+      })
       break
   }
   return e
@@ -144,9 +181,11 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
     joinedTeam: null,
     donationAmount: 0,
     donationCustom: '',
+    paymentMode: 'captain_pays_all',
+    invitees: [],
   })
 
-  const activeSteps = getActiveSteps(form.registrationType)
+  const activeSteps = getActiveSteps(form.registrationType, form.paymentMode)
   const currentStep = activeSteps[stepIndex]
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -165,6 +204,8 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
       walkUpSong: '',
       joinCode: '',
       joinedTeam: null,
+      paymentMode: 'captain_pays_all',
+      invitees: buildInviteesArray(type, []),
     }))
     setErrors({})
     setCodeError(null)
@@ -229,6 +270,15 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
       } else if (form.registrationType === 'duo' || form.registrationType === 'team') {
         registrationData.teamName = form.teamName || undefined
         registrationData.walkUpSong = form.walkUpSong || undefined
+        registrationData.paymentMode = form.paymentMode
+        if (form.paymentMode === 'individual') {
+          registrationData.invitees = form.invitees.map(inv => ({
+            firstName: inv.firstName.trim(),
+            lastName: inv.lastName.trim(),
+            email: inv.email.trim().toLowerCase(),
+            phone: inv.phone.trim() || undefined,
+          }))
+        }
       }
 
       const res = await fetch('/api/stripe/checkout', {
@@ -510,7 +560,7 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
   const renderTeamDetailsStep = () => (
     <div className="space-y-4">
       <p className="text-sm text-muted">
-        Set up your team. Your teammates will join using the invite code shown after registration.
+        Set up your team. You&apos;ll choose how teammates pay on the next step.
       </p>
       <div>
         <label className={LABEL}>
@@ -538,8 +588,162 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
     </div>
   )
 
+  const renderPaymentModeStep = () => {
+    const isFreeEvent = !event.entryFee || event.entryFee === 0
+    const teamSize = form.registrationType === 'duo' ? 2 : 4
+    const entryFee = event.entryFee ?? 0
+    const totalFee = `$${entryFee * teamSize}`
+
+    const options = [
+      {
+        mode: 'captain_pays_all' as const,
+        label: "I'll pay for everyone",
+        sub: isFreeEvent
+          ? 'No entry fee — proceed directly'
+          : `Pay ${totalFee} upfront for the full team`,
+      },
+      {
+        mode: 'individual' as const,
+        label: 'Each player pays their own way',
+        sub: `Each player pays $${entryFee} via a personal invite link — no account required`,
+      },
+    ]
+
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-muted">Choose how your team&apos;s entry fees are handled.</p>
+        <div className="grid gap-3">
+          {options.map(({ mode, label, sub }) => {
+            const selected = form.paymentMode === mode
+            return (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => {
+                  setForm(prev => ({
+                    ...prev,
+                    paymentMode: mode,
+                    invitees: mode === 'individual'
+                      ? buildInviteesArray(prev.registrationType, prev.invitees)
+                      : prev.invitees,
+                  }))
+                  setErrors({})
+                }}
+                className={`flex items-center justify-between w-full px-5 py-4 rounded-xl border text-left transition-all duration-150 ${
+                  selected
+                    ? 'border-accent bg-accent/5 ring-1 ring-accent'
+                    : 'border-border bg-bg hover:border-fg/30 hover:bg-surface/50'
+                }`}
+              >
+                <div>
+                  <p className={`text-sm font-semibold ${selected ? 'text-accent' : 'text-fg'}`}>{label}</p>
+                  <p className="text-xs text-muted mt-0.5">{sub}</p>
+                </div>
+                <span
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                    selected ? 'border-accent bg-accent' : 'border-border'
+                  }`}
+                >
+                  {selected && (
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 10">
+                      <path
+                        d="M1.5 5L4 7.5L8.5 2.5"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  const renderInviteesStep = () => {
+    const teamSize = form.registrationType === 'duo' ? 2 : 4
+    const labels = teamSize === 2 ? ['Partner'] : ['Player 2', 'Player 3', 'Player 4']
+
+    return (
+      <div className="space-y-6">
+        <p className="text-sm text-muted">
+          Enter your teammates&apos; details. Each will receive a personal payment link via email — no account needed.
+        </p>
+
+        {form.invitees.map((inv, i) => {
+          const updateInvitee = (field: keyof Invitee, val: string) => {
+            const next = form.invitees.map((x, j) => j === i ? { ...x, [field]: val } : x)
+            setField('invitees', next)
+            clearError(`invitee_${i}_${field}`)
+          }
+
+          return (
+            <div key={i} className="card-base p-5 space-y-4">
+              <p className="label-mono text-[0.6rem]">{labels[i]}</p>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={LABEL}>First Name <span className="text-danger">*</span></label>
+                  <input
+                    className={`${INPUT} ${errors[`invitee_${i}_firstName`] ? 'border-danger' : ''}`}
+                    value={inv.firstName}
+                    onChange={e => updateInvitee('firstName', e.target.value)}
+                    placeholder="Jordan"
+                  />
+                  {errors[`invitee_${i}_firstName`] && <p className={ERR}>{errors[`invitee_${i}_firstName`]}</p>}
+                </div>
+                <div>
+                  <label className={LABEL}>Last Name <span className="text-danger">*</span></label>
+                  <input
+                    className={`${INPUT} ${errors[`invitee_${i}_lastName`] ? 'border-danger' : ''}`}
+                    value={inv.lastName}
+                    onChange={e => updateInvitee('lastName', e.target.value)}
+                    placeholder="Reed"
+                  />
+                  {errors[`invitee_${i}_lastName`] && <p className={ERR}>{errors[`invitee_${i}_lastName`]}</p>}
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={LABEL}>Email <span className="text-danger">*</span></label>
+                  <input
+                    className={`${INPUT} ${errors[`invitee_${i}_email`] ? 'border-danger' : ''}`}
+                    type="email"
+                    value={inv.email}
+                    onChange={e => updateInvitee('email', e.target.value)}
+                    placeholder="jordan@example.com"
+                  />
+                  {errors[`invitee_${i}_email`] && <p className={ERR}>{errors[`invitee_${i}_email`]}</p>}
+                </div>
+                <div>
+                  <label className={LABEL}>Phone <span className="text-muted text-xs">(optional)</span></label>
+                  <input
+                    className={INPUT}
+                    type="tel"
+                    value={inv.phone}
+                    onChange={e => updateInvitee('phone', e.target.value)}
+                    placeholder="(555) 867-5309"
+                  />
+                </div>
+              </div>
+            </div>
+          )
+        })}
+
+        <div className="rounded-xl border border-border bg-surface/40 px-4 py-3">
+          <p className="text-xs text-muted leading-relaxed">
+            Each teammate will receive an email with a secure payment link valid for 7 days.
+            They can pay without creating an account.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const renderAddOnsStep = () => {
-    // Group add-ons by category
     const groups: Record<string, SanityEventAddOn[]> = {}
     for (const addOn of addOns ?? []) {
       const cat = addOn.category ?? 'Add-Ons'
@@ -600,7 +804,6 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
                     </div>
                   )
                 }
-                // checkbox (default)
                 return (
                   <label key={addOn._id} className="flex items-center gap-3 cursor-pointer py-3">
                     <input
@@ -667,13 +870,12 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
   const renderReviewStep = () => {
     const typeLabels: Record<RegistrationType, string> = {
       individual: 'Individual',
-      duo: 'Duo Captain (2 players)',
-      team: 'Team Captain (4 players)',
+      duo: form.paymentMode === 'individual' ? 'Duo — Self-Pay' : 'Duo Captain (2 players)',
+      team: form.paymentMode === 'individual' ? 'Foursome — Self-Pay' : 'Team Captain (4 players)',
       join: `Joining: ${form.joinedTeam?.teamName ?? '—'}`,
       volunteer: 'Volunteer',
     }
 
-    // Collect selected add-ons for display
     const selectedAddOnItems = (addOns ?? []).filter(a => {
       const val = form.selectedAddOns[a._id]
       return a.inputType === 'text'
@@ -682,6 +884,7 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
     })
 
     const isVolunteer = form.registrationType === 'volunteer'
+    const isIndividualPay = form.paymentMode === 'individual'
     const entryFee = isVolunteer ? 0 : (event.entryFee ?? 0)
     const entryFeeStr = entryFee === 0 ? 'Free' : `$${entryFee}`
     const hasDonation = form.donationAmount > 0
@@ -715,6 +918,28 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
             <p className="label-mono text-[0.6rem] mb-2">Team Details</p>
             <ReviewRow label="Team Name" value={form.teamName} />
             {form.walkUpSong && <ReviewRow label="Walk-Up Song" value={form.walkUpSong} />}
+            <ReviewRow
+              label="Payment Mode"
+              value={isIndividualPay ? 'Each player pays their own way' : 'Captain pays for everyone'}
+            />
+          </div>
+        )}
+
+        {isIndividualPay && form.invitees.length > 0 && (
+          <div className="pt-4 border-t border-border space-y-3">
+            <p className="label-mono text-[0.6rem] mb-2">Invited Teammates</p>
+            {form.invitees.map((inv, i) => (
+              <ReviewRow
+                key={i}
+                label={`Player ${i + 2}`}
+                value={`${inv.firstName} ${inv.lastName} — ${inv.email}`}
+              />
+            ))}
+            <div className="rounded-lg bg-accent/5 border border-accent/20 px-3 py-2">
+              <p className="text-xs text-accent">
+                Invite links will be emailed immediately after you complete payment. Invites expire in 7 days.
+              </p>
+            </div>
           </div>
         )}
 
@@ -743,14 +968,14 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
         )}
 
         <div className="pt-4 border-t border-border space-y-2">
-          <ReviewRow label="Entry Fee" value={entryFeeStr} />
+          <ReviewRow label={isIndividualPay ? 'Your Entry Fee' : 'Entry Fee'} value={entryFeeStr} />
           {pricedAddOnsTotal > 0 && (
             <ReviewRow label="Add-Ons" value={`$${pricedAddOnsTotal}`} />
           )}
           {hasDonation && <ReviewRow label="Donation" value={`$${form.donationAmount}`} />}
           {(hasDonation || pricedAddOnsTotal > 0) && entryFee > 0 && (
             <div className="pt-2 border-t border-border/50">
-              <ReviewRow label="Total" value={totalStr} />
+              <ReviewRow label="Your Total" value={totalStr} />
             </div>
           )}
         </div>
@@ -771,12 +996,28 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
     joinCode: renderJoinCodeStep,
     playerInfo: renderPlayerInfoStep,
     teamDetails: renderTeamDetailsStep,
+    paymentMode: renderPaymentModeStep,
+    invitees: renderInviteesStep,
     addOns: renderAddOnsStep,
     review: renderReviewStep,
   }
 
   const isLastStep = stepIndex === activeSteps.length - 1
-  const isFree = !event.entryFee || event.entryFee === 0 || form.registrationType === 'volunteer'
+  const isVolunteer = form.registrationType === 'volunteer'
+  const isIndividualPay = form.paymentMode === 'individual'
+  const isFree = !event.entryFee || event.entryFee === 0 || isVolunteer
+
+  const submitLabel = () => {
+    if (submitting) return (
+      <span className="flex items-center gap-2">
+        <IconLoader className="w-4 h-4" />
+        <span>Please wait…</span>
+      </span>
+    )
+    if (isFree && !isIndividualPay) return 'Complete Registration'
+    if (isIndividualPay) return 'Pay My Spot & Send Invites'
+    return 'Proceed to Payment'
+  }
 
   return (
     <div className="max-w-xl mx-auto">
@@ -840,16 +1081,7 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
             disabled={submitting}
             className={`btn-accent flex-1 justify-center ${submitting ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
-            {submitting ? (
-              <span className="flex items-center gap-2">
-                <IconLoader className="w-4 h-4" />
-                <span>Please wait…</span>
-              </span>
-            ) : isFree ? (
-              'Complete Registration'
-            ) : (
-              'Proceed to Payment'
-            )}
+            {submitLabel()}
           </button>
         ) : (
           <button

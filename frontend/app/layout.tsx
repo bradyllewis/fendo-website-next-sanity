@@ -1,7 +1,7 @@
 import './globals.css'
 
 import {SpeedInsights} from '@vercel/speed-insights/next'
-import type {Metadata} from 'next'
+import type {Metadata, Viewport} from 'next'
 import {Inter, IBM_Plex_Mono} from 'next/font/google'
 import {draftMode} from 'next/headers'
 import {toPlainText} from 'next-sanity'
@@ -17,6 +17,11 @@ import {sanityFetch, SanityLive} from '@/sanity/lib/live'
 import {settingsQuery} from '@/sanity/lib/queries'
 import {resolveOpenGraphImage} from '@/sanity/lib/utils'
 import {handleError} from '@/app/client-utils'
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const {data: settings} = await sanityFetch({

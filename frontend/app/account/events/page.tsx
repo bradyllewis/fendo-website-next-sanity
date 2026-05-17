@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import AccountNav from '@/app/components/account/AccountNav'
 import RegistrationsList from '@/app/components/account/RegistrationsList'
+import MyTeams from '@/app/components/account/MyTeams'
 import type { EventRegistration } from '@/lib/supabase/types'
 
 export const metadata = {
@@ -64,6 +65,7 @@ export default async function AccountEventsPage() {
           </div>
 
           <RegistrationsList registrations={(registrations ?? []) as EventRegistration[]} />
+          <MyTeams />
         </div>
       </section>
 

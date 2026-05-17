@@ -95,9 +95,33 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
 
   const isConfirmed = registration?.status === 'paid'
   const inviteCode =
-    isConfirmed && registration?.metadata?.isTeamCaptain
+    isConfirmed && registration?.metadata?.isTeamCaptain && registration?.metadata?.paymentMode !== 'individual'
       ? (registration.metadata.inviteCode as string | undefined)
       : undefined
+
+  const isIndividualCaptain =
+    isConfirmed &&
+    registration?.metadata?.isTeamCaptain === true &&
+    registration?.metadata?.paymentMode === 'individual'
+
+  // Fetch invited slots if individual captain
+  let invitedSlots: Array<{ firstName: string; lastName: string; email: string; status: string; expiresAt: string }> = []
+  if (isIndividualCaptain && registration?.metadata?.teamId) {
+    const adminClient = createAdminClient()
+    const { data: slots } = await adminClient
+      .from('registration_slots')
+      .select('player_first_name, player_last_name, player_email, status, expires_at, is_captain')
+      .eq('team_id', registration.metadata.teamId as string)
+      .eq('is_captain', false)
+      .order('created_at', { ascending: true })
+    invitedSlots = (slots ?? []).map((s) => ({
+      firstName: s.player_first_name,
+      lastName: s.player_last_name,
+      email: s.player_email,
+      status: s.status,
+      expiresAt: s.expires_at,
+    }))
+  }
 
   return (
     <>
@@ -226,6 +250,46 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
         </section>
       )}
 
+      {/* Invites sent — individual payment mode captain */}
+      {isIndividualCaptain && (
+        <section className="section-padding border-b border-border">
+          <div className="container max-w-md mx-auto">
+            <div className="card-base p-6 space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="font-semibold text-fg">Invites Sent</h2>
+                <span className="text-xs font-mono text-green bg-green/10 border border-green/20 px-2 py-1 rounded-md">
+                  {invitedSlots.filter((s) => s.status === 'paid' || s.status === 'claimed').length}/{invitedSlots.length} paid
+                </span>
+              </div>
+              <p className="text-sm text-muted">
+                Each teammate received an invite link at their email address. They can pay their own spot independently.
+              </p>
+              <div className="space-y-2">
+                {invitedSlots.map((slot, i) => (
+                  <div key={i} className="flex items-center justify-between gap-3 py-2.5 border-b border-border last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-fg">{slot.firstName} {slot.lastName}</p>
+                      <p className="text-xs text-muted">{slot.email}</p>
+                    </div>
+                    <SlotStatusBadge status={slot.status} />
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted">
+                Invites expire on{' '}
+                {invitedSlots[0]?.expiresAt
+                  ? format(parseISO(invitedSlots[0].expiresAt), 'MMMM d, yyyy')
+                  : '—'}
+                . Manage your team from your{' '}
+                <a href="/account/events" className="text-fg font-medium hover:text-accent transition-colors">
+                  account
+                </a>.
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Invite code for team captains */}
       {inviteCode && (
         <section className="section-padding border-b border-border">
@@ -271,5 +335,22 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
         </div>
       </section>
     </>
+  )
+}
+
+function SlotStatusBadge({ status }: { status: string }) {
+  const config: Record<string, { label: string; className: string }> = {
+    invited:         { label: 'Invited',     className: 'text-fg bg-mustard/10 border-mustard/20' },
+    payment_started: { label: 'In Progress', className: 'text-fg bg-mustard/20 border-mustard/30' },
+    paid:            { label: 'Paid ✓',      className: 'text-green bg-green/10 border-green/20' },
+    claimed:         { label: 'Claimed ✓',   className: 'text-green bg-green/10 border-green/20' },
+    expired:         { label: 'Expired',     className: 'text-muted bg-surface border-border' },
+    cancelled:       { label: 'Cancelled',   className: 'text-muted bg-surface border-border' },
+  }
+  const badge = config[status] ?? { label: status, className: 'text-muted bg-surface border-border' }
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[0.65rem] font-mono font-medium tracking-wide border ${badge.className}`}>
+      {badge.label}
+    </span>
   )
 }
