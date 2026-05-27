@@ -27,6 +27,7 @@ interface Invitee {
   lastName: string
   email: string
   phone?: string
+  shirtSize?: string
 }
 
 export async function POST(request: NextRequest) {
@@ -236,6 +237,7 @@ export async function POST(request: NextRequest) {
           amount_due: entryFeeInCents,
           currency: 'usd',
           expires_at: expiresAt,
+          metadata: { shirtSize: inv.shirtSize || null },
         })),
       ]
 

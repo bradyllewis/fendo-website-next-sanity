@@ -22,6 +22,7 @@ interface Invitee {
   lastName: string
   email: string
   phone: string
+  shirtSize: string
 }
 
 interface FormState {
@@ -98,7 +99,7 @@ function getActiveSteps(type: RegistrationType | null, paymentMode: PaymentMode)
 }
 
 function emptyInvitee(): Invitee {
-  return { firstName: '', lastName: '', email: '', phone: '' }
+  return { firstName: '', lastName: '', email: '', phone: '', shirtSize: '' }
 }
 
 function buildInviteesArray(type: RegistrationType | null, existing: Invitee[]): Invitee[] {
@@ -139,6 +140,7 @@ function validateStep(step: Step, form: FormState): Record<string, string> {
         if (!inv.lastName.trim()) e[`invitee_${i}_lastName`] = 'Last name is required.'
         if (!inv.email.trim() || !inv.email.includes('@'))
           e[`invitee_${i}_email`] = 'A valid email is required.'
+        if (!inv.shirtSize) e[`invitee_${i}_shirtSize`] = 'Shirt size is required.'
       })
       break
   }
@@ -729,6 +731,22 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
                   />
                 </div>
               </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={LABEL}>Shirt Size <span className="text-danger">*</span></label>
+                  <select
+                    className={`${SELECT} ${errors[`invitee_${i}_shirtSize`] ? 'border-danger' : ''}`}
+                    value={inv.shirtSize}
+                    onChange={e => updateInvitee('shirtSize', e.target.value)}
+                  >
+                    <option value="">Select a size</option>
+                    {SHIRT_SIZES.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                  {errors[`invitee_${i}_shirtSize`] && <p className={ERR}>{errors[`invitee_${i}_shirtSize`]}</p>}
+                </div>
+              </div>
             </div>
           )
         })}
@@ -932,7 +950,7 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
               <ReviewRow
                 key={i}
                 label={`Player ${i + 2}`}
-                value={`${inv.firstName} ${inv.lastName} — ${inv.email}`}
+                value={`${inv.firstName} ${inv.lastName} — ${inv.email}${inv.shirtSize ? ` · ${inv.shirtSize}` : ''}`}
               />
             ))}
             <div className="rounded-lg bg-accent/5 border border-accent/20 px-3 py-2">
