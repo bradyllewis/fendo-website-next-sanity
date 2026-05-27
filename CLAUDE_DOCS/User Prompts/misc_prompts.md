@@ -1,5 +1,6 @@
  /goal Review your goal here: CLAUDE_DOCS/goal.md. Flawlessly, methodically, and thoroughly complete all requests/tasks in the goal.md doc. Always make sure the app builds without errors before considering your goal achieved. Always kill any dev servers you have launched prior to responding.
 
+
 Review or use your .claude/skills/sanity_cms_skill to flawlessly complete the following tasks: 
 
 /supabase-nextjs-dev We need to make some tweaks to the tournament registration flow, specifically around 
