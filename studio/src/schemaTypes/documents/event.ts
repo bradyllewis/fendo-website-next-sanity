@@ -1,6 +1,6 @@
 import {CalendarIcon} from '@sanity/icons'
 import {format, parseISO} from 'date-fns'
-import {defineField, defineType} from 'sanity'
+import {defineArrayMember, defineField, defineType} from 'sanity'
 
 /**
  * Event schema — Tournaments, clinics, and community rounds.
@@ -200,32 +200,9 @@ export const event = defineType({
       name: 'sponsorshipTiers',
       title: 'Sponsorship Tiers',
       type: 'array',
+      description: 'Select reusable sponsorship tiers. Manage tier definitions under "Sponsorship Tiers" in the Studio.',
       hidden: ({document}) => !document?.sponsorshipsEnabled,
-      of: [
-        {
-          type: 'object',
-          fields: [
-            defineField({name: 'id', title: 'Tier ID (slug)', type: 'slug', options: {source: 'name'}}),
-            defineField({name: 'name', title: 'Tier Name', type: 'string', validation: (r) => r.required()}),
-            defineField({name: 'price', title: 'Price (USD)', type: 'number', validation: (r) => r.required().min(0)}),
-            defineField({name: 'description', title: 'Description', type: 'text', rows: 2}),
-            defineField({
-              name: 'benefits',
-              title: 'Benefits',
-              type: 'array',
-              of: [{type: 'string'}],
-              description: 'One benefit per line.',
-            }),
-            defineField({name: 'includedPlayerSpots', title: 'Included Player Spots', type: 'number', initialValue: 0, validation: (r) => r.min(0).integer()}),
-          ],
-          preview: {
-            select: {title: 'name', subtitle: 'price'},
-            prepare({title, subtitle}) {
-              return {title, subtitle: subtitle != null ? `$${subtitle}` : ''}
-            },
-          },
-        },
-      ],
+      of: [defineArrayMember({type: 'reference', to: [{type: 'sponsorshipTier'}]})],
     }),
     defineField({
       name: 'tags',

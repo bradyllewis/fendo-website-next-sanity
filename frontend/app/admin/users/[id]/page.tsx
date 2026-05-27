@@ -4,6 +4,7 @@ import { format, parseISO } from 'date-fns'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import RoleToggle from '@/app/components/admin/RoleToggle'
+import UnregisterButton from '@/app/components/admin/UnregisterButton'
 import UserAvatar from '@/app/components/auth/UserAvatar'
 import { RegistrationStatusBadge } from '@/app/components/account/RegistrationsList'
 import { IconCalendar, IconArrow, IconUser, IconMail, IconShield } from '@/app/components/icons'
@@ -171,12 +172,20 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                       </p>
                     )}
                   </div>
-                  <Link
-                    href={`/compete/${reg.event_slug}`}
-                    className="btn-ghost text-xs px-3 py-2 shrink-0"
-                  >
-                    View Event
-                  </Link>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {reg.status !== 'cancelled' && reg.status !== 'refunded' && (
+                      <UnregisterButton
+                        registrationId={reg.id}
+                        eventTitle={reg.event_title}
+                      />
+                    )}
+                    <Link
+                      href={`/compete/${reg.event_slug}`}
+                      className="btn-ghost text-xs px-3 py-2"
+                    >
+                      View Event
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>

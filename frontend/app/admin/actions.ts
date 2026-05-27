@@ -110,3 +110,37 @@ export async function addRegistrationNote(
   revalidatePath('/admin/registrations')
   return {}
 }
+
+export async function unregisterUser(
+  registrationId: string,
+  reason?: string,
+): Promise<AdminActionResult> {
+  const check = await requireAdmin()
+  if ('error' in check) return { error: check.error }
+
+  const adminDb = createAdminClient()
+
+  // Verify the registration exists and isn't already cancelled/refunded
+  const { data: reg } = await adminDb
+    .from('event_registrations')
+    .select('id, status, user_id')
+    .eq('id', registrationId)
+    .single()
+
+  if (!reg) return { error: 'Registration not found' }
+  if (reg.status === 'cancelled' || reg.status === 'refunded') {
+    return { error: 'Registration is already cancelled or refunded' }
+  }
+
+  const trimmedReason = reason?.trim().slice(0, 500) || null
+  const { error } = await adminDb
+    .from('event_registrations')
+    .update({ status: 'cancelled', notes: trimmedReason })
+    .eq('id', registrationId)
+
+  if (error) return { error: 'Failed to cancel registration' }
+
+  revalidatePath('/admin/registrations')
+  revalidatePath(`/admin/users/${reg.user_id}`)
+  return {}
+}

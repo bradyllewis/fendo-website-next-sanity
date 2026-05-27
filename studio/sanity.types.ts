@@ -313,6 +313,19 @@ export type MediaAsset = {
   isFeatured?: boolean;
 };
 
+export type SponsorshipTier = {
+  _id: string;
+  _type: "sponsorshipTier";
+  _createdAt: string;
+  _updatedAt: string;
+  _rev: string;
+  name: string;
+  price: number;
+  description?: string;
+  benefits?: Array<string>;
+  includedPlayerSpots?: number;
+};
+
 export type EventAddOn = {
   _id: string;
   _type: "eventAddOn";
@@ -332,6 +345,13 @@ export type EventAddOnReference = {
   _type: "reference";
   _weak?: boolean;
   [internalGroqTypeReferenceTo]?: "eventAddOn";
+};
+
+export type SponsorshipTierReference = {
+  _ref: string;
+  _type: "reference";
+  _weak?: boolean;
+  [internalGroqTypeReferenceTo]?: "sponsorshipTier";
 };
 
 export type Event = {
@@ -385,14 +405,8 @@ export type Event = {
   }>;
   sponsorshipsEnabled?: boolean;
   sponsorshipTiers?: Array<{
-    id?: Slug;
-    name: string;
-    price: number;
-    description?: string;
-    benefits?: Array<string>;
-    includedPlayerSpots?: number;
     _key: string;
-  }>;
+  } & SponsorshipTierReference>;
   tags?: Array<string>;
 };
 
@@ -713,5 +727,5 @@ export type Geopoint = {
   alt?: number;
 };
 
-export type AllSanitySchemaTypes = PageReference | PostReference | Link | SanityImageAssetReference | CallToAction | InfoSection | BlockContentTextOnly | BlockContent | Button | SanityFileAssetReference | PersonReference | PlaybookReference | Playbook | SanityImageCrop | SanityImageHotspot | Slug | Gear | Testimonial | MediaAsset | EventAddOn | EventAddOnReference | Event | Settings | Page | Post | Person | SanityAssistInstructionTask | SanityAssistTaskStatus | SanityAssistSchemaTypeAnnotations | SanityAssistOutputType | SanityAssistOutputField | AssistInstructionContextReference | SanityAssistInstructionContext | AssistInstructionContext | SanityAssistInstructionUserInput | SanityAssistInstructionPrompt | SanityAssistInstructionFieldRef | SanityAssistInstruction | SanityAssistSchemaTypeField | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset | Geopoint;
+export type AllSanitySchemaTypes = PageReference | PostReference | Link | SanityImageAssetReference | CallToAction | InfoSection | BlockContentTextOnly | BlockContent | Button | SanityFileAssetReference | PersonReference | PlaybookReference | Playbook | SanityImageCrop | SanityImageHotspot | Slug | Gear | Testimonial | MediaAsset | SponsorshipTier | EventAddOn | EventAddOnReference | SponsorshipTierReference | Event | Settings | Page | Post | Person | SanityAssistInstructionTask | SanityAssistTaskStatus | SanityAssistSchemaTypeAnnotations | SanityAssistOutputType | SanityAssistOutputField | AssistInstructionContextReference | SanityAssistInstructionContext | AssistInstructionContext | SanityAssistInstructionUserInput | SanityAssistInstructionPrompt | SanityAssistInstructionFieldRef | SanityAssistInstruction | SanityAssistSchemaTypeField | SanityImagePaletteSwatch | SanityImagePalette | SanityImageDimensions | SanityImageMetadata | SanityFileAsset | SanityAssetSourceData | SanityImageAsset | Geopoint;
 

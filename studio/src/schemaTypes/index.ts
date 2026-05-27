@@ -3,6 +3,7 @@ import {page} from './documents/page'
 import {post} from './documents/post'
 import {event} from './documents/event'
 import {eventAddOn} from './documents/eventAddOn'
+import {sponsorshipTier} from './documents/sponsorshipTier'
 import {mediaAsset} from './documents/mediaAsset'
 import {testimonial} from './documents/testimonial'
 import {gear} from './documents/gear'
@@ -26,6 +27,7 @@ export const schemaTypes = [
   person,
   event,
   eventAddOn,
+  sponsorshipTier,
   mediaAsset,
   testimonial,
   gear,

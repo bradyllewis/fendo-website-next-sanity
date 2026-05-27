@@ -120,8 +120,8 @@ const eventFields = /* groq */ `
   registrationUrl,
   requiresRegistration,
   sponsorshipsEnabled,
-  "sponsorshipTiers": sponsorshipTiers[] {
-    "id": id.current,
+  "sponsorshipTiers": sponsorshipTiers[]->{
+    "id": _id,
     name,
     price,
     description,
