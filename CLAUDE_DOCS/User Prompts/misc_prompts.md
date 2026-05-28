@@ -33,3 +33,22 @@ Use plan mode and your local scope klaviyo-developer Claude Skill to review Pend
 
 
 pnpm update @sanity/cli
+
+
+
+
+curl -X POST "https://gqa4b3kj.api.sanity.io/v2025-02-19/data/mutate/production" \
+  -H "Authorization: Bearer skvgJgUr6dsU36HZeW2d62ma0fD6o23VlewdzqrZMQ2T2yvSZjbIDB5hezJyPX4JXSQXORcgyV2V2qeGekDj0Woc3BVDl44VcgtVSxmsq1E8LgAxMADIOUUFEQABulovHyYEuztk0DlSvTitYEr2UGV04uifu6NLfpAqWE8Q8o61XxxcE4Uc" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mutations": [
+      {
+        "patch": {
+          "id": "cf488c87-c673-4407-84cc-07e2da9aa12a",
+          "set": {
+            "_debugPermissionTest": true
+          }
+        }
+      }
+    ]
+  }'

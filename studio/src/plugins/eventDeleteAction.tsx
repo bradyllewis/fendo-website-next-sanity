@@ -35,8 +35,8 @@ export const EventDeleteAction: DocumentActionComponent = function EventDeleteAc
 ) {
   const ops = useDocumentOperation(props.id, props.type)
   const [open, setOpen] = useState(false)
-  const [sendEmails, setSendEmails] = useState(true)
-  const [processRefunds, setProcessRefunds] = useState(true)
+  const [sendEmails, setSendEmails] = useState(false)
+  const [processRefunds, setProcessRefunds] = useState(false)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<CascadeResult | null>(null)
   const [error, setError] = useState<string | null>(null)
