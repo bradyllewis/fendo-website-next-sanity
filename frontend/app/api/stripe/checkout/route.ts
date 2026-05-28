@@ -9,6 +9,7 @@ import { client } from '@/sanity/lib/client'
 import { eventQuery } from '@/sanity/lib/queries'
 import { sendEmail, getBaseUrl } from '@/lib/email/resend'
 import { buildInviteEmail } from '@/lib/email/templates/invite'
+import { buildTeamNotificationEmail } from '@/lib/email/templates/team-notification'
 import { format, parseISO } from 'date-fns'
 
 // Generates a 6-character invite code, skipping visually ambiguous characters
@@ -516,6 +517,66 @@ export async function POST(request: NextRequest) {
       teamId = teamData.id
       inviteCode = teamData.invite_code
       registrationData = { ...registrationData, inviteCode, isTeamCaptain: true }
+
+      // Validate and persist invitees for captain_pays_all
+      const captainInvitees: Invitee[] = Array.isArray(registrationData?.invitees)
+        ? (registrationData.invitees as Invitee[])
+        : []
+
+      const expectedCount = maxMembers - 1
+      if (captainInvitees.length !== expectedCount) {
+        await admin.from('teams').delete().eq('id', teamData.id)
+        return NextResponse.json(
+          { error: `Expected ${expectedCount} invited player(s) for a ${formRegistrationType}` },
+          { status: 400 },
+        )
+      }
+
+      for (const inv of captainInvitees) {
+        if (!inv.firstName?.trim() || !inv.lastName?.trim() || !inv.email?.trim()) {
+          await admin.from('teams').delete().eq('id', teamData.id)
+          return NextResponse.json(
+            { error: 'Each invited player requires first name, last name, and email' },
+            { status: 400 },
+          )
+        }
+        if (inv.email.trim().toLowerCase() === user.email!.toLowerCase()) {
+          await admin.from('teams').delete().eq('id', teamData.id)
+          return NextResponse.json({ error: 'You cannot add yourself as a teammate' }, { status: 400 })
+        }
+      }
+
+      const captainSlotExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      const captainInviteeSlots = captainInvitees.map((inv) => ({
+        team_id: teamData!.id,
+        event_sanity_id: event._id,
+        event_slug: eventSlug,
+        is_captain: false,
+        player_first_name: inv.firstName.trim(),
+        player_last_name: inv.lastName.trim(),
+        player_email: inv.email.trim().toLowerCase(),
+        player_phone: inv.phone?.trim() || null as string | null,
+        app_user_id: null as string | null,
+        invited_by_user_id: user.id,
+        invite_token: generateInviteToken(),
+        status: 'captain_registered' as const,
+        amount_due: 0,
+        currency: 'usd',
+        expires_at: captainSlotExpiresAt,
+        metadata: { shirtSize: inv.shirtSize || null },
+      }))
+
+      if (captainInviteeSlots.length > 0) {
+        const { error: captainSlotsError } = await admin
+          .from('registration_slots')
+          .insert(captainInviteeSlots)
+
+        if (captainSlotsError) {
+          console.error('[stripe/checkout] Failed to create invitee slots:', captainSlotsError)
+          await admin.from('teams').delete().eq('id', teamData.id)
+          return NextResponse.json({ error: 'Failed to create player slots' }, { status: 500 })
+        }
+      }
     }
 
     // ── Volunteer: bypass Stripe regardless of event fee ────────────────────
@@ -588,6 +649,63 @@ export async function POST(request: NextRequest) {
         }
         console.error('[stripe/checkout] Free registration insert failed:', freeRegError)
         return NextResponse.json({ error: 'Failed to register' }, { status: 500 })
+      }
+
+      // For free captain_pays_all teams: mark invitee slots paid and send notifications now
+      if (teamId) {
+        const { data: freeInviteeSlots } = await admin
+          .from('registration_slots')
+          .select('id, player_first_name, player_email')
+          .eq('team_id', teamId)
+          .eq('status', 'captain_registered')
+
+        if (freeInviteeSlots?.length) {
+          await admin
+            .from('registration_slots')
+            .update({ status: 'paid', paid_at: new Date().toISOString() })
+            .eq('team_id', teamId)
+            .eq('status', 'captain_registered')
+
+          await admin.from('teams').update({ team_status: 'complete' }).eq('id', teamId)
+
+          const { data: freeProfile } = await supabase
+            .from('profiles')
+            .select('full_name, display_name')
+            .eq('id', user.id)
+            .maybeSingle()
+          const freeCaptainName = freeProfile?.full_name || freeProfile?.display_name || 'Your Captain'
+
+          const { data: freeTeamRow } = await admin
+            .from('teams')
+            .select('team_name, registration_type')
+            .eq('id', teamId)
+            .maybeSingle()
+          const freeTeamType: 'Duo' | 'Foursome' = freeTeamRow?.registration_type === 'duo' ? 'Duo' : 'Foursome'
+          const freeEventDateStr = event.startDate ? format(parseISO(event.startDate), 'EEEE, MMMM d, yyyy') : ''
+          const freeEventLocation = event.location
+            ? [event.location.venueName, event.location.city, event.location.state].filter(Boolean).join(', ')
+            : null
+          const freeBaseUrl = getBaseUrl()
+
+          Promise.all(
+            freeInviteeSlots.map((slot) =>
+              sendEmail({
+                to: slot.player_email,
+                subject: `You've been registered for ${event.title ?? eventSlug} — Fendo Golf`,
+                html: buildTeamNotificationEmail({
+                  playerFirstName: slot.player_first_name,
+                  captainName: freeCaptainName,
+                  eventTitle: event.title ?? eventSlug,
+                  eventDate: freeEventDateStr,
+                  eventLocation: freeEventLocation,
+                  teamName: freeTeamRow?.team_name ?? '',
+                  teamType: freeTeamType,
+                  siteUrl: freeBaseUrl,
+                }),
+              }),
+            ),
+          ).catch((err) => console.error('[stripe/checkout/free] Teammate notification email error:', err))
+        }
       }
 
       const baseUrl = getBaseUrl()
@@ -672,6 +790,7 @@ export async function POST(request: NextRequest) {
         eventTitle,
         eventDate: event.startDate ?? '',
         donationAmount: donationAmountCents > 0 ? String(donationAmountCents / 100) : '',
+        teamId: teamId ?? '',
       },
       payment_intent_data: {
         metadata: {

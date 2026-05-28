@@ -91,11 +91,8 @@ function getActiveSteps(type: RegistrationType | null, paymentMode: PaymentMode)
   if (type === 'volunteer') return ['type', 'playerInfo', 'review']
   if (!type || type === 'individual') return ['type', 'playerInfo', 'addOns', 'review']
   if (type === 'join') return ['type', 'joinCode', 'playerInfo', 'addOns', 'review']
-  // duo/team — always show paymentMode step; add invitees only for individual mode
-  if (paymentMode === 'individual') {
-    return ['type', 'playerInfo', 'teamDetails', 'paymentMode', 'invitees', 'addOns', 'review']
-  }
-  return ['type', 'playerInfo', 'teamDetails', 'paymentMode', 'addOns', 'review']
+  // duo/team — always collect all player info regardless of payment mode
+  return ['type', 'playerInfo', 'teamDetails', 'paymentMode', 'invitees', 'addOns', 'review']
 }
 
 function emptyInvitee(): Invitee {
@@ -273,14 +270,13 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
         registrationData.teamName = form.teamName || undefined
         registrationData.walkUpSong = form.walkUpSong || undefined
         registrationData.paymentMode = form.paymentMode
-        if (form.paymentMode === 'individual') {
-          registrationData.invitees = form.invitees.map(inv => ({
-            firstName: inv.firstName.trim(),
-            lastName: inv.lastName.trim(),
-            email: inv.email.trim().toLowerCase(),
-            phone: inv.phone.trim() || undefined,
-          }))
-        }
+        registrationData.invitees = form.invitees.map(inv => ({
+          firstName: inv.firstName.trim(),
+          lastName: inv.lastName.trim(),
+          email: inv.email.trim().toLowerCase(),
+          phone: inv.phone.trim() || undefined,
+          shirtSize: inv.shirtSize || undefined,
+        }))
       }
 
       const res = await fetch('/api/stripe/checkout', {
@@ -673,7 +669,9 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
     return (
       <div className="space-y-6">
         <p className="text-sm text-muted">
-          Enter your teammates&apos; details. Each will receive a personal payment link via email — no account needed.
+          {form.paymentMode === 'captain_pays_all'
+            ? "Enter your teammates' details. They'll receive a confirmation email — no payment required from them."
+            : "Enter your teammates' details. Each will receive a personal payment link via email — no account needed."}
         </p>
 
         {form.invitees.map((inv, i) => {
@@ -943,7 +941,7 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
           </div>
         )}
 
-        {isIndividualPay && form.invitees.length > 0 && (
+        {(form.registrationType === 'duo' || form.registrationType === 'team') && form.invitees.length > 0 && (
           <div className="pt-4 border-t border-border space-y-3">
             <p className="label-mono text-[0.6rem] mb-2">Invited Teammates</p>
             {form.invitees.map((inv, i) => (
@@ -955,7 +953,9 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
             ))}
             <div className="rounded-lg bg-accent/5 border border-accent/20 px-3 py-2">
               <p className="text-xs text-accent">
-                Invite links will be emailed immediately after you complete payment. Invites expire in 7 days.
+                {isIndividualPay
+                  ? 'Invite links will be emailed immediately after you complete payment. Invites expire in 7 days.'
+                  : 'Your teammates will receive a confirmation email once payment is complete. No action needed from them.'}
               </p>
             </div>
           </div>

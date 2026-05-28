@@ -5,6 +5,7 @@ import type Stripe from 'stripe'
 import { sendEmail, getBaseUrl } from '@/lib/email/resend'
 import { buildSlotConfirmationEmail } from '@/lib/email/templates/slot-confirmation'
 import { buildTeamCompleteEmail } from '@/lib/email/templates/team-complete'
+import { buildTeamNotificationEmail } from '@/lib/email/templates/team-notification'
 import { format, parseISO } from 'date-fns'
 
 // Stripe requires the raw request body for signature verification
@@ -365,6 +366,67 @@ export async function POST(request: NextRequest) {
         }
 
         console.log(`[webhook] Confirmed paid registration for user ${userId} / event ${eventSlug}`)
+
+        // ── captain_pays_all invitee notification ───────────────────────────
+        // If this registration is for a captain_pays_all team, mark invitee
+        // slots paid and send notification emails to teammates.
+        if (meta.teamId) {
+          const { data: captainRegInviteeSlots } = await supabase
+            .from('registration_slots')
+            .select('id, player_first_name, player_email')
+            .eq('team_id', meta.teamId)
+            .eq('status', 'captain_registered')
+
+          if (captainRegInviteeSlots?.length) {
+            await supabase
+              .from('registration_slots')
+              .update({ status: 'paid', paid_at: new Date().toISOString() })
+              .eq('team_id', meta.teamId)
+              .eq('status', 'captain_registered')
+
+            await supabase
+              .from('teams')
+              .update({ team_status: 'complete' })
+              .eq('id', meta.teamId)
+
+            const { data: captainProfile } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', userId)
+              .maybeSingle()
+            const captainName = captainProfile?.full_name ?? 'Your Captain'
+
+            const { data: teamRow } = await supabase
+              .from('teams')
+              .select('team_name, registration_type')
+              .eq('id', meta.teamId)
+              .maybeSingle()
+            const teamType: 'Duo' | 'Foursome' = teamRow?.registration_type === 'duo' ? 'Duo' : 'Foursome'
+
+            const siteUrl = getBaseUrl()
+            const eventDateStr = meta.eventDate ? format(parseISO(meta.eventDate), 'EEEE, MMMM d, yyyy') : ''
+
+            Promise.all(
+              captainRegInviteeSlots.map((slot) =>
+                sendEmail({
+                  to: slot.player_email,
+                  subject: `You've been registered for ${meta.eventTitle ?? eventSlug} — Fendo Golf`,
+                  html: buildTeamNotificationEmail({
+                    playerFirstName: slot.player_first_name,
+                    captainName,
+                    eventTitle: meta.eventTitle ?? eventSlug,
+                    eventDate: eventDateStr,
+                    eventLocation: null,
+                    teamName: teamRow?.team_name ?? '',
+                    teamType,
+                    siteUrl,
+                  }),
+                }),
+              ),
+            ).catch((err) => console.error('[webhook] Teammate notification email error:', err))
+          }
+        }
+
         break
       }
 
@@ -391,6 +453,16 @@ export async function POST(request: NextRequest) {
             .update({ status: 'cancelled' })
             .eq('stripe_checkout_session_id', session.id)
             .eq('status', 'pending')
+
+          // Cancel any captain_registered invitee slots for abandoned captain_pays_all checkouts
+          const expiredMeta = session.metadata as Record<string, string>
+          if (expiredMeta?.teamId) {
+            await supabase
+              .from('registration_slots')
+              .update({ status: 'cancelled' })
+              .eq('team_id', expiredMeta.teamId)
+              .eq('status', 'captain_registered')
+          }
         }
 
         break
