@@ -69,6 +69,12 @@ function formatCents(cents: number) {
   return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 0 })}`
 }
 
+const STUDIO_BASE = process.env.NEXT_PUBLIC_SANITY_STUDIO_URL?.replace(/\/$/, '') || 'http://localhost:3333'
+
+function studioEventUrl(eventId: string) {
+  return `${STUDIO_BASE}/structure/event;${eventId}`
+}
+
 // ─── Delete Modal ─────────────────────────────────────────────────────────────
 
 interface DeleteModalProps {
@@ -104,7 +110,7 @@ function DeleteModal({ event, onClose, onSuccess }: DeleteModalProps) {
           eventDate: event.startDate,
           sendEmails,
           processRefunds,
-          skipSanityDeletion: false,
+          skipSanityDeletion: true,
         }),
       })
 
@@ -174,7 +180,7 @@ function DeleteModal({ event, onClose, onSuccess }: DeleteModalProps) {
                 <span>Sessions cancelled: <strong className="text-fg">{result.sessionsCancelled}</strong></span>
                 <span>Emails sent: <strong className="text-fg">{result.emailsSent}</strong></span>
                 <span>Records cancelled: <strong className="text-fg">{result.recordsCancelled}</strong></span>
-                <span>Sanity deleted: <strong className={result.sanityDeleted ? 'text-green' : 'text-mustard'}>{result.sanityDeleted ? 'Yes' : 'No'}</strong></span>
+                <span>Email failures: <strong className={result.emailsFailed > 0 ? 'text-red-500' : 'text-fg'}>{result.emailsFailed}</strong></span>
               </div>
             </div>
 
@@ -189,11 +195,23 @@ function DeleteModal({ event, onClose, onSuccess }: DeleteModalProps) {
               </div>
             )}
 
-            {!result.sanityDeleted && (
-              <p className="text-xs text-muted bg-mustard/10 border border-mustard/20 rounded-lg p-3">
-                The Sanity document was not deleted automatically (SANITY_API_WRITE_TOKEN not configured). Please delete the event manually in Sanity Studio to complete cleanup.
+            <div className="rounded-xl border border-border bg-surface p-4 space-y-2">
+              <p className="text-xs font-semibold text-fg">One step remains</p>
+              <p className="text-xs text-muted leading-relaxed">
+                All registrations and payment records have been cleaned up. To finish, remove the event from Sanity Studio — it takes just a moment.
               </p>
-            )}
+              <a
+                href={studioEventUrl(event._id)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline mt-1"
+              >
+                Open event in Sanity Studio
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3 opacity-70">
+                  <path fillRule="evenodd" d="M4.22 11.78a.75.75 0 0 1 0-1.06l5.25-5.25H5.75a.75.75 0 0 1 0-1.5h5.5a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-1.5 0V6.56l-5.25 5.22a.75.75 0 0 1-1.03 0Z" clipRule="evenodd" />
+                </svg>
+              </a>
+            </div>
 
             <button
               onClick={onClose}
@@ -293,9 +311,27 @@ function DeleteModal({ event, onClose, onSuccess }: DeleteModalProps) {
             )}
 
             {/* Warning */}
-            <p className="text-xs text-muted bg-surface border border-border rounded-lg p-3">
-              This will permanently delete the tournament from Sanity CMS and cancel all Supabase registrations. This action cannot be undone.
-            </p>
+            <div className="rounded-xl bg-surface border border-border p-3.5 space-y-2.5">
+              <p className="text-xs text-muted leading-relaxed">
+                This will permanently cancel all registrations, expire open checkout sessions, and remove all associated payment records. <strong className="text-fg font-medium">This cannot be undone.</strong>
+              </p>
+              <div className="border-t border-border pt-2.5 flex items-start gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-muted shrink-0 mt-0.5">
+                  <path fillRule="evenodd" d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0ZM9 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.75 8a.75.75 0 0 0 0 1.5h.75v1.75a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8.25 8h-1.5Z" clipRule="evenodd" />
+                </svg>
+                <p className="text-xs text-muted leading-relaxed">
+                  The event will remain in Sanity Studio and on the public site until you delete it there.{' '}
+                  <a
+                    href={studioEventUrl(event._id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent hover:underline font-medium"
+                  >
+                    Open event in Studio →
+                  </a>
+                </p>
+              </div>
+            </div>
 
             {/* Actions */}
             <div className="flex gap-3 pt-1">

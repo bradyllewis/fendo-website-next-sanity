@@ -37,6 +37,7 @@ export const EventDeleteAction: DocumentActionComponent = function EventDeleteAc
   const [open, setOpen] = useState(false)
   const [sendEmails, setSendEmails] = useState(false)
   const [processRefunds, setProcessRefunds] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<CascadeResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -107,8 +108,9 @@ export const EventDeleteAction: DocumentActionComponent = function EventDeleteAc
       setOpen(true)
       setResult(null)
       setError(null)
-      setSendEmails(true)
-      setProcessRefunds(true)
+      setConfirming(false)
+      setSendEmails(false)
+      setProcessRefunds(false)
     },
     dialog: open
       ? {
@@ -177,8 +179,45 @@ export const EventDeleteAction: DocumentActionComponent = function EventDeleteAc
                     The document is being deleted from Sanity…
                   </p>
                 </div>
+              ) : confirming ? (
+                // ── Final confirmation ───────────────────────────────────────
+                <div>
+                  <p style={{fontSize: '15px', fontWeight: 600, color: '#111', marginBottom: '12px'}}>
+                    Are you absolutely sure?
+                  </p>
+                  <p style={{fontSize: '14px', color: '#555', marginBottom: '16px', lineHeight: 1.6}}>
+                    You are about to permanently delete <strong>{eventTitle ?? 'this tournament'}</strong>. This cannot be undone.
+                  </p>
+                  <div style={{background: '#f8f8f8', borderRadius: '8px', padding: '12px 14px', marginBottom: '20px', fontSize: '13px', color: '#555', lineHeight: 1.8}}>
+                    <div>• Cancel all registrations</div>
+                    {processRefunds && <div>• Issue Stripe refunds to all paid registrants</div>}
+                    {sendEmails && <div>• Send cancellation emails to all registrants</div>}
+                    <div>• Delete the tournament document from Sanity</div>
+                  </div>
+                  {error && (
+                    <div style={{background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '10px 12px', marginBottom: '16px'}}>
+                      <p style={{fontSize: '12px', color: '#dc2626', margin: 0}}>{error}</p>
+                    </div>
+                  )}
+                  <div style={{display: 'flex', gap: '12px'}}>
+                    <button
+                      onClick={() => setConfirming(false)}
+                      disabled={loading}
+                      style={{flex: 1, padding: '10px', border: '1px solid #ddd', borderRadius: '8px', background: '#fff', cursor: 'pointer', fontSize: '14px', color: '#555'}}
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={handleDelete}
+                      disabled={loading}
+                      style={{flex: 1, padding: '10px', border: 'none', borderRadius: '8px', background: loading ? '#f87171' : '#dc2626', color: '#fff', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: 600}}
+                    >
+                      {loading ? 'Processing…' : 'Yes, delete permanently'}
+                    </button>
+                  </div>
+                </div>
               ) : (
-                // ── Confirmation form ────────────────────────────────────────
+                // ── Options form ─────────────────────────────────────────────
                 <div>
                   {eventTitle && (
                     <div
@@ -285,21 +324,20 @@ export const EventDeleteAction: DocumentActionComponent = function EventDeleteAc
                       Cancel
                     </button>
                     <button
-                      onClick={handleDelete}
-                      disabled={loading}
+                      onClick={() => setConfirming(true)}
                       style={{
                         flex: 1,
                         padding: '10px',
                         border: 'none',
                         borderRadius: '8px',
-                        background: loading ? '#f87171' : '#dc2626',
+                        background: '#dc2626',
                         color: '#fff',
-                        cursor: loading ? 'not-allowed' : 'pointer',
+                        cursor: 'pointer',
                         fontSize: '14px',
                         fontWeight: 600,
                       }}
                     >
-                      {loading ? 'Processing…' : 'Delete Tournament'}
+                      Delete Tournament
                     </button>
                   </div>
                 </div>
