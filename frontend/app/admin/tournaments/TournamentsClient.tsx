@@ -78,8 +78,8 @@ interface DeleteModalProps {
 }
 
 function DeleteModal({ event, onClose, onSuccess }: DeleteModalProps) {
-  const [sendEmails, setSendEmails] = useState(true)
-  const [processRefunds, setProcessRefunds] = useState(true)
+  const [sendEmails, setSendEmails] = useState(false)
+  const [processRefunds, setProcessRefunds] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<DeleteTournamentResult | null>(null)
