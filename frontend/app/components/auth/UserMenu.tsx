@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import UserAvatar from './UserAvatar'
-import { IconUser, IconLogOut, IconUsers, IconTicket, IconShield } from '@/app/components/icons'
+import { IconUser, IconLogOut, IconUsers, IconTicket, IconShield, IconEdit, IconExternalLink } from '@/app/components/icons'
 import { signOut } from '@/app/auth/actions'
 import type { Profile } from '@/lib/supabase/types'
 
@@ -34,7 +34,7 @@ export default function UserMenu({ profile }: { profile: Profile | null }) {
     <div ref={menuRef} className="relative">
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className="flex items-center gap-2 rounded-full hover:opacity-80 transition-opacity duration-200"
+        className="flex cursor-pointer items-center gap-2 rounded-full hover:opacity-80 transition-opacity duration-200"
         aria-expanded={open}
         aria-haspopup="true"
         aria-label="User menu"
@@ -83,14 +83,27 @@ export default function UserMenu({ profile }: { profile: Profile | null }) {
               The Collective
             </Link>
             {profile?.role === 'admin' && (
-              <Link
-                href="/admin"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-fg hover:bg-surface transition-colors duration-150"
-              >
-                <IconShield className="w-4 h-4" />
-                Admin Panel
-              </Link>
+              <>
+                <Link
+                  href="/admin"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-fg hover:bg-surface transition-colors duration-150"
+                >
+                  <IconShield className="w-4 h-4" />
+                  Admin Panel
+                </Link>
+                <a
+                  href="https://fendo-website-sanity-studio.vercel.app/structure"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-muted hover:text-fg hover:bg-surface transition-colors duration-150"
+                >
+                  <IconEdit className="w-4 h-4" />
+                  Sanity Studio
+                  <IconExternalLink className="w-3 h-3 ml-auto opacity-50" />
+                </a>
+              </>
             )}
           </div>
 

@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import StatCard from '@/app/components/admin/StatCard'
-import { IconCalendar, IconUsers, IconDollar, IconTicket, IconTrendUp } from '@/app/components/icons'
+import { IconCalendar, IconUsers, IconDollar, IconTicket, IconTrendUp, IconEdit, IconExternalLink } from '@/app/components/icons'
 import { format } from 'date-fns'
 
 export const metadata = { title: 'Dashboard' }
@@ -72,6 +72,28 @@ export default async function AdminDashboard() {
         <h1 className="display-md mt-1">Dashboard</h1>
         <p className="text-muted text-sm mt-1">{format(now, 'MMMM d, yyyy')}</p>
       </div>
+
+      {/* Sanity Studio shortcut */}
+      <a
+        href="https://fendo-website-sanity-studio.vercel.app/structure"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group flex items-center justify-between p-4 lg:p-5 rounded-xl bg-fg text-bg border border-fg/10 hover:bg-fg/90 transition-all duration-200"
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center shrink-0">
+            <IconEdit className="w-5 h-5 text-mustard" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-bg">Sanity Studio</p>
+            <p className="text-[0.7rem] font-mono text-bg/50 mt-0.5">Manage site content</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-bg/40 group-hover:text-bg/70 transition-colors duration-200">
+          <span className="hidden sm:block text-xs font-mono text-mustard">Open Studio</span>
+          <IconExternalLink className="w-4 h-4 text-mustard" />
+        </div>
+      </a>
 
       {/* Key metrics */}
       <div>
