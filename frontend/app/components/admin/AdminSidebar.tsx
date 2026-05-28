@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { IconGrid, IconUsers, IconTicket, IconShield, IconStar, IconUsersSmall } from '@/app/components/icons'
+import { IconGrid, IconUsers, IconTicket, IconShield, IconStar, IconUsersSmall, IconTrophy } from '@/app/components/icons'
 
 const NAV_ITEMS = [
   { label: 'Dashboard',     href: '/admin',                  icon: IconGrid        },
+  { label: 'Tournaments',   href: '/admin/tournaments',      icon: IconTrophy      },
   { label: 'Users',         href: '/admin/users',            icon: IconUsers       },
   { label: 'Registrations', href: '/admin/registrations',    icon: IconTicket      },
   { label: 'Teams',         href: '/admin/teams',            icon: IconUsersSmall  },

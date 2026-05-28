@@ -16,6 +16,7 @@ import {
   type DocumentLocation,
 } from 'sanity/presentation'
 import {assist} from '@sanity/assist'
+import {EventDeleteAction} from './src/plugins/eventDeleteAction'
 
 // Environment variables for project configuration
 const projectId = process.env.SANITY_STUDIO_PROJECT_ID || 'gqa4b3kj'
@@ -131,5 +132,21 @@ export default defineConfig({
   // Schema configuration, imported from ./src/schemaTypes/index.ts
   schema: {
     types: schemaTypes,
+  },
+
+  // Custom document actions — replace default delete for event documents with
+  // a safe cascade that handles Stripe, Supabase, and emails first.
+  document: {
+    actions: (prev, context) => {
+      if (context.schemaType === 'event') {
+        // Add safe delete action and keep all other standard actions
+        // (publish, unpublish, duplicate, etc.)
+        const withoutDelete = prev.filter(
+          (action) => !action.toString().toLowerCase().includes('deleteaction'),
+        )
+        return [...withoutDelete, EventDeleteAction]
+      }
+      return prev
+    },
   },
 })
