@@ -63,6 +63,7 @@ export type TeamRecord = {
 
 export type RegistrationSlotStatus =
   | 'captain_pending'
+  | 'captain_registered'
   | 'invited'
   | 'payment_started'
   | 'paid'

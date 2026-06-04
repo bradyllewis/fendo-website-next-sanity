@@ -1,5 +1,15 @@
  /goal Review your goal here: CLAUDE_DOCS/goal.md. Flawlessly, methodically, and thoroughly complete all requests/tasks in the goal.md doc. Always make sure the app builds without errors before considering your goal achieved. Always kill any dev servers you have launched prior to responding.
 
+ /fullstack-dev-skills:fullstack-guardian We are having an issue
+  in our tournament (event) registration flow. When registering as
+  a team, on the 'Team Details' screen there is an error at the
+  bottom that says 'Failed to create player slots'. This happened
+  when I (team captain) chose to pay for all team members - but I
+  have not tested the other scenarios so this may be happening for
+  other/all scenarios. Investigate thoroughly to precisely diagnose
+  the issue and everything it affects, then flawlessly design and
+  apply the optimal fix. Make sure you check upstream and
+  downstream, and address the issue fully.
 
 Review or use your .claude/skills/sanity_cms_skill to flawlessly complete the following tasks: 
 
