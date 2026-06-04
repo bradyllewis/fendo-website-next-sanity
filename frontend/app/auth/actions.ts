@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { subscribeEmailToList } from '@/lib/klaviyo'
 
 export async function signUp(formData: FormData) {
   const email = formData.get('email') as string
@@ -22,6 +23,8 @@ export async function signUp(formData: FormData) {
   if (createError) {
     return { error: createError.message }
   }
+
+  subscribeEmailToList(email).catch(() => {})
 
   return { success: true }
 }
