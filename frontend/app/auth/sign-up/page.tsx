@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import AuthFormCard from '@/app/components/auth/AuthFormCard'
 import FormInput from '@/app/components/auth/FormInput'
@@ -18,7 +18,6 @@ export default function SignUpPage() {
 }
 
 function SignUpForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const claimToken = searchParams.get('claimToken')
   const prefillEmail = searchParams.get('email') ?? ''
@@ -63,7 +62,7 @@ function SignUpForm() {
       return
     }
 
-    router.push(claimToken ? `/account/claim/${claimToken}` : '/collective')
+    window.location.href = claimToken ? `/account/claim/${claimToken}` : '/collective'
   }
 
   return (
