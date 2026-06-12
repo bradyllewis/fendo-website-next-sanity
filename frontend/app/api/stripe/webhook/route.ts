@@ -170,6 +170,12 @@ export async function POST(request: NextRequest) {
                 })
                 .eq('id', existingEventReg.id)
             } else {
+              const { data: slotTeamRow } = await supabase
+                .from('teams')
+                .select('registration_type')
+                .eq('id', slotCheck.team_id)
+                .maybeSingle()
+
               const { data: insertedReg } = await supabase
                 .from('event_registrations')
                 .insert({
@@ -183,7 +189,7 @@ export async function POST(request: NextRequest) {
                   amount_paid: session.amount_total,
                   currency: session.currency ?? 'usd',
                   status: 'paid',
-                  registration_type: slotCheck.is_captain ? 'duo' : 'team',
+                  registration_type: slotTeamRow?.registration_type ?? (slotCheck.is_captain ? 'duo' : 'team'),
                   team_name: teamName ?? null,
                   team_id: slotCheck.team_id,
                   metadata: {
@@ -191,6 +197,7 @@ export async function POST(request: NextRequest) {
                     paymentMode: 'individual',
                     inviteCode: inviteCode ?? null,
                     registrationSlotId,
+                    teamId: slotCheck.team_id,
                   },
                 })
                 .select('id')

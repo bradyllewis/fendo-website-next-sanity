@@ -902,13 +902,16 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
     const isVolunteer = form.registrationType === 'volunteer'
     const isIndividualPay = form.paymentMode === 'individual'
     const entryFee = isVolunteer ? 0 : (event.entryFee ?? 0)
-    const entryFeeStr = entryFee === 0 ? 'Free' : `$${entryFee}`
+    // For captain_pays_all, multiply by team size to show what's actually charged
+    const teamSize = form.registrationType === 'duo' ? 2 : form.registrationType === 'team' ? 4 : 1
+    const effectiveEntryFee = !isIndividualPay && teamSize > 1 ? entryFee * teamSize : entryFee
+    const entryFeeStr = effectiveEntryFee === 0 ? 'Free' : `$${effectiveEntryFee}`
     const hasDonation = form.donationAmount > 0
     const pricedAddOnsTotal = selectedAddOnItems.reduce(
       (sum, a) => sum + (a.inputType !== 'text' && a.price != null ? a.price : 0),
       0,
     )
-    const totalStr = `$${entryFee + form.donationAmount + pricedAddOnsTotal}`
+    const totalStr = `$${effectiveEntryFee + form.donationAmount + pricedAddOnsTotal}`
 
     return (
       <div className="space-y-5">

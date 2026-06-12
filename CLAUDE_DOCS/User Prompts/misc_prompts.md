@@ -1,15 +1,20 @@
  /goal Review your goal here: CLAUDE_DOCS/goal.md. Flawlessly, methodically, and thoroughly complete all requests/tasks in the goal.md doc. Always make sure the app builds without errors before considering your goal achieved. Always kill any dev servers you have launched prior to responding.
 
- /fullstack-dev-skills:fullstack-guardian We are having an issue
-  in our tournament (event) registration flow. When registering as
-  a team, on the 'Team Details' screen there is an error at the
-  bottom that says 'Failed to create player slots'. This happened
-  when I (team captain) chose to pay for all team members - but I
-  have not tested the other scenarios so this may be happening for
-  other/all scenarios. Investigate thoroughly to precisely diagnose
-  the issue and everything it affects, then flawlessly design and
-  apply the optimal fix. Make sure you check upstream and
-  downstream, and address the issue fully.
+Use plan mode to review our event (tournament)
+  registration flow - specifically the Stripe functionality. You will see that
+  we have multiple registration options, and even multiple paths from some
+  individual registration options (single, duo, team...). We are currently
+  still having issues with the Stripe piece of it. When I attempted to register
+  as a duo and only pay for myself, it seemed like it was going to work, it
+  displayed 'Invite links will be mailed immediately......', but then it also
+  displayed the error: 'Failed to create checkout session.'
+
+  This is the only scenario I have tested, so it's very likely that this issue
+  could affect other registration scenarios.
+
+  I want you to thoroughly and precisely diagnose the issue and determine the
+  optimal way to completely address it, and audit the other scenarios to check
+  for broken/bad logic so we can avoid any further issues from the start.
 
 Review or use your .claude/skills/sanity_cms_skill to flawlessly complete the following tasks: 
 

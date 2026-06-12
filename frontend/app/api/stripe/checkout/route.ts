@@ -329,63 +329,74 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // Create Stripe Checkout Session for captain's own slot
-      const customerId = await getOrCreateStripeCustomer(user.id, user.email!, captainName)
+      // Create Stripe Checkout Session for captain's own slot.
+      // Wrapped in targeted try/catch: surfaces the actual Stripe error message
+      // and rolls back orphaned team/slot records if session creation fails.
+      try {
+        const customerId = await getOrCreateStripeCustomer(user.id, user.email!, captainName)
 
-      const captainSession = await stripe.checkout.sessions.create({
-        customer: customerId,
-        payment_method_types: ['card'],
-        mode: 'payment',
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              unit_amount: entryFeeInCents,
-              product_data: {
-                name: `${teamType} Entry — ${teamName}`,
-                description: `Captain entry fee for ${event.title ?? eventSlug}`,
+        const captainSession = await stripe.checkout.sessions.create({
+          customer: customerId,
+          payment_method_types: ['card'],
+          mode: 'payment',
+          line_items: [
+            {
+              price_data: {
+                currency: 'usd',
+                unit_amount: entryFeeInCents,
+                product_data: {
+                  name: `${teamType} Entry — ${teamName}`,
+                  description: `Captain entry fee for ${event.title ?? eventSlug}`,
+                },
               },
+              quantity: 1,
             },
-            quantity: 1,
-          },
-        ],
-        success_url: `${baseUrl}/compete/${eventSlug}/register-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${baseUrl}/compete/${eventSlug}`,
-        metadata: {
-          type: 'slot',
-          registrationSlotId: captainSlot.id,
-          teamId: teamData.id,
-          userId: user.id,
-          eventSanityId: event._id,
-          eventSlug,
-          eventTitle: event.title ?? '',
-          eventDate: event.startDate ?? '',
-          teamName,
-          inviteCode: teamData.invite_code,
-          paymentMode: 'individual',
-        },
-        payment_intent_data: {
+          ],
+          success_url: `${baseUrl}/compete/${eventSlug}/register-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${baseUrl}/compete/${eventSlug}`,
           metadata: {
             type: 'slot',
             registrationSlotId: captainSlot.id,
+            teamId: teamData.id,
             userId: user.id,
             eventSanityId: event._id,
             eventSlug,
+            eventTitle: event.title ?? '',
+            eventDate: event.startDate ?? '',
+            teamName,
+            inviteCode: teamData.invite_code,
+            paymentMode: 'individual',
           },
-        },
-      })
+          payment_intent_data: {
+            metadata: {
+              type: 'slot',
+              registrationSlotId: captainSlot.id,
+              userId: user.id,
+              eventSanityId: event._id,
+              eventSlug,
+            },
+          },
+        })
 
-      // Update captain slot with session id
-      await admin
-        .from('registration_slots')
-        .update({ stripe_checkout_session_id: captainSession.id, status: 'payment_started' })
-        .eq('id', captainSlot.id)
+        // Update captain slot with session id
+        await admin
+          .from('registration_slots')
+          .update({ stripe_checkout_session_id: captainSession.id, status: 'payment_started' })
+          .eq('id', captainSlot.id)
 
-      return NextResponse.json({
-        url: captainSession.url,
-        sessionId: captainSession.id,
-        invitedCount: invitedSlots.length,
-      })
+        return NextResponse.json({
+          url: captainSession.url,
+          sessionId: captainSession.id,
+          invitedCount: invitedSlots.length,
+        })
+      } catch (stripeErr) {
+        console.error('[stripe/checkout/individual] Stripe session creation failed:', stripeErr)
+        // Roll back orphaned records so the user can retry cleanly
+        await admin.from('registration_slots').delete().eq('team_id', teamData.id)
+        await admin.from('teams').delete().eq('id', teamData.id)
+        const message = stripeErr instanceof Error ? stripeErr.message : 'Failed to create checkout session'
+        return NextResponse.json({ error: message }, { status: 500 })
+      }
     }
 
     // ── Check spots availability for standard flows ──────────────────────────
@@ -408,6 +419,7 @@ export async function POST(request: NextRequest) {
     let dbRegistrationType: string | null = formRegistrationType ?? null
     let teamId: string | null = null
     let inviteCode: string | null = null
+    let captainPaysAllMemberCount = 1
 
     if (formRegistrationType === 'join') {
       const joinCode = (registrationData?.joinTeamCode as string | undefined)?.toUpperCase().trim()
@@ -475,6 +487,7 @@ export async function POST(request: NextRequest) {
       }
     } else if (formRegistrationType === 'duo' || formRegistrationType === 'team') {
       const maxMembers = formRegistrationType === 'duo' ? 2 : 4
+      captainPaysAllMemberCount = maxMembers
       const teamName = (registrationData?.teamName as string | undefined)?.trim()
 
       if (!teamName) {
@@ -736,11 +749,13 @@ export async function POST(request: NextRequest) {
           currency: 'usd',
           unit_amount: entryFeeInCents,
           product_data: {
-            name: eventTitle,
+            name: captainPaysAllMemberCount > 1
+              ? `${eventTitle} — ${captainPaysAllMemberCount} Spots`
+              : eventTitle,
             description: event.shortDescription ?? `Registration for ${eventTitle}`,
           },
         },
-        quantity: 1,
+        quantity: captainPaysAllMemberCount,
       },
     ]
 

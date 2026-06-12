@@ -56,9 +56,8 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
       .maybeSingle()
     registration = data
 
-    // Fallback: if the webhook hasn't fired yet, verify with Stripe directly and
-    // fulfill inline. This mirrors the webhook handler exactly — it's idempotent
-    // (the webhook will skip if it arrives later and finds status='paid').
+    // Fallback A: standard checkout — pending row exists, webhook hasn't fired yet.
+    // Update inline; idempotent (webhook will skip if it finds status='paid' later).
     if (registration?.status === 'pending') {
       try {
         const stripeSession = await stripe.checkout.sessions.retrieve(session_id)
@@ -89,6 +88,45 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
       } catch (err) {
         // Non-fatal: if Stripe is unreachable, fall through with the pending state
         console.error('[register-success] Stripe session verify failed:', err)
+      }
+    }
+
+    // Fallback B: individual payment captain — no event_registrations row yet
+    // (webhook creates it after payment; show confirmed UI from the slot directly).
+    if (!registration) {
+      try {
+        const stripeSession = await stripe.checkout.sessions.retrieve(session_id)
+        if (
+          stripeSession.payment_status === 'paid' &&
+          stripeSession.metadata?.type === 'slot' &&
+          stripeSession.metadata?.userId === user.id
+        ) {
+          const admin = createAdminClient()
+          const { data: captainSlot } = await admin
+            .from('registration_slots')
+            .select('team_id, event_sanity_id')
+            .eq('stripe_checkout_session_id', session_id)
+            .eq('is_captain', true)
+            .maybeSingle()
+
+          if (captainSlot) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            registration = {
+              status: 'paid',
+              event_title: stripeSession.metadata.eventTitle ?? slug,
+              event_date: stripeSession.metadata.eventDate || null,
+              amount_paid: stripeSession.amount_total,
+              metadata: {
+                isTeamCaptain: true,
+                paymentMode: 'individual',
+                teamId: captainSlot.team_id,
+                inviteCode: stripeSession.metadata.inviteCode ?? null,
+              },
+            } as any
+          }
+        }
+      } catch (err) {
+        console.error('[register-success] Slot payment fallback failed:', err)
       }
     }
   }
