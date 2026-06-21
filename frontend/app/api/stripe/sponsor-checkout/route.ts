@@ -5,6 +5,9 @@ import { stripe } from '@/lib/stripe/client'
 import { getOrCreateStripeCustomer } from '@/lib/stripe/customer'
 import { client } from '@/sanity/lib/client'
 import { eventQuery } from '@/sanity/lib/queries'
+import { sendEmail, getBaseUrl } from '@/lib/email/resend'
+import { buildSponsorConfirmationEmail } from '@/lib/email/templates/sponsor-confirmation'
+import { format, parseISO } from 'date-fns'
 
 export async function POST(request: NextRequest) {
   try {
@@ -87,6 +90,25 @@ export async function POST(request: NextRequest) {
         console.error('[sponsor-checkout] Invoice insert failed:', insertError)
         return NextResponse.json({ error: 'Failed to create sponsorship record' }, { status: 500 })
       }
+
+      // Send invoice-received confirmation to sponsor
+      const siteUrl = getBaseUrl()
+      const eventDateStr = event.startDate ? format(parseISO(event.startDate), 'EEEE, MMMM d, yyyy') : ''
+      await sendEmail({
+        to: sponsorData.email,
+        subject: `Sponsorship request received — ${event.title}`,
+        html: buildSponsorConfirmationEmail({
+          contactName: sponsorData.primaryContact,
+          companyName: sponsorData.companyName,
+          sponsorshipLevel: sponsorData.sponsorshipLevel,
+          eventTitle: event.title,
+          eventDate: eventDateStr,
+          eventLocation: null,
+          amountPaid: null,
+          paymentMethod: 'invoice',
+          siteUrl,
+        }),
+      }).catch((err) => console.error('[sponsor-checkout] Invoice confirmation email error:', err))
 
       return NextResponse.json({
         url: `${baseUrl}/compete/${eventSlug}/sponsor-success?invoice=1`,

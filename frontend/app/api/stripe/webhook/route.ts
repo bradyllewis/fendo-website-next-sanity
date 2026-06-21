@@ -6,6 +6,10 @@ import { sendEmail, getBaseUrl } from '@/lib/email/resend'
 import { buildSlotConfirmationEmail } from '@/lib/email/templates/slot-confirmation'
 import { buildTeamCompleteEmail } from '@/lib/email/templates/team-complete'
 import { buildTeamNotificationEmail } from '@/lib/email/templates/team-notification'
+import { buildRegistrationConfirmationEmail } from '@/lib/email/templates/registration-confirmation'
+import { buildSponsorConfirmationEmail } from '@/lib/email/templates/sponsor-confirmation'
+import { buildTeammatePaidEmail } from '@/lib/email/templates/teammate-paid'
+import { buildRefundConfirmationEmail } from '@/lib/email/templates/refund-confirmation'
 import { format, parseISO } from 'date-fns'
 
 // Stripe requires the raw request body for signature verification
@@ -77,6 +81,35 @@ export async function POST(request: NextRequest) {
             console.warn(`[webhook] No pending sponsor row for session ${session.id} — skipping fallback insert`)
           } else {
             console.log(`[webhook] Confirmed paid sponsor registration / event ${meta.eventSlug}`)
+
+            // Send confirmation email to sponsor
+            const { data: sponsorRow } = await supabase
+              .from('sponsor_registrations')
+              .select('email, primary_contact, company_name, sponsorship_level, sponsorship_level_price, event_title, event_date')
+              .eq('stripe_checkout_session_id', session.id)
+              .maybeSingle()
+
+            if (sponsorRow?.email) {
+              const siteUrl = getBaseUrl()
+              const eventDateStr = sponsorRow.event_date
+                ? format(parseISO(sponsorRow.event_date), 'EEEE, MMMM d, yyyy')
+                : ''
+              await sendEmail({
+                to: sponsorRow.email,
+                subject: `Sponsorship confirmed — ${sponsorRow.event_title ?? meta.eventSlug}`,
+                html: buildSponsorConfirmationEmail({
+                  contactName: sponsorRow.primary_contact,
+                  companyName: sponsorRow.company_name,
+                  sponsorshipLevel: sponsorRow.sponsorship_level,
+                  eventTitle: sponsorRow.event_title ?? meta.eventSlug,
+                  eventDate: eventDateStr,
+                  eventLocation: null,
+                  amountPaid: session.amount_total,
+                  paymentMethod: 'stripe',
+                  siteUrl,
+                }),
+              }).catch((err) => console.error('[webhook] Sponsor confirmation email error:', err))
+            }
           }
           break
         }
@@ -272,6 +305,46 @@ export async function POST(request: NextRequest) {
               }),
             }).catch((err) => console.error('[webhook] Confirmation email error:', err))
 
+            // If a non-captain teammate paid and team isn't complete yet → notify captain
+            if (!slotCheck.is_captain && newTeamStatus !== 'complete') {
+              const { data: captainSlot } = await supabase
+                .from('registration_slots')
+                .select('invited_by_user_id')
+                .eq('team_id', slotCheck.team_id)
+                .eq('is_captain', true)
+                .maybeSingle()
+
+              if (captainSlot?.invited_by_user_id) {
+                const { data: captainProfile } = await supabase
+                  .from('profiles')
+                  .select('full_name, email')
+                  .eq('id', captainSlot.invited_by_user_id)
+                  .maybeSingle()
+
+                if (captainProfile?.email) {
+                  const captainFirstName = (captainProfile.full_name ?? 'Captain').split(' ')[0]
+                  const unpaidCount = allTeamSlots
+                    ? allTeamSlots.filter((s) => !['paid', 'claimed', 'expired', 'cancelled'].includes(s.status)).length
+                    : 0
+
+                  await sendEmail({
+                    to: captainProfile.email,
+                    subject: `${slotCheck.player_first_name} paid their spot — ${teamData?.team_name ?? ''}`,
+                    html: buildTeammatePaidEmail({
+                      captainFirstName,
+                      teammateFirstName: slotCheck.player_first_name,
+                      teammateLastName: slotCheck.player_last_name,
+                      teamName: teamData?.team_name ?? teamName ?? '',
+                      eventTitle: meta.eventTitle ?? eventSlug,
+                      eventDate,
+                      slotsRemaining: unpaidCount,
+                      siteUrl,
+                    }),
+                  }).catch((err) => console.error('[webhook] Teammate-paid email error:', err))
+                }
+              }
+            }
+
             // If all slots are now paid → send team-complete email to captain
             if (newTeamStatus === 'complete') {
               const { data: allSlotsWithDetails } = await supabase
@@ -373,6 +446,34 @@ export async function POST(request: NextRequest) {
         }
 
         console.log(`[webhook] Confirmed paid registration for user ${userId} / event ${eventSlug}`)
+
+        // Send confirmation email to the registering player
+        if (userId) {
+          const { data: playerProfile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', userId)
+            .maybeSingle()
+
+          if (playerProfile?.email) {
+            const playerFirstName = (playerProfile.full_name ?? 'there').split(' ')[0]
+            const eventDateStr = eventDate ? format(parseISO(eventDate), 'EEEE, MMMM d, yyyy') : ''
+            const siteUrl = getBaseUrl()
+
+            await sendEmail({
+              to: playerProfile.email,
+              subject: `You're registered — ${eventTitle ?? eventSlug}`,
+              html: buildRegistrationConfirmationEmail({
+                playerFirstName,
+                eventTitle: eventTitle ?? eventSlug,
+                eventDate: eventDateStr,
+                eventLocation: null,
+                amountPaid: session.amount_total ?? 0,
+                siteUrl,
+              }),
+            }).catch((err) => console.error('[webhook] Registration confirmation email error:', err))
+          }
+        }
 
         // ── captain_pays_all invitee notification ───────────────────────────
         // If this registration is for a captain_pays_all team, mark invitee
@@ -479,10 +580,12 @@ export async function POST(request: NextRequest) {
         const charge = event.data.object as Stripe.Charge
 
         if (charge.payment_intent) {
-          await supabase
+          const { data: refundedReg } = await supabase
             .from('event_registrations')
             .update({ status: 'refunded' })
             .eq('stripe_payment_intent_id', charge.payment_intent as string)
+            .select('user_id, event_title')
+            .maybeSingle()
 
           await supabase
             .from('sponsor_registrations')
@@ -493,6 +596,29 @@ export async function POST(request: NextRequest) {
             .from('registration_slots')
             .update({ status: 'cancelled' })
             .eq('stripe_payment_intent_id', charge.payment_intent as string)
+
+          // Send refund confirmation to the player
+          if (refundedReg?.user_id) {
+            const { data: refundProfile } = await supabase
+              .from('profiles')
+              .select('full_name, email')
+              .eq('id', refundedReg.user_id)
+              .maybeSingle()
+
+            if (refundProfile?.email) {
+              const siteUrl = getBaseUrl()
+              await sendEmail({
+                to: refundProfile.email,
+                subject: `Your refund is on the way — ${refundedReg.event_title ?? 'Fendo Golf'}`,
+                html: buildRefundConfirmationEmail({
+                  recipientName: refundProfile.full_name ?? 'there',
+                  eventTitle: refundedReg.event_title ?? 'your event',
+                  amountRefunded: charge.amount_refunded,
+                  siteUrl,
+                }),
+              }).catch((err) => console.error('[webhook] Refund confirmation email error:', err))
+            }
+          }
         }
 
         break
