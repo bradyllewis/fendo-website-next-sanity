@@ -58,10 +58,10 @@ export default function TeamsTable({ teams }: Props) {
               <tr className="border-b border-border bg-surface/60">
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted font-medium">Team</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted font-medium">Type</th>
-                <th className="text-left px-4 py-3 text-xs font-mono text-muted font-medium">Code</th>
+                <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-mono text-muted font-medium">Code</th>
                 <th className="text-left px-4 py-3 text-xs font-mono text-muted font-medium">Members</th>
-                <th className="text-left px-4 py-3 text-xs font-mono text-muted font-medium">Event</th>
-                <th className="text-left px-4 py-3 text-xs font-mono text-muted font-medium">Created</th>
+                <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-mono text-muted font-medium">Event</th>
+                <th className="hidden md:table-cell text-left px-4 py-3 text-xs font-mono text-muted font-medium">Created</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
@@ -86,14 +86,14 @@ export default function TeamsTable({ teams }: Props) {
                         {team.registration_type === 'duo' ? 'Duo' : 'Team'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-mono font-bold tracking-widest text-fg text-xs">
+                    <td className="hidden sm:table-cell px-4 py-3 font-mono font-bold tracking-widest text-fg text-xs">
                       {team.invite_code}
                     </td>
                     <td className="px-4 py-3 font-mono text-muted">
                       {team.member_count} / {team.max_members}
                     </td>
-                    <td className="px-4 py-3 font-mono text-muted text-xs">{team.event_slug}</td>
-                    <td className="px-4 py-3 font-mono text-muted text-xs">
+                    <td className="hidden sm:table-cell px-4 py-3 font-mono text-muted text-xs">{team.event_slug}</td>
+                    <td className="hidden md:table-cell px-4 py-3 font-mono text-muted text-xs">
                       {format(parseISO(team.created_at), 'MMM d, yyyy')}
                     </td>
                   </tr>

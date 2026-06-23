@@ -76,7 +76,7 @@ export default function RegistrationsTable({ registrations }: Props) {
       ) : (
         <div className="card-base overflow-hidden">
           {/* Header */}
-          <div className="hidden lg:grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-4 px-5 py-3 border-b border-border bg-surface/50">
+          <div className="hidden md:grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-4 px-5 py-3 border-b border-border bg-surface/50">
             <span className="label-mono text-[0.6rem]">Member</span>
             <span className="label-mono text-[0.6rem]">Event</span>
             <span className="label-mono text-[0.6rem]">Type</span>
@@ -90,7 +90,7 @@ export default function RegistrationsTable({ registrations }: Props) {
             {filtered.map((reg) => (
               <div
                 key={reg.id}
-                className="flex flex-col lg:grid lg:grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-2 lg:gap-4 lg:items-center px-5 py-4"
+                className="flex flex-col md:grid md:grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-2 md:gap-4 md:items-center px-5 py-4"
               >
                 {/* Member */}
                 <div>
@@ -125,42 +125,54 @@ export default function RegistrationsTable({ registrations }: Props) {
                 </div>
 
                 {/* Registration type */}
-                <div>
-                  {reg.registration_type ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.6rem] font-mono uppercase tracking-wider bg-surface border border-border text-muted">
-                      {reg.registration_type}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-muted-2 font-mono">—</span>
-                  )}
-                  {reg.team_name && (
-                    <p className="text-[0.65rem] text-muted mt-0.5 truncate">{reg.team_name}</p>
-                  )}
+                <div className="flex items-center gap-2 md:block">
+                  <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Type</span>
+                  <div>
+                    {reg.registration_type ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.6rem] font-mono uppercase tracking-wider bg-surface border border-border text-muted">
+                        {reg.registration_type}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-2 font-mono">—</span>
+                    )}
+                    {reg.team_name && (
+                      <p className="text-[0.65rem] text-muted mt-0.5 truncate">{reg.team_name}</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Status */}
-                <div>
-                  <StatusSelector
-                    registrationId={reg.id}
-                    currentStatus={reg.status}
-                  />
-                  {reg.notes && (
-                    <p className="text-[0.65rem] text-muted mt-1 italic line-clamp-1">{reg.notes}</p>
-                  )}
+                <div className="flex items-center gap-2 md:block">
+                  <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Status</span>
+                  <div>
+                    <StatusSelector
+                      registrationId={reg.id}
+                      currentStatus={reg.status}
+                    />
+                    {reg.notes && (
+                      <p className="text-[0.65rem] text-muted mt-1 italic line-clamp-1">{reg.notes}</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Amount */}
-                <p className="text-sm font-mono text-fg">
-                  {reg.amount_paid != null
-                    ? `$${(reg.amount_paid / 100).toFixed(2)}`
-                    : <span className="text-muted">—</span>
-                  }
-                </p>
+                <div className="flex items-center gap-2 md:block">
+                  <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Amount</span>
+                  <p className="text-sm font-mono text-fg">
+                    {reg.amount_paid != null
+                      ? `$${(reg.amount_paid / 100).toFixed(2)}`
+                      : <span className="text-muted">—</span>
+                    }
+                  </p>
+                </div>
 
                 {/* Date */}
-                <p className="text-xs font-mono text-muted">
-                  {format(parseISO(reg.created_at), 'MMM d, yyyy')}
-                </p>
+                <div className="flex items-center gap-2 md:block">
+                  <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Date</span>
+                  <p className="text-xs font-mono text-muted">
+                    {format(parseISO(reg.created_at), 'MMM d, yyyy')}
+                  </p>
+                </div>
               </div>
             ))}
           </div>

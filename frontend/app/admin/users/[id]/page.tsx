@@ -153,7 +153,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
               {(registrations as EventRegistration[]).map((reg) => (
                 <div
                   key={reg.id}
-                  className="flex items-center justify-between gap-4 px-5 py-4"
+                  className="flex flex-wrap items-start justify-between gap-3 px-5 py-4"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -172,7 +172,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0 mt-1">
                     {reg.status !== 'cancelled' && reg.status !== 'refunded' && (
                       <UnregisterButton
                         registrationId={reg.id}

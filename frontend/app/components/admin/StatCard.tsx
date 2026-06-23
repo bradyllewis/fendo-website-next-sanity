@@ -11,7 +11,7 @@ export default function StatCard({ label, value, sub, accent = false }: StatCard
       <p className={`label-mono text-[0.6rem] ${accent ? 'text-bg/40' : 'text-muted'}`}>
         {label}
       </p>
-      <p className={`text-2xl font-semibold tracking-tight ${accent ? 'text-bg' : 'text-fg'}`}>
+      <p className={`text-xl sm:text-2xl font-semibold tracking-tight ${accent ? 'text-bg' : 'text-fg'}`}>
         {value}
       </p>
       {sub && (

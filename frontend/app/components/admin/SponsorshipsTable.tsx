@@ -76,7 +76,7 @@ export default function SponsorshipsTable({ sponsorships }: Props) {
       ) : (
         <div className="card-base overflow-hidden">
           {/* Header */}
-          <div className="hidden lg:grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-4 px-5 py-3 border-b border-border bg-surface/50">
+          <div className="hidden md:grid grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-4 px-5 py-3 border-b border-border bg-surface/50">
             <span className="label-mono text-[0.6rem]">Company</span>
             <span className="label-mono text-[0.6rem]">Event</span>
             <span className="label-mono text-[0.6rem]">Level</span>
@@ -90,7 +90,7 @@ export default function SponsorshipsTable({ sponsorships }: Props) {
             {filtered.map(s => (
               <div
                 key={s.id}
-                className="flex flex-col lg:grid lg:grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-2 lg:gap-4 lg:items-center px-5 py-4"
+                className="flex flex-col md:grid md:grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-2 md:gap-4 md:items-center px-5 py-4"
               >
                 {/* Company */}
                 <div>
@@ -115,32 +115,44 @@ export default function SponsorshipsTable({ sponsorships }: Props) {
                 </div>
 
                 {/* Level */}
-                <div>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.6rem] font-mono uppercase tracking-wider bg-surface border border-border text-muted">
-                    {s.sponsorship_level}
-                  </span>
-                  <p className="text-[0.65rem] font-mono text-muted mt-0.5">
-                    {s.payment_method === 'invoice' ? 'Invoice' : 'Card/ACH'}
-                  </p>
+                <div className="flex items-center gap-2 md:block">
+                  <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Level</span>
+                  <div>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.6rem] font-mono uppercase tracking-wider bg-surface border border-border text-muted">
+                      {s.sponsorship_level}
+                    </span>
+                    <p className="text-[0.65rem] font-mono text-muted mt-0.5">
+                      {s.payment_method === 'invoice' ? 'Invoice' : 'Card/ACH'}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Status */}
-                <SponsorStatusSelector sponsorshipId={s.id} currentStatus={s.status} statusStyles={STATUS_STYLES} />
+                <div className="flex items-center gap-2 md:block">
+                  <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Status</span>
+                  <SponsorStatusSelector sponsorshipId={s.id} currentStatus={s.status} statusStyles={STATUS_STYLES} />
+                </div>
 
                 {/* Amount */}
-                <p className="text-sm font-mono text-fg">
-                  {s.amount_paid != null
-                    ? `$${(s.amount_paid / 100).toFixed(2)}`
-                    : s.sponsorship_level_price != null
-                      ? <span className="text-muted">${(s.sponsorship_level_price / 100).toFixed(2)}</span>
-                      : <span className="text-muted">—</span>
-                  }
-                </p>
+                <div className="flex items-center gap-2 md:block">
+                  <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Amount</span>
+                  <p className="text-sm font-mono text-fg">
+                    {s.amount_paid != null
+                      ? `$${(s.amount_paid / 100).toFixed(2)}`
+                      : s.sponsorship_level_price != null
+                        ? <span className="text-muted">${(s.sponsorship_level_price / 100).toFixed(2)}</span>
+                        : <span className="text-muted">—</span>
+                    }
+                  </p>
+                </div>
 
                 {/* Date */}
-                <p className="text-xs font-mono text-muted">
-                  {format(parseISO(s.created_at), 'MMM d, yyyy')}
-                </p>
+                <div className="flex items-center gap-2 md:block">
+                  <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Date</span>
+                  <p className="text-xs font-mono text-muted">
+                    {format(parseISO(s.created_at), 'MMM d, yyyy')}
+                  </p>
+                </div>
               </div>
             ))}
           </div>

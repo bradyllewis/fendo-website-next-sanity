@@ -98,7 +98,7 @@ export default async function AdminDashboard() {
       {/* Key metrics */}
       <div>
         <h2 className="label-mono text-[0.65rem] mb-3">Members</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard
             label="Total Members"
             value={totalUsers ?? 0}
@@ -126,7 +126,7 @@ export default async function AdminDashboard() {
       {/* Registration stats */}
       <div>
         <h2 className="label-mono text-[0.65rem] mb-3">Registrations</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <StatCard label="Total" value={totalRegistrations} />
           <StatCard label="Registered" value={totalPaid} />
           <StatCard label="Pending" value={totalPending} />

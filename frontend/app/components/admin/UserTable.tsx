@@ -62,7 +62,7 @@ export default function UserTable({ users }: Props) {
       ) : (
         <div className="card-base overflow-hidden">
           {/* Header row */}
-          <div className="hidden lg:grid grid-cols-[2fr_2fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-border bg-surface/50">
+          <div className="hidden md:grid grid-cols-[2fr_2fr_1fr_1fr_auto] gap-4 px-5 py-3 border-b border-border bg-surface/50">
             <span className="label-mono text-[0.6rem]">Member</span>
             <span className="label-mono text-[0.6rem]">Email</span>
             <span className="label-mono text-[0.6rem]">Handicap / Course</span>
@@ -76,7 +76,7 @@ export default function UserTable({ users }: Props) {
               <Link
                 key={user.id}
                 href={`/admin/users/${user.id}`}
-                className="flex lg:grid lg:grid-cols-[2fr_2fr_1fr_1fr_auto] gap-4 items-center px-5 py-4 hover:bg-surface/50 transition-colors duration-150 group"
+                className="flex md:grid md:grid-cols-[2fr_2fr_1fr_1fr_auto] gap-4 items-center px-5 py-4 hover:bg-surface/50 transition-colors duration-150 group"
               >
                 {/* Avatar + name */}
                 <div className="flex items-center gap-3 min-w-0">
@@ -96,10 +96,10 @@ export default function UserTable({ users }: Props) {
                 </div>
 
                 {/* Email */}
-                <p className="hidden lg:block text-sm text-muted truncate">{user.email}</p>
+                <p className="hidden md:block text-sm text-muted truncate">{user.email}</p>
 
                 {/* Handicap / course */}
-                <div className="hidden lg:block">
+                <div className="hidden md:block">
                   {user.handicap != null && (
                     <p className="text-xs font-mono text-fg">HCP {user.handicap}</p>
                   )}
@@ -112,7 +112,7 @@ export default function UserTable({ users }: Props) {
                 </div>
 
                 {/* Joined */}
-                <p className="hidden lg:block text-xs font-mono text-muted">
+                <p className="hidden md:block text-xs font-mono text-muted">
                   {format(parseISO(user.created_at), 'MMM d, yyyy')}
                 </p>
 

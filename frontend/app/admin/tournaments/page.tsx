@@ -75,7 +75,7 @@ export default async function TournamentsPage() {
       {/* Metrics */}
       <div>
         <h2 className="label-mono text-[0.65rem] mb-3">Overview</h2>
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <StatCard label="Total Events" value={totalEvents} sub="All time" />
           <StatCard label="Upcoming / Open" value={upcoming} />
           <StatCard label="Completed" value={completed} />

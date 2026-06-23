@@ -31,7 +31,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-5rem)]">
+    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-5rem)]">
       <AdminSidebar />
       <div className="flex-1 min-w-0">
         {children}
