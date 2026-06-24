@@ -2,19 +2,11 @@ import { notFound } from 'next/navigation'
 import { format, parseISO, isPast } from 'date-fns'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { client } from '@/sanity/lib/client'
-import { defineQuery } from 'next-sanity'
+import { eventByIdQuery } from '@/sanity/lib/queries'
 import { IconCalendar, IconMapPin, IconDollar } from '@/app/components/icons'
 import InvitePayButton from './InvitePayButton'
 
 type Props = { params: Promise<{ token: string }> }
-
-const eventTitleQuery = defineQuery(`
-  *[_type == "event" && slug.current == $slug][0]{
-    title,
-    startDate,
-    "location": location { venueName, city, state }
-  }
-`)
 
 export default async function InvitePage({ params }: Props) {
   const { token } = await params
@@ -22,7 +14,7 @@ export default async function InvitePage({ params }: Props) {
 
   const { data: slot } = await admin
     .from('registration_slots')
-    .select('id, status, player_first_name, player_last_name, player_email, amount_due, expires_at, invited_by_user_id, team_id, event_slug, is_captain')
+    .select('id, status, player_first_name, player_last_name, player_email, amount_due, expires_at, invited_by_user_id, team_id, event_sanity_id, event_slug, is_captain')
     .eq('invite_token', token)
     .maybeSingle()
 
@@ -44,7 +36,8 @@ export default async function InvitePage({ params }: Props) {
     if (captain?.full_name) captainName = captain.full_name
   }
 
-  const eventData = await client.fetch(eventTitleQuery, { slug: slot.event_slug }, { next: { revalidate: 3600 } })
+  // Resolve event by immutable Sanity _id (slug may have changed since the slot was created)
+  const eventData = await client.fetch(eventByIdQuery, { id: slot.event_sanity_id }, { next: { revalidate: 3600 } })
 
   const isExpired = slot.status === 'expired' || slot.status === 'cancelled' || isPast(parseISO(slot.expires_at))
   const isPaid = slot.status === 'paid' || slot.status === 'claimed'

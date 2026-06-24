@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getCurrentEventTitles } from '@/sanity/lib/events'
 import TeamsTable from '@/app/components/admin/TeamsTable'
 
 export const metadata = { title: 'Teams' }
@@ -8,7 +9,7 @@ export default async function AdminTeamsPage() {
 
   const { data: teams } = await db
     .from('teams')
-    .select('id, team_name, invite_code, registration_type, max_members, event_slug, created_at')
+    .select('id, team_name, invite_code, registration_type, max_members, event_sanity_id, event_slug, created_at')
     .order('created_at', { ascending: false })
 
   const teamIds = (teams ?? []).map((t) => t.id)
@@ -26,8 +27,12 @@ export default async function AdminTeamsPage() {
     if (reg.team_id) countMap[reg.team_id] = (countMap[reg.team_id] ?? 0) + 1
   }
 
+  // Override stale stored event_slug with the current Sanity title for display
+  const titleMap = await getCurrentEventTitles((teams ?? []).map((t) => t.event_sanity_id))
+
   const rows = (teams ?? []).map((t) => ({
     ...t,
+    event_title: titleMap.get(t.event_sanity_id) ?? t.event_slug,
     member_count: countMap[t.id] ?? 0,
   }))
 

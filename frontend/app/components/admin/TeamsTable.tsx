@@ -10,7 +10,7 @@ interface TeamRow {
   invite_code: string
   registration_type: 'duo' | 'team'
   max_members: number
-  event_slug: string
+  event_title: string
   member_count: number
   created_at: string
 }
@@ -26,7 +26,7 @@ export default function TeamsTable({ teams }: Props) {
     (t) =>
       t.team_name.toLowerCase().includes(search.toLowerCase()) ||
       t.invite_code.toLowerCase().includes(search.toLowerCase()) ||
-      t.event_slug.toLowerCase().includes(search.toLowerCase()),
+      t.event_title.toLowerCase().includes(search.toLowerCase()),
   )
 
   return (
@@ -92,7 +92,7 @@ export default function TeamsTable({ teams }: Props) {
                     <td className="px-4 py-3 font-mono text-muted">
                       {team.member_count} / {team.max_members}
                     </td>
-                    <td className="hidden sm:table-cell px-4 py-3 font-mono text-muted text-xs">{team.event_slug}</td>
+                    <td className="hidden sm:table-cell px-4 py-3 font-mono text-muted text-xs">{team.event_title}</td>
                     <td className="hidden md:table-cell px-4 py-3 font-mono text-muted text-xs">
                       {format(parseISO(team.created_at), 'MMM d, yyyy')}
                     </td>

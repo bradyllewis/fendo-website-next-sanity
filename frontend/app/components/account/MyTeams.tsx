@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { format, parseISO, formatDistanceToNow, isPast } from 'date-fns'
 import Link from 'next/link'
 import MyTeamsSlotActions from './MyTeamsSlotActions'
+import { getCurrentEventTitles } from '@/sanity/lib/events'
 import type { RegistrationSlot, TeamRecord } from '@/lib/supabase/types'
 
 type SlotRow = Pick<
@@ -57,6 +58,9 @@ export default async function MyTeams() {
     slots: slotsByTeam.get(t.id) ?? [],
   }))
 
+  // Override stale stored event_slug labels with the current Sanity title
+  const titleMap = await getCurrentEventTitles(teamsWithSlots.map((t) => t.event_sanity_id))
+
   return (
     <section className="pt-8 space-y-8">
       <h2 className="font-semibold text-xl tracking-tight">My Teams</h2>
@@ -66,7 +70,7 @@ export default async function MyTeams() {
           <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-border">
             <div>
               <h3 className="font-semibold text-fg">{team.team_name}</h3>
-              <p className="text-xs text-muted font-mono mt-0.5">{team.event_slug}</p>
+              <p className="text-xs text-muted font-mono mt-0.5">{titleMap.get(team.event_sanity_id) ?? team.event_slug}</p>
             </div>
             <TeamStatusBadge status={team.team_status} />
           </div>
