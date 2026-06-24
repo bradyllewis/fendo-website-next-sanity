@@ -4,6 +4,8 @@ import { format, parseISO } from 'date-fns'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stripe } from '@/lib/stripe/client'
+import { client } from '@/sanity/lib/client'
+import { eventRefBySlugQuery } from '@/sanity/lib/queries'
 import { IconCalendar } from '@/app/components/icons'
 
 type Props = {
@@ -32,6 +34,10 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
     redirect(`/auth/sign-in?next=/compete/${slug}`)
   }
 
+  // Resolve the current URL slug to the immutable Sanity _id (for a stale-proof
+  // lookup) and current title (to override the stored snapshot for display).
+  const sanityEvent = await client.fetch(eventRefBySlugQuery, { slug })
+
   // Look up registration — Stripe session (paid) or direct (free event)
   let registration = null
 
@@ -39,7 +45,7 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
     const { data } = await supabase
       .from('event_registrations')
       .select('*')
-      .eq('event_slug', slug)
+      .eq('event_sanity_id', sanityEvent?._id ?? '')
       .eq('user_id', user.id)
       .eq('status', 'paid')
       .is('stripe_checkout_session_id', null)
@@ -132,6 +138,7 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
   }
 
   const isConfirmed = registration?.status === 'paid'
+  const displayTitle = sanityEvent?.title ?? registration?.event_title ?? slug
   const inviteCode =
     isConfirmed && registration?.metadata?.isTeamCaptain && registration?.metadata?.paymentMode !== 'individual'
       ? (registration.metadata.inviteCode as string | undefined)
@@ -219,7 +226,7 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
           {isConfirmed ? (
             <p className="text-muted leading-relaxed mb-8 max-w-md mx-auto">
               Your spot for{' '}
-              <strong className="text-fg">{registration.event_title}</strong> is confirmed.
+              <strong className="text-fg">{displayTitle}</strong> is confirmed.
               {registration.event_date && (
                 <>
                   {' '}
@@ -256,7 +263,7 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
                 <div className="flex justify-between gap-4 py-3">
                   <span className="text-sm text-muted font-mono">Event</span>
                   <span className="text-sm text-fg font-medium text-right max-w-[60%]">
-                    {registration.event_title}
+                    {displayTitle}
                   </span>
                 </div>
                 {registration.event_date && (

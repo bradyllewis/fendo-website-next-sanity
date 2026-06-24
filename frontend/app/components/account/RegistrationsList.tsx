@@ -52,7 +52,7 @@ export default function RegistrationsList({ registrations }: Props) {
           </div>
           <div className="flex flex-col items-end gap-0.5 shrink-0">
             <Link
-              href={`/compete/${reg.event_slug}`}
+              href={`/compete/event/${reg.event_sanity_id}`}
               className="btn-ghost text-xs px-3 py-2"
             >
               View Event

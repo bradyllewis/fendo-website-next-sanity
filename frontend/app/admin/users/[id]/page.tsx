@@ -7,6 +7,7 @@ import RoleToggle from '@/app/components/admin/RoleToggle'
 import UnregisterButton from '@/app/components/admin/UnregisterButton'
 import UserAvatar from '@/app/components/auth/UserAvatar'
 import { RegistrationStatusBadge } from '@/app/components/account/RegistrationsList'
+import { getCurrentEventTitles } from '@/sanity/lib/events'
 import { IconCalendar, IconArrow, IconUser, IconMail, IconShield } from '@/app/components/icons'
 import type { Profile, EventRegistration } from '@/lib/supabase/types'
 
@@ -38,6 +39,9 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   if (!profile) notFound()
 
   const isSelf = currentUser.id === id
+
+  // Override stale stored titles with current Sanity titles
+  const titleMap = await getCurrentEventTitles((registrations ?? []).map((r) => r.event_sanity_id))
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
@@ -157,7 +161,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <p className="text-sm font-medium text-fg">{reg.event_title}</p>
+                      <p className="text-sm font-medium text-fg">{titleMap.get(reg.event_sanity_id) ?? reg.event_title}</p>
                       <RegistrationStatusBadge status={reg.status} />
                     </div>
                     {reg.event_date && (
@@ -176,11 +180,11 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                     {reg.status !== 'cancelled' && reg.status !== 'refunded' && (
                       <UnregisterButton
                         registrationId={reg.id}
-                        eventTitle={reg.event_title}
+                        eventTitle={titleMap.get(reg.event_sanity_id) ?? reg.event_title}
                       />
                     )}
                     <Link
-                      href={`/compete/${reg.event_slug}`}
+                      href={`/compete/event/${reg.event_sanity_id}`}
                       className="btn-ghost text-xs px-3 py-2"
                     >
                       View Event

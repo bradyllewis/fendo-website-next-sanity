@@ -193,6 +193,40 @@ export const eventSlugQuery = defineQuery(`
   {"slug": slug.current}
 `)
 
+// Lookups keyed by the immutable Sanity document _id (not the mutable slug).
+// Use these whenever a stored event_sanity_id must be resolved back to current
+// Sanity data — the slug can change, _id never does.
+export const eventByIdQuery = defineQuery(`
+  *[_type == "event" && _id == $id] [0] {
+    title,
+    startDate,
+    location,
+    "slug": slug.current
+  }
+`)
+
+export const eventSlugByIdQuery = defineQuery(`
+  *[_type == "event" && _id == $id] [0] {
+    "slug": slug.current
+  }
+`)
+
+export const eventRefBySlugQuery = defineQuery(`
+  *[_type == "event" && slug.current == $slug] [0] {
+    _id,
+    title
+  }
+`)
+
+// Current titles for a set of event ids — used to override stale stored
+// event_title snapshots when displaying registration lists.
+export const eventTitlesByIdsQuery = defineQuery(`
+  *[_type == "event" && _id in $ids] {
+    _id,
+    title
+  }
+`)
+
 // ─── Gear ─────────────────────────────────────────────────────────────────────
 
 const gearFields = /* groq */ `

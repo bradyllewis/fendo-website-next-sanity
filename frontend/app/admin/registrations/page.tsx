@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import RegistrationsTable from '@/app/components/admin/RegistrationsTable'
+import { getCurrentEventTitles } from '@/sanity/lib/events'
 import type { EventRegistration } from '@/lib/supabase/types'
 
 export const metadata = { title: 'Registrations' }
@@ -21,10 +22,14 @@ export default async function AdminRegistrationsPage() {
 
   const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]))
 
+  // Override stale stored titles with current Sanity titles
+  const titleMap = await getCurrentEventTitles((registrations ?? []).map((r) => r.event_sanity_id))
+
   const rows = (registrations ?? []).map((r) => {
     const profile = profileMap[r.user_id]
     return {
       ...(r as EventRegistration),
+      event_title: titleMap.get(r.event_sanity_id) ?? r.event_title,
       user_email: profile?.email,
       user_name: profile?.display_name || profile?.full_name || undefined,
     }

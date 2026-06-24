@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import SponsorshipsTable from '@/app/components/admin/SponsorshipsTable'
+import { getCurrentEventTitles } from '@/sanity/lib/events'
 import type { SponsorRegistration } from '@/lib/supabase/types'
 
 export const metadata = { title: 'Sponsorships' }
@@ -12,6 +13,13 @@ export default async function AdminSponsorshipsPage() {
     .select('*')
     .order('created_at', { ascending: false })
 
+  // Override stale stored titles with current Sanity titles
+  const titleMap = await getCurrentEventTitles((sponsorships ?? []).map((s) => s.event_sanity_id))
+  const rows = ((sponsorships ?? []) as SponsorRegistration[]).map((s) => ({
+    ...s,
+    event_title: titleMap.get(s.event_sanity_id) ?? s.event_title,
+  }))
+
   return (
     <div className="p-6 lg:p-8 space-y-6">
       <div>
@@ -22,7 +30,7 @@ export default async function AdminSponsorshipsPage() {
         </p>
       </div>
 
-      <SponsorshipsTable sponsorships={(sponsorships ?? []) as SponsorRegistration[]} />
+      <SponsorshipsTable sponsorships={rows} />
     </div>
   )
 }

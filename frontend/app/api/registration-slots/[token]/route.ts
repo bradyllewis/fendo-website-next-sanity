@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { client } from '@/sanity/lib/client'
-import { eventQuery } from '@/sanity/lib/queries'
+import { eventByIdQuery } from '@/sanity/lib/queries'
 
 type Params = { params: Promise<{ token: string }> }
 
 type EventSnippet = {
   title?: string | null
   startDate?: string | null
+  slug?: string | null
   location?: { venueName?: string | null; city?: string | null; state?: string | null } | null
 }
 
@@ -69,12 +70,12 @@ export async function GET(_request: NextRequest, { params }: Params) {
     captainName = profile?.full_name || profile?.display_name || captainName
   }
 
-  // Fetch event from Sanity
+  // Fetch event from Sanity by the immutable _id (slug may have changed since invite)
   let event: EventSnippet | null = null
   try {
     event = await client
       .withConfig({ useCdn: true })
-      .fetch(eventQuery, { slug: slot.event_slug }) as EventSnippet
+      .fetch(eventByIdQuery, { id: slot.event_sanity_id }) as EventSnippet
   } catch {
     // non-fatal — event details are nice-to-have on the invite page
   }
@@ -100,7 +101,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     teamStatus: team?.team_status ?? null,
     eventTitle: event?.title ?? null,
     eventDate: event?.startDate ?? null,
-    eventSlug: slot.event_slug,
+    eventSlug: event?.slug ?? slot.event_slug,
     eventLocation,
   })
 }

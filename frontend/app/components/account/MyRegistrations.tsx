@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { createClient } from '@/lib/supabase/server'
+import { getCurrentEventTitles } from '@/sanity/lib/events'
 import { IconCalendar } from '@/app/components/icons'
 import type { EventRegistration } from '@/lib/supabase/types'
 
@@ -17,6 +18,8 @@ export default async function MyRegistrations() {
     .select('*')
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
+
+  const titleMap = await getCurrentEventTitles((registrations ?? []).map((r) => r.event_sanity_id))
 
   if (!registrations || registrations.length === 0) {
     return (
@@ -46,7 +49,7 @@ export default async function MyRegistrations() {
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <h3 className="font-medium text-fg text-sm">{reg.event_title}</h3>
+                  <h3 className="font-medium text-fg text-sm">{titleMap.get(reg.event_sanity_id) ?? reg.event_title}</h3>
                   <RegistrationStatusBadge status={reg.status} />
                 </div>
                 {reg.event_date && (
@@ -62,7 +65,7 @@ export default async function MyRegistrations() {
                 )}
               </div>
               <Link
-                href={`/compete/${reg.event_slug}`}
+                href={`/compete/event/${reg.event_sanity_id}`}
                 className="btn-ghost text-xs px-3 py-2 shrink-0"
               >
                 View Event

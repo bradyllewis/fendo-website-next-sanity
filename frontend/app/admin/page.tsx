@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import StatCard from '@/app/components/admin/StatCard'
+import { getCurrentEventTitles } from '@/sanity/lib/events'
 import { IconCalendar, IconUsers, IconDollar, IconTicket, IconTrendUp, IconEdit, IconExternalLink } from '@/app/components/icons'
 import { format } from 'date-fns'
 
@@ -33,9 +34,15 @@ export default async function AdminDashboard() {
       .select('event_sanity_id, event_title, event_slug')
       .eq('status', 'paid'),
     db.from('event_registrations')
-      .select('id, event_title, event_slug, status, amount_paid, created_at, user_id')
+      .select('id, event_sanity_id, event_title, event_slug, status, amount_paid, created_at, user_id')
       .order('created_at', { ascending: false })
       .limit(8),
+  ])
+
+  // Override stale stored titles with current Sanity titles (top events + recent regs)
+  const titleMap = await getCurrentEventTitles([
+    ...(topEvents ?? []).map((r) => r.event_sanity_id),
+    ...(recentRegs ?? []).map((r) => r.event_sanity_id),
   ])
 
   // Status breakdown
@@ -49,10 +56,10 @@ export default async function AdminDashboard() {
   const monthRevenue = (revenueMonth ?? []).reduce((s, r) => s + (r.amount_paid ?? 0), 0)
 
   // Top events by paid registrations
-  const eventCounts: Record<string, { title: string; slug: string; count: number }> = {}
+  const eventCounts: Record<string, { id: string; title: string; count: number }> = {}
   for (const r of topEvents ?? []) {
     if (!eventCounts[r.event_sanity_id]) {
-      eventCounts[r.event_sanity_id] = { title: r.event_title, slug: r.event_slug, count: 0 }
+      eventCounts[r.event_sanity_id] = { id: r.event_sanity_id, title: titleMap.get(r.event_sanity_id) ?? r.event_title, count: 0 }
     }
     eventCounts[r.event_sanity_id].count++
   }
@@ -148,13 +155,13 @@ export default async function AdminDashboard() {
           ) : (
             <div className="space-y-2">
               {topEventList.map((ev, i) => (
-                <div key={ev.slug} className="flex items-center justify-between gap-3">
+                <div key={ev.id} className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="label-mono text-[0.6rem] w-4 text-right text-muted shrink-0">
                       {i + 1}
                     </span>
                     <a
-                      href={`/compete/${ev.slug}`}
+                      href={`/compete/event/${ev.id}`}
                       className="text-sm text-fg hover:text-accent transition-colors truncate"
                     >
                       {ev.title}
@@ -182,7 +189,7 @@ export default async function AdminDashboard() {
               {(recentRegs ?? []).map((reg) => (
                 <div key={reg.id} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm text-fg truncate">{reg.event_title}</p>
+                    <p className="text-sm text-fg truncate">{titleMap.get(reg.event_sanity_id) ?? reg.event_title}</p>
                     <p className="text-[0.65rem] font-mono text-muted">
                       {format(new Date(reg.created_at), 'MMM d, h:mm a')}
                     </p>

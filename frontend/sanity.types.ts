@@ -1313,6 +1313,44 @@ export type EventSlugQueryResult = Array<{
 }>;
 
 // Source: sanity/lib/queries.ts
+// Variable: eventByIdQuery
+// Query: *[_type == "event" && _id == $id] [0] {    title,    startDate,    location,    "slug": slug.current  }
+export type EventByIdQueryResult = {
+  title: string;
+  startDate: string;
+  location: {
+    venueName?: string;
+    city?: string;
+    state?: string;
+    addressLine?: string;
+  } | null;
+  slug: string;
+} | null;
+
+// Source: sanity/lib/queries.ts
+// Variable: eventSlugByIdQuery
+// Query: *[_type == "event" && _id == $id] [0] {    "slug": slug.current  }
+export type EventSlugByIdQueryResult = {
+  slug: string;
+} | null;
+
+// Source: sanity/lib/queries.ts
+// Variable: eventRefBySlugQuery
+// Query: *[_type == "event" && slug.current == $slug] [0] {    _id,    title  }
+export type EventRefBySlugQueryResult = {
+  _id: string;
+  title: string;
+} | null;
+
+// Source: sanity/lib/queries.ts
+// Variable: eventTitlesByIdsQuery
+// Query: *[_type == "event" && _id in $ids] {    _id,    title  }
+export type EventTitlesByIdsQueryResult = Array<{
+  _id: string;
+  title: string;
+}>;
+
+// Source: sanity/lib/queries.ts
 // Variable: allGearQuery
 // Query: *[_type == "gear"] | order(displayOrder asc, name asc) {      _id,  name,  "slug": slug.current,  tagline,  category,  badge,  shortDescription,  features,  price,  shopUrl,  image,  isFeatured,  displayOrder,  }
 export type AllGearQueryResult = Array<{
@@ -1584,6 +1622,10 @@ declare module "@sanity/client" {
     "\n  *[_type == \"event\" && isFeatured == true && status in [\"upcoming\", \"registration_open\", \"waitlist\"]] | order(startDate asc) [0..4] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[]->{\n    \"id\": _id,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n  \"addOns\": addOns[]->{\n    _id,\n    name,\n    description,\n    inputType,\n    placeholder,\n    category,\n    price,\n  },\n\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": FeaturedEventsQueryResult;
     "\n  *[_type == \"event\" && slug.current == $slug] [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[]->{\n    \"id\": _id,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n  \"addOns\": addOns[]->{\n    _id,\n    name,\n    description,\n    inputType,\n    placeholder,\n    category,\n    price,\n  },\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": EventQueryResult;
     "\n  *[_type == \"event\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": EventSlugQueryResult;
+    "\n  *[_type == \"event\" && _id == $id] [0] {\n    title,\n    startDate,\n    location,\n    \"slug\": slug.current\n  }\n": EventByIdQueryResult;
+    "\n  *[_type == \"event\" && _id == $id] [0] {\n    \"slug\": slug.current\n  }\n": EventSlugByIdQueryResult;
+    "\n  *[_type == \"event\" && slug.current == $slug] [0] {\n    _id,\n    title\n  }\n": EventRefBySlugQueryResult;
+    "\n  *[_type == \"event\" && _id in $ids] {\n    _id,\n    title\n  }\n": EventTitlesByIdsQueryResult;
     "\n  *[_type == \"gear\"] | order(displayOrder asc, name asc) {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": AllGearQueryResult;
     "\n  *[_type == \"gear\" && isFeatured == true] | order(displayOrder asc) [0] {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": FeaturedGearQueryResult;
     "\n  *[_type == \"playbook\"] | order(publishedAt desc) {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n  }\n": AllPlaybooksQueryResult;

@@ -4,6 +4,8 @@ import { format, parseISO } from 'date-fns'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stripe } from '@/lib/stripe/client'
+import { client } from '@/sanity/lib/client'
+import { eventRefBySlugQuery } from '@/sanity/lib/queries'
 
 type Props = {
   params: Promise<{ slug: string }>
@@ -31,13 +33,17 @@ export default async function SponsorSuccessPage({ params, searchParams }: Props
     redirect(`/auth/sign-in?next=/compete/${slug}`)
   }
 
+  // Resolve current slug → immutable Sanity _id (stale-proof lookup) and current
+  // title (to override the stored snapshot for display).
+  const sanityEvent = await client.fetch(eventRefBySlugQuery, { slug })
+
   let sponsorship = null
 
   if (invoice) {
     const { data } = await supabase
       .from('sponsor_registrations')
       .select('*')
-      .eq('event_slug', slug)
+      .eq('event_sanity_id', sanityEvent?._id ?? '')
       .eq('user_id', user.id)
       .eq('status', 'invoiced')
       .order('created_at', { ascending: false })
@@ -87,6 +93,7 @@ export default async function SponsorSuccessPage({ params, searchParams }: Props
   const isInvoice = sponsorship?.status === 'invoiced'
   const isPaid = sponsorship?.status === 'paid'
   const isConfirmed = isPaid || isInvoice
+  const displayTitle = sanityEvent?.title ?? sponsorship?.event_title ?? slug
 
   return (
     <>
@@ -133,13 +140,13 @@ export default async function SponsorSuccessPage({ params, searchParams }: Props
           {isInvoice ? (
             <p className="text-muted leading-relaxed mb-8 max-w-md mx-auto">
               Your sponsorship for{' '}
-              <strong className="text-fg">{sponsorship?.event_title}</strong> has been submitted.
+              <strong className="text-fg">{displayTitle}</strong> has been submitted.
               Our team will send you an invoice shortly.
             </p>
           ) : isPaid ? (
             <p className="text-muted leading-relaxed mb-8 max-w-md mx-auto">
               Your sponsorship for{' '}
-              <strong className="text-fg">{sponsorship?.event_title}</strong> is confirmed.
+              <strong className="text-fg">{displayTitle}</strong> is confirmed.
               {sponsorship?.event_date && (
                 <> We&apos;ll see you on {format(parseISO(sponsorship.event_date), 'MMMM d, yyyy')}.</>
               )}
@@ -167,7 +174,7 @@ export default async function SponsorSuccessPage({ params, searchParams }: Props
                 <div className="flex justify-between gap-4 py-3">
                   <span className="text-sm text-muted font-mono">Event</span>
                   <span className="text-sm text-fg font-medium text-right max-w-[60%]">
-                    {sponsorship.event_title}
+                    {displayTitle}
                   </span>
                 </div>
                 <div className="flex justify-between gap-4 py-3">

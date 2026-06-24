@@ -112,7 +112,7 @@ export default function RegistrationsTable({ registrations }: Props) {
                 {/* Event */}
                 <div>
                   <Link
-                    href={`/compete/${reg.event_slug}`}
+                    href={`/compete/event/${reg.event_sanity_id}`}
                     className="text-sm text-fg hover:text-accent transition-colors line-clamp-1"
                   >
                     {reg.event_title}

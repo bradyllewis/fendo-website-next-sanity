@@ -63,7 +63,7 @@ export default async function ClaimPage({ params }: Props) {
     .from('event_registrations')
     .select('id')
     .eq('user_id', user.id)
-    .eq('event_slug', slot.event_slug)
+    .eq('event_sanity_id', slot.event_sanity_id)
     .maybeSingle()
 
   if (!existingReg) {

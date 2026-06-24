@@ -102,7 +102,7 @@ export default function SponsorshipsTable({ sponsorships }: Props) {
                 {/* Event */}
                 <div>
                   <Link
-                    href={`/compete/${s.event_slug}`}
+                    href={`/compete/event/${s.event_sanity_id}`}
                     className="text-sm text-fg hover:text-accent transition-colors line-clamp-1"
                   >
                     {s.event_title}
