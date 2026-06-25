@@ -1,4 +1,5 @@
 import './globals.css'
+import 'lenis/dist/lenis.css'
 
 import {SpeedInsights} from '@vercel/speed-insights/next'
 import type {Metadata, Viewport} from 'next'
@@ -8,7 +9,10 @@ import {toPlainText} from 'next-sanity'
 import {VisualEditing} from 'next-sanity/visual-editing'
 import {Toaster} from 'sonner'
 
+import {ReactLenis} from 'lenis/react'
+
 import AuthProvider from '@/app/components/auth/AuthProvider'
+import ScrollToTop from '@/app/components/ScrollToTop'
 import DraftModeToast from '@/app/components/DraftModeToast'
 import Footer from '@/app/components/Footer'
 import Header from '@/app/components/Header'
@@ -76,7 +80,9 @@ export default async function RootLayout({children}: {children: React.ReactNode}
       className={`${inter.variable} ${ibmPlexMono.variable}`}
     >
       <body className="bg-bg text-fg antialiased">
+        <ReactLenis root options={{lerp: 0.1, duration: 1.5}}>
         <AuthProvider>
+          <ScrollToTop />
           <Toaster />
           {isDraftMode && (
             <>
@@ -90,6 +96,7 @@ export default async function RootLayout({children}: {children: React.ReactNode}
           <Footer />
           <SpeedInsights />
         </AuthProvider>
+        </ReactLenis>
       </body>
     </html>
   )

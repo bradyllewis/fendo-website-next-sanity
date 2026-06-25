@@ -1,6 +1,6 @@
 'use client'
 
-import React, { Fragment, useState } from 'react'
+import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { IconLoader } from '@/app/components/icons'
 import type { SanityEventAddOn } from '@/app/compete/types'
@@ -141,7 +141,12 @@ const ERR = 'mt-1.5 text-xs text-danger'
 
 export default function RegistrationForm({ event, addOns, userEmail, initialName, initialHandicap }: Props) {
   const router = useRouter()
+  const formRef = useRef<HTMLDivElement>(null)
   const [stepIndex, setStepIndex] = useState(0)
+
+  useEffect(() => {
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [stepIndex])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
@@ -934,7 +939,7 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
   }
 
   return (
-    <div className="max-w-xl mx-auto">
+    <div ref={formRef} className="max-w-xl mx-auto">
       {/* Stepper */}
       <div className="flex items-center gap-1.5 mb-8 overflow-x-auto pb-1" role="list" aria-label="Registration steps">
         {activeSteps.map((step, i) => (
