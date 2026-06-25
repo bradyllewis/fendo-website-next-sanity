@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import StatCard from '@/app/components/admin/StatCard'
-import { getCurrentEventTitles } from '@/sanity/lib/events'
+import { getCurrentEventInfo } from '@/sanity/lib/events'
 import { IconCalendar, IconUsers, IconDollar, IconTicket, IconTrendUp, IconEdit, IconExternalLink } from '@/app/components/icons'
 import { format } from 'date-fns'
 
@@ -40,7 +40,7 @@ export default async function AdminDashboard() {
   ])
 
   // Override stale stored titles with current Sanity titles (top events + recent regs)
-  const titleMap = await getCurrentEventTitles([
+  const infoMap = await getCurrentEventInfo([
     ...(topEvents ?? []).map((r) => r.event_sanity_id),
     ...(recentRegs ?? []).map((r) => r.event_sanity_id),
   ])
@@ -59,7 +59,7 @@ export default async function AdminDashboard() {
   const eventCounts: Record<string, { id: string; title: string; count: number }> = {}
   for (const r of topEvents ?? []) {
     if (!eventCounts[r.event_sanity_id]) {
-      eventCounts[r.event_sanity_id] = { id: r.event_sanity_id, title: titleMap.get(r.event_sanity_id) ?? r.event_title, count: 0 }
+      eventCounts[r.event_sanity_id] = { id: r.event_sanity_id, title: infoMap.get(r.event_sanity_id)?.title ?? r.event_title, count: 0 }
     }
     eventCounts[r.event_sanity_id].count++
   }
@@ -189,7 +189,7 @@ export default async function AdminDashboard() {
               {(recentRegs ?? []).map((reg) => (
                 <div key={reg.id} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm text-fg truncate">{titleMap.get(reg.event_sanity_id) ?? reg.event_title}</p>
+                    <p className="text-sm text-fg truncate">{infoMap.get(reg.event_sanity_id)?.title ?? reg.event_title}</p>
                     <p className="text-[0.65rem] font-mono text-muted">
                       {format(new Date(reg.created_at), 'MMM d, h:mm a')}
                     </p>

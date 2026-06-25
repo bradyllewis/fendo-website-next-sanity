@@ -1,5 +1,9 @@
  /goal Review your goal here: CLAUDE_DOCS/goal.md. Flawlessly, methodically, and thoroughly complete all requests/tasks in the goal.md doc. Always make sure the app builds without errors before considering your goal achieved. Always kill any dev servers you have launched prior to responding.
 
+
+ live-resolve stale event_date and sponsor tier snapshots
+ 
+
 Use plan mode to review our event (tournament)
   registration flow - specifically the Stripe functionality. You will see that
   we have multiple registration options, and even multiple paths from some

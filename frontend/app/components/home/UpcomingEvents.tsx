@@ -6,6 +6,7 @@ import {IconArrow, IconCalendar} from '@/app/components/icons'
 import EventCard from '@/app/components/compete/EventCard'
 import type {SanityEvent} from '@/app/compete/types'
 import {createClient} from '@/lib/supabase/server'
+import {getEventSeatCounts} from '@/sanity/lib/eventSeats'
 
 interface UpcomingEventsProps {
   /** Maximum number of events to display. Defaults to 3. */
@@ -15,6 +16,11 @@ interface UpcomingEventsProps {
 export default async function UpcomingEvents({count = 3}: UpcomingEventsProps) {
   const {data: allUpcoming} = await sanityFetch({query: upcomingEventsQuery})
   const events = (allUpcoming as SanityEvent[]).slice(0, count)
+
+  // Derive live seat counts for in-app-registration events so spot bars aren't stale
+  const seatMap = await getEventSeatCounts(
+    events.filter((e) => e.requiresRegistration === true).map((e) => e._id),
+  )
 
   // Fetch the current user's registrations so EventCards can show "Registered"
   let registeredEventIds: Set<string> = new Set()
@@ -61,7 +67,7 @@ export default async function UpcomingEvents({count = 3}: UpcomingEventsProps) {
             }`}
           >
             {events.map((event) => (
-              <EventCard key={event._id} event={event} isRegistered={registeredEventIds.has(event._id)} />
+              <EventCard key={event._id} event={event} paidCount={seatMap.get(event._id)} isRegistered={registeredEventIds.has(event._id)} />
             ))}
           </div>
         ) : (

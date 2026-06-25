@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { createClient } from '@/lib/supabase/server'
-import { getCurrentEventTitles } from '@/sanity/lib/events'
+import { getCurrentEventInfo } from '@/sanity/lib/events'
 import { IconCalendar } from '@/app/components/icons'
 import type { EventRegistration } from '@/lib/supabase/types'
 
@@ -19,7 +19,7 @@ export default async function MyRegistrations() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  const titleMap = await getCurrentEventTitles((registrations ?? []).map((r) => r.event_sanity_id))
+  const infoMap = await getCurrentEventInfo((registrations ?? []).map((r) => r.event_sanity_id))
 
   if (!registrations || registrations.length === 0) {
     return (
@@ -49,15 +49,18 @@ export default async function MyRegistrations() {
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <h3 className="font-medium text-fg text-sm">{titleMap.get(reg.event_sanity_id) ?? reg.event_title}</h3>
+                  <h3 className="font-medium text-fg text-sm">{infoMap.get(reg.event_sanity_id)?.title ?? reg.event_title}</h3>
                   <RegistrationStatusBadge status={reg.status} />
                 </div>
-                {reg.event_date && (
-                  <p className="flex items-center gap-1.5 text-xs font-mono text-muted-2 mt-1">
-                    <IconCalendar className="w-3.5 h-3.5 shrink-0" />
-                    {format(parseISO(reg.event_date), 'MMMM d, yyyy')}
-                  </p>
-                )}
+                {(() => {
+                  const eventDate = infoMap.get(reg.event_sanity_id)?.startDate ?? reg.event_date
+                  return eventDate ? (
+                    <p className="flex items-center gap-1.5 text-xs font-mono text-muted-2 mt-1">
+                      <IconCalendar className="w-3.5 h-3.5 shrink-0" />
+                      {format(parseISO(eventDate), 'MMMM d, yyyy')}
+                    </p>
+                  ) : null
+                })()}
                 {reg.amount_paid != null && (
                   <p className="text-xs font-mono text-muted-2 mt-0.5">
                     Paid: ${(reg.amount_paid / 100).toFixed(2)} USD

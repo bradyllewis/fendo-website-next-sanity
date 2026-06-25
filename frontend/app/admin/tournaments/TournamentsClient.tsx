@@ -17,6 +17,7 @@ import type { DeleteTournamentResult } from '@/app/api/admin/delete-tournament/r
 interface EventStats {
   event_sanity_id: string
   paid_count: number
+  seats_filled: number
   total_revenue: number
 }
 
@@ -469,7 +470,7 @@ export default function TournamentsClient({ events: initialEvents }: Tournaments
                     Date
                   </th>
                   <th className="hidden sm:table-cell text-right px-4 py-3 text-[0.65rem] font-mono font-medium text-muted uppercase tracking-wider">
-                    Paid Regs
+                    Spots Filled
                   </th>
                   <th className="hidden sm:table-cell text-right px-4 py-3 text-[0.65rem] font-mono font-medium text-muted uppercase tracking-wider">
                     Revenue
@@ -524,10 +525,11 @@ export default function TournamentsClient({ events: initialEvents }: Tournaments
                       </span>
                     </td>
 
-                    {/* Paid Regs */}
+                    {/* Spots Filled */}
                     <td className="hidden sm:table-cell px-4 py-3 text-right">
                       <span className="text-xs font-mono text-fg">
-                        {ev.stats.paid_count}
+                        {ev.stats.seats_filled}
+                        {ev.spotsTotal != null ? ` / ${ev.spotsTotal}` : ''}
                       </span>
                     </td>
 

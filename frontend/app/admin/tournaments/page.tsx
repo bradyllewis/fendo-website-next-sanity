@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { client } from '@/sanity/lib/client'
 import { allEventsQuery } from '@/sanity/lib/queries'
+import { getEventSeatCounts } from '@/sanity/lib/eventSeats'
 import StatCard from '@/app/components/admin/StatCard'
 import TournamentsClient from './TournamentsClient'
 import { IconTrophy } from '@/app/components/icons'
@@ -13,6 +14,7 @@ export const revalidate = 60
 interface SupabaseEventStats {
   event_sanity_id: string
   paid_count: number
+  seats_filled: number
   total_revenue: number
 }
 
@@ -26,13 +28,25 @@ export default async function TournamentsPage() {
       .in('status', ['paid', 'refunded', 'cancelled', 'pending', 'waitlisted']),
   ])
 
+  // Derive live seat counts (counts each player once across all registration flows)
+  const seatMap = await getEventSeatCounts((events ?? []).map((e: { _id: string }) => e._id))
+
+  // Filled spots: derived for in-app-registration events; manual Sanity value otherwise
+  const filledFor = (ev: { _id: string; requiresRegistration?: boolean; spotsFilled?: number | null }) =>
+    ev.requiresRegistration ? (seatMap.get(ev._id) ?? 0) : (ev.spotsFilled ?? 0)
+  const eventById = new Map(
+    (events ?? []).map((e: { _id: string }) => [e._id, e as { _id: string; requiresRegistration?: boolean; spotsFilled?: number | null }]),
+  )
+
   // Aggregate per-event stats from Supabase
   const statsMap = new Map<string, SupabaseEventStats>()
   for (const row of regRows.data ?? []) {
     if (!statsMap.has(row.event_sanity_id)) {
+      const ev = eventById.get(row.event_sanity_id)
       statsMap.set(row.event_sanity_id, {
         event_sanity_id: row.event_sanity_id,
         paid_count: 0,
+        seats_filled: ev ? filledFor(ev) : (seatMap.get(row.event_sanity_id) ?? 0),
         total_revenue: 0,
       })
     }
@@ -56,7 +70,12 @@ export default async function TournamentsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const eventsWithStats = (events ?? []).map((ev: any) => ({
     ...ev,
-    stats: statsMap.get(ev._id as string) ?? { paid_count: 0, total_revenue: 0, event_sanity_id: ev._id as string },
+    stats: statsMap.get(ev._id as string) ?? {
+      paid_count: 0,
+      seats_filled: filledFor(ev),
+      total_revenue: 0,
+      event_sanity_id: ev._id as string,
+    },
   }))
 
   return (

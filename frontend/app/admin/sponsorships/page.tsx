@@ -1,6 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import SponsorshipsTable from '@/app/components/admin/SponsorshipsTable'
-import { getCurrentEventTitles } from '@/sanity/lib/events'
+import { getCurrentEventInfo } from '@/sanity/lib/events'
 import type { SponsorRegistration } from '@/lib/supabase/types'
 
 export const metadata = { title: 'Sponsorships' }
@@ -13,11 +13,14 @@ export default async function AdminSponsorshipsPage() {
     .select('*')
     .order('created_at', { ascending: false })
 
-  // Override stale stored titles with current Sanity titles
-  const titleMap = await getCurrentEventTitles((sponsorships ?? []).map((s) => s.event_sanity_id))
+  // Override stale stored title/date with current Sanity values.
+  // sponsorship_level/_price are transactional (what the sponsor was quoted/
+  // charged) and intentionally kept as the at-purchase snapshot.
+  const infoMap = await getCurrentEventInfo((sponsorships ?? []).map((s) => s.event_sanity_id))
   const rows = ((sponsorships ?? []) as SponsorRegistration[]).map((s) => ({
     ...s,
-    event_title: titleMap.get(s.event_sanity_id) ?? s.event_title,
+    event_title: infoMap.get(s.event_sanity_id)?.title ?? s.event_title,
+    event_date: infoMap.get(s.event_sanity_id)?.startDate ?? s.event_date,
   }))
 
   return (

@@ -7,6 +7,7 @@ import { stripe } from '@/lib/stripe/client'
 import { getOrCreateStripeCustomer } from '@/lib/stripe/customer'
 import { client } from '@/sanity/lib/client'
 import { eventQuery } from '@/sanity/lib/queries'
+import { getEventSeatCounts } from '@/sanity/lib/eventSeats'
 import { sendEmail, getBaseUrl } from '@/lib/email/resend'
 import { buildInviteEmail } from '@/lib/email/templates/invite'
 import { buildTeamNotificationEmail } from '@/lib/email/templates/team-notification'
@@ -130,21 +131,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Team name is required' }, { status: 400 })
       }
 
-      // Capacity check: paid slots + active slots + team size must not exceed spotsTotal
+      // Capacity check: occupied seats + this team's size must not exceed spotsTotal
       if (event.spotsTotal) {
-        const { count: paidCount } = await admin
-          .from('event_registrations')
-          .select('*', { count: 'exact', head: true })
-          .eq('event_sanity_id', event._id)
-          .eq('status', 'paid')
-
-        const { count: activeSlotCount } = await admin
-          .from('registration_slots')
-          .select('*', { count: 'exact', head: true })
-          .eq('event_sanity_id', event._id)
-          .not('status', 'in', '("expired","cancelled")')
-
-        const used = (paidCount ?? 0) + (activeSlotCount ?? 0)
+        const seatMap = await getEventSeatCounts([event._id])
+        const used = seatMap.get(event._id) ?? 0
         if (used + maxMembers > event.spotsTotal) {
           return NextResponse.json(
             { error: 'Not enough spots available for your team size', eventFull: true },
@@ -400,14 +390,14 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Check spots availability for standard flows ──────────────────────────
+    // A captain_pays_all duo/team consumes one seat per member; everyone else consumes one.
     if (event.spotsTotal) {
-      const { count: paidCount } = await supabase
-        .from('event_registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_sanity_id', event._id)
-        .eq('status', 'paid')
+      const neededSeats =
+        formRegistrationType === 'duo' ? 2 : formRegistrationType === 'team' ? 4 : 1
+      const seatMap = await getEventSeatCounts([event._id])
+      const used = seatMap.get(event._id) ?? 0
 
-      if (paidCount !== null && paidCount >= event.spotsTotal) {
+      if (used + neededSeats > event.spotsTotal) {
         return NextResponse.json(
           { error: 'Event is full', eventFull: true },
           { status: 409 },
@@ -416,76 +406,12 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Standard team handling ───────────────────────────────────────────────
-    let dbRegistrationType: string | null = formRegistrationType ?? null
+    const dbRegistrationType: string | null = formRegistrationType ?? null
     let teamId: string | null = null
     let inviteCode: string | null = null
     let captainPaysAllMemberCount = 1
 
-    if (formRegistrationType === 'join') {
-      const joinCode = (registrationData?.joinTeamCode as string | undefined)?.toUpperCase().trim()
-      if (!joinCode) {
-        return NextResponse.json({ error: 'Missing team invite code' }, { status: 400 })
-      }
-
-      const { data: team } = await admin
-        .from('teams')
-        .select('id, team_name, registration_type, max_members, created_by')
-        .eq('invite_code', joinCode)
-        .eq('event_sanity_id', event._id)
-        .maybeSingle()
-
-      if (!team) {
-        return NextResponse.json({ error: 'Invalid invite code' }, { status: 404 })
-      }
-
-      const { data: captainReg } = await admin
-        .from('event_registrations')
-        .select('id')
-        .eq('team_id', team.id)
-        .eq('user_id', team.created_by)
-        .eq('status', 'paid')
-        .maybeSingle()
-
-      if (!captainReg) {
-        return NextResponse.json(
-          { error: 'This team is not yet confirmed. Ask your captain to complete payment first.' },
-          { status: 400 },
-        )
-      }
-
-      const { count: memberCount } = await admin
-        .from('event_registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('team_id', team.id)
-        .neq('status', 'cancelled')
-
-      if (memberCount !== null && memberCount >= team.max_members) {
-        return NextResponse.json({ error: 'This team is already full' }, { status: 409 })
-      }
-
-      const { data: existingMembership } = await admin
-        .from('event_registrations')
-        .select('id')
-        .eq('team_id', team.id)
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (existingMembership) {
-        return NextResponse.json(
-          { error: 'Already a member of this team', alreadyRegistered: true },
-          { status: 409 },
-        )
-      }
-
-      teamId = team.id
-      dbRegistrationType = team.registration_type
-      registrationData = {
-        ...registrationData,
-        registrationType: team.registration_type,
-        teamName: team.team_name,
-        isJoiner: true,
-      }
-    } else if (formRegistrationType === 'duo' || formRegistrationType === 'team') {
+    if (formRegistrationType === 'duo' || formRegistrationType === 'team') {
       const maxMembers = formRegistrationType === 'duo' ? 2 : 4
       captainPaysAllMemberCount = maxMembers
       const teamName = (registrationData?.teamName as string | undefined)?.trim()

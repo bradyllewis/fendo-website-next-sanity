@@ -129,6 +129,9 @@ export const event = defineType({
       name: 'spotsFilled',
       title: 'Spots Filled',
       type: 'number',
+      description:
+        'Only for externally-managed events. When In-App Registration is enabled, the filled count is derived automatically from actual registrations and this field is ignored.',
+      hidden: ({document}) => document?.requiresRegistration === true,
       validation: (rule) => rule.min(0).integer(),
     }),
     defineField({

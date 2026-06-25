@@ -5,17 +5,9 @@ import { useRouter } from 'next/navigation'
 import { IconLoader } from '@/app/components/icons'
 import type { SanityEventAddOn } from '@/app/compete/types'
 
-type RegistrationType = 'individual' | 'duo' | 'team' | 'join' | 'volunteer'
+type RegistrationType = 'individual' | 'duo' | 'team' | 'volunteer'
 type PaymentMode = 'captain_pays_all' | 'individual'
-type Step = 'type' | 'joinCode' | 'playerInfo' | 'teamDetails' | 'paymentMode' | 'invitees' | 'addOns' | 'review'
-
-interface JoinedTeam {
-  id: string
-  teamName: string
-  registrationType: string
-  maxMembers: number
-  memberCount: number
-}
+type Step = 'type' | 'playerInfo' | 'teamDetails' | 'paymentMode' | 'invitees' | 'addOns' | 'review'
 
 interface Invitee {
   firstName: string
@@ -38,8 +30,6 @@ interface FormState {
   teamName: string
   walkUpSong: string
   selectedAddOns: Record<string, string | boolean>
-  joinCode: string
-  joinedTeam: JoinedTeam | null
   donationAmount: number
   donationCustom: string
   paymentMode: PaymentMode
@@ -74,7 +64,6 @@ const REFERRAL_OPTIONS = [
 
 const STEP_LABELS: Record<Step, string> = {
   type: 'Type',
-  joinCode: 'Team Code',
   playerInfo: 'Your Info',
   teamDetails: 'Team',
   paymentMode: 'Payment',
@@ -90,7 +79,6 @@ const DONATION_PRESETS = [10, 25, 50] as const
 function getActiveSteps(type: RegistrationType | null, paymentMode: PaymentMode): Step[] {
   if (type === 'volunteer') return ['type', 'playerInfo', 'review']
   if (!type || type === 'individual') return ['type', 'playerInfo', 'addOns', 'review']
-  if (type === 'join') return ['type', 'joinCode', 'playerInfo', 'addOns', 'review']
   // duo/team — always collect all player info regardless of payment mode
   return ['type', 'playerInfo', 'teamDetails', 'paymentMode', 'invitees', 'addOns', 'review']
 }
@@ -113,9 +101,6 @@ function validateStep(step: Step, form: FormState): Record<string, string> {
   switch (step) {
     case 'type':
       if (!form.registrationType) e.registrationType = 'Please select a registration type.'
-      break
-    case 'joinCode':
-      if (!form.joinedTeam) e.joinCode = 'Please find and confirm a valid team first.'
       break
     case 'playerInfo':
       if (!form.name.trim()) e.name = 'Full name is required.'
@@ -160,8 +145,6 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
-  const [lookingUpCode, setLookingUpCode] = useState(false)
-  const [codeError, setCodeError] = useState<string | null>(null)
 
   const [form, setForm] = useState<FormState>({
     registrationType: null,
@@ -176,8 +159,6 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
     teamName: '',
     walkUpSong: '',
     selectedAddOns: {},
-    joinCode: '',
-    joinedTeam: null,
     donationAmount: 0,
     donationCustom: '',
     paymentMode: 'captain_pays_all',
@@ -201,13 +182,10 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
       registrationType: type,
       teamName: '',
       walkUpSong: '',
-      joinCode: '',
-      joinedTeam: null,
       paymentMode: 'captain_pays_all',
       invitees: buildInviteesArray(type, []),
     }))
     setErrors({})
-    setCodeError(null)
   }
 
   const handleNext = () => {
@@ -220,31 +198,6 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
   const handleBack = () => {
     setErrors({})
     setStepIndex(i => i - 1)
-  }
-
-  const handleLookupCode = async () => {
-    const code = form.joinCode.trim().toUpperCase()
-    if (!code) { setCodeError('Please enter a team code.'); return }
-
-    setLookingUpCode(true)
-    setCodeError(null)
-    setField('joinedTeam', null)
-
-    try {
-      const res = await fetch(
-        `/api/teams/lookup?code=${encodeURIComponent(code)}&eventSanityId=${encodeURIComponent(event._id)}`,
-      )
-      const data = await res.json()
-      if (!res.ok) {
-        setCodeError(data.error || 'Unable to find team.')
-        return
-      }
-      setForm(prev => ({ ...prev, joinedTeam: data, joinCode: code }))
-    } catch {
-      setCodeError('Something went wrong. Please try again.')
-    } finally {
-      setLookingUpCode(false)
-    }
   }
 
   const handleSubmit = async () => {
@@ -264,9 +217,7 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
         selectedAddOns: Object.keys(form.selectedAddOns).length > 0 ? form.selectedAddOns : undefined,
       }
 
-      if (form.registrationType === 'join') {
-        registrationData.joinTeamCode = form.joinCode
-      } else if (form.registrationType === 'duo' || form.registrationType === 'team') {
+      if (form.registrationType === 'duo' || form.registrationType === 'team') {
         registrationData.teamName = form.teamName || undefined
         registrationData.walkUpSong = form.walkUpSong || undefined
         registrationData.paymentMode = form.paymentMode
@@ -312,7 +263,6 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
             { type: 'individual' as const, label: 'Individual', sub: 'Solo entry — just you' },
             { type: 'duo' as const, label: 'Duo', sub: 'Create a 2-player team' },
             { type: 'team' as const, label: 'Team', sub: 'Create a 4-player team' },
-            { type: 'join' as const, label: 'Join Existing Team', sub: 'Enter your team invite code' },
             { type: 'volunteer' as const, label: 'Volunteer', sub: 'Help run the event — no entry fee' },
           ] as const
         ).map(({ type, label, sub }) => {
@@ -354,53 +304,6 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
         })}
       </div>
       {errors.registrationType && <p className={ERR}>{errors.registrationType}</p>}
-    </div>
-  )
-
-  const renderJoinCodeStep = () => (
-    <div className="space-y-5">
-      <p className="text-sm text-muted">
-        Enter the 6-character invite code your team captain shared with you.
-      </p>
-      <div>
-        <label className={LABEL}>
-          Team Invite Code <span className="text-danger">*</span>
-        </label>
-        <div className="flex gap-2">
-          <input
-            className={`${INPUT} flex-1 uppercase tracking-widest font-mono ${errors.joinCode ? 'border-danger' : ''}`}
-            value={form.joinCode}
-            onChange={e => {
-              setField('joinCode', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))
-              setField('joinedTeam', null)
-              setCodeError(null)
-              clearError('joinCode')
-            }}
-            placeholder="GF7K2X"
-            maxLength={6}
-          />
-          <button
-            type="button"
-            onClick={handleLookupCode}
-            disabled={lookingUpCode || form.joinCode.length < 6}
-            className="btn-accent shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {lookingUpCode ? <IconLoader className="w-4 h-4" /> : 'Find Team'}
-          </button>
-        </div>
-        {codeError && <p className={ERR}>{codeError}</p>}
-        {errors.joinCode && !codeError && <p className={ERR}>{errors.joinCode}</p>}
-      </div>
-
-      {form.joinedTeam && (
-        <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 space-y-2">
-          <p className="text-xs font-mono text-accent uppercase tracking-wide">Team Found</p>
-          <p className="font-semibold text-fg">{form.joinedTeam.teamName}</p>
-          <p className="text-sm text-muted">
-            {form.joinedTeam.memberCount} of {form.joinedTeam.maxMembers} spots filled
-          </p>
-        </div>
-      )}
     </div>
   )
 
@@ -888,7 +791,6 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
       individual: 'Individual',
       duo: form.paymentMode === 'individual' ? 'Duo — Self-Pay' : 'Duo Captain (2 players)',
       team: form.paymentMode === 'individual' ? 'Foursome — Self-Pay' : 'Team Captain (4 players)',
-      join: `Joining: ${form.joinedTeam?.teamName ?? '—'}`,
       volunteer: 'Volunteer',
     }
 
@@ -964,14 +866,6 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
           </div>
         )}
 
-        {form.registrationType === 'join' && form.joinedTeam && (
-          <div className="pt-4 border-t border-border space-y-3">
-            <p className="label-mono text-[0.6rem] mb-2">Team</p>
-            <ReviewRow label="Team Name" value={form.joinedTeam.teamName} />
-            <ReviewRow label="Invite Code" value={form.joinCode} />
-          </div>
-        )}
-
         {selectedAddOnItems.length > 0 && (
           <div className="pt-4 border-t border-border space-y-2">
             <p className="label-mono text-[0.6rem] mb-2">Add-Ons</p>
@@ -1014,7 +908,6 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
 
   const stepContent: Record<Step, () => React.JSX.Element> = {
     type: renderTypeStep,
-    joinCode: renderJoinCodeStep,
     playerInfo: renderPlayerInfoStep,
     teamDetails: renderTeamDetailsStep,
     paymentMode: renderPaymentModeStep,

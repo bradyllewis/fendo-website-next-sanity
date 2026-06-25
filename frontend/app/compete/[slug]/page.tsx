@@ -13,6 +13,7 @@ import {IconCalendar, IconMapPin, IconUsersSmall, IconDollar, IconFootprints, Ic
 import type {SanityEventFull} from '../types'
 import {EVENT_TYPE_LABELS, STATUS_LABELS} from '../types'
 import {createClient} from '@/lib/supabase/server'
+import {getEventSeatCounts} from '@/sanity/lib/eventSeats'
 import RegisterButton from '@/app/components/compete/RegisterButton'
 
 type Props = {params: Promise<{slug: string}>}
@@ -106,7 +107,7 @@ export default async function EventDetailPage(props: Props) {
   if (!entry?._id) return notFound()
 
   // ── Auth + Registration data from Supabase ────────────────────────────────
-  let paidCount = 0
+  let seatCount = 0
   let userRegistration: { id: string; status: string } | null = null
 
   const supabase = await createClient()
@@ -115,13 +116,8 @@ export default async function EventDetailPage(props: Props) {
   } = await supabase.auth.getUser()
 
   if (entry.requiresRegistration) {
-    const { count } = await supabase
-      .from('event_registrations')
-      .select('*', { count: 'exact', head: true })
-      .eq('event_sanity_id', entry._id)
-      .eq('status', 'paid')
-
-    paidCount = count ?? 0
+    const seatMap = await getEventSeatCounts([entry._id])
+    seatCount = seatMap.get(entry._id) ?? 0
 
     if (user) {
       const { data: reg } = await supabase
@@ -140,7 +136,7 @@ export default async function EventDetailPage(props: Props) {
   const statusStyle = entry.status    ? STATUS_STYLES[entry.status]        ?? '' : ''
   const locationStr = formatLocation(entry.location)
   const fullAddress = formatFullAddress(entry.location)
-  const filledCount = entry.requiresRegistration ? paidCount : (entry.spotsFilled ?? 0)
+  const filledCount = entry.requiresRegistration ? seatCount : (entry.spotsFilled ?? 0)
   const spotsLeft   = entry.spotsTotal != null ? entry.spotsTotal - filledCount : null
   const spotsRatio  = entry.spotsTotal ? Math.min(filledCount / entry.spotsTotal, 1) : null
   const isComplete  = entry.status === 'completed' || entry.status === 'cancelled'
@@ -374,7 +370,7 @@ export default async function EventDetailPage(props: Props) {
                     spotsTotal: entry.spotsTotal,
                     requiresRegistration: entry.requiresRegistration,
                   }}
-                  paidCount={paidCount}
+                  paidCount={seatCount}
                   userRegistration={userRegistration}
                 />
               ) : (

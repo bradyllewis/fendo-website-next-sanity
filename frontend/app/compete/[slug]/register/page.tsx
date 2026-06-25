@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { client } from '@/sanity/lib/client'
 import { eventQuery } from '@/sanity/lib/queries'
+import { getEventSeatCounts } from '@/sanity/lib/eventSeats'
 import RegistrationForm from './RegistrationForm'
 
 type Props = { params: Promise<{ slug: string }> }
@@ -43,15 +44,11 @@ export default async function RegisterPage({ params }: Props) {
 
   if (existingReg) redirect(`/compete/${slug}`)
 
-  // Event full
+  // Event full — derive occupied seats (paid + in-progress reservations) across all flows
   if (event.spotsTotal) {
-    const { count } = await supabase
-      .from('event_registrations')
-      .select('*', { count: 'exact', head: true })
-      .eq('event_sanity_id', event._id)
-      .eq('status', 'paid')
-
-    if (count !== null && count >= event.spotsTotal) redirect(`/compete/${slug}`)
+    const seatMap = await getEventSeatCounts([event._id])
+    const used = seatMap.get(event._id) ?? 0
+    if (used >= event.spotsTotal) redirect(`/compete/${slug}`)
   }
 
   const { data: profile } = await supabase

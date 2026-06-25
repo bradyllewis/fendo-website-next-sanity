@@ -10,6 +10,7 @@ import EventsGrid from '@/app/components/compete/EventsGrid'
 import {IconArrow, IconTicket} from '@/app/components/icons'
 import type {SanityEvent} from './types'
 import { createClient } from '@/lib/supabase/server'
+import { getEventSeatCounts } from '@/sanity/lib/eventSeats'
 
 export const metadata: Metadata = {
   title: 'Compete',
@@ -37,8 +38,8 @@ export default async function CompetePage() {
   const events = (allEvents ?? []) as SanityEvent[]
   const featuredEvents = (featuredEventsRaw ?? []) as SanityEvent[]
 
-  // Batch-query real paid counts from Supabase for in-app-registration events.
-  // This ensures EventCard spots bars show live DB counts, not stale Sanity values.
+  // Derive live seat counts from Supabase for in-app-registration events.
+  // This ensures EventCard spots bars show real registrations, not stale Sanity values.
   const registrationEventIds = events
     .filter((e) => e.requiresRegistration === true && e._id)
     .map((e) => e._id)
@@ -48,19 +49,10 @@ export default async function CompetePage() {
 
   const supabase = await createClient()
 
-  // Batch-query paid counts for spot bars
+  // Derive seat counts for the spot bars (counts each player once across all flows)
   if (registrationEventIds.length > 0) {
-    const { data: countRows } = await supabase
-      .from('event_registrations')
-      .select('event_sanity_id')
-      .in('event_sanity_id', registrationEventIds)
-      .eq('status', 'paid')
-
-    if (countRows) {
-      for (const row of countRows) {
-        paidCountMap[row.event_sanity_id] = (paidCountMap[row.event_sanity_id] ?? 0) + 1
-      }
-    }
+    const seatMap = await getEventSeatCounts(registrationEventIds)
+    paidCountMap = Object.fromEntries(seatMap)
   }
 
   // Fetch the current user's registrations so EventCards can show "Registered"

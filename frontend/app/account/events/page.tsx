@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import AccountNav from '@/app/components/account/AccountNav'
 import RegistrationsList from '@/app/components/account/RegistrationsList'
 import MyTeams from '@/app/components/account/MyTeams'
-import { getCurrentEventTitles } from '@/sanity/lib/events'
+import { getCurrentEventInfo } from '@/sanity/lib/events'
 import type { EventRegistration } from '@/lib/supabase/types'
 
 export const metadata = {
@@ -27,11 +27,12 @@ export default async function AccountEventsPage() {
     .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
-  // Override stale stored titles with current Sanity titles
-  const titleMap = await getCurrentEventTitles((registrations ?? []).map((r) => r.event_sanity_id))
+  // Override stale stored title/date with current Sanity values
+  const infoMap = await getCurrentEventInfo((registrations ?? []).map((r) => r.event_sanity_id))
   const rows = ((registrations ?? []) as EventRegistration[]).map((r) => ({
     ...r,
-    event_title: titleMap.get(r.event_sanity_id) ?? r.event_title,
+    event_title: infoMap.get(r.event_sanity_id)?.title ?? r.event_title,
+    event_date: infoMap.get(r.event_sanity_id)?.startDate ?? r.event_date,
   }))
 
   return (

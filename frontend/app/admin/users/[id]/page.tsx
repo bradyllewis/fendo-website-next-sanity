@@ -7,7 +7,7 @@ import RoleToggle from '@/app/components/admin/RoleToggle'
 import UnregisterButton from '@/app/components/admin/UnregisterButton'
 import UserAvatar from '@/app/components/auth/UserAvatar'
 import { RegistrationStatusBadge } from '@/app/components/account/RegistrationsList'
-import { getCurrentEventTitles } from '@/sanity/lib/events'
+import { getCurrentEventInfo } from '@/sanity/lib/events'
 import { IconCalendar, IconArrow, IconUser, IconMail, IconShield } from '@/app/components/icons'
 import type { Profile, EventRegistration } from '@/lib/supabase/types'
 
@@ -40,8 +40,8 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
 
   const isSelf = currentUser.id === id
 
-  // Override stale stored titles with current Sanity titles
-  const titleMap = await getCurrentEventTitles((registrations ?? []).map((r) => r.event_sanity_id))
+  // Override stale stored title/date with current Sanity values
+  const infoMap = await getCurrentEventInfo((registrations ?? []).map((r) => r.event_sanity_id))
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
@@ -161,15 +161,18 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <p className="text-sm font-medium text-fg">{titleMap.get(reg.event_sanity_id) ?? reg.event_title}</p>
+                      <p className="text-sm font-medium text-fg">{infoMap.get(reg.event_sanity_id)?.title ?? reg.event_title}</p>
                       <RegistrationStatusBadge status={reg.status} />
                     </div>
-                    {reg.event_date && (
-                      <p className="flex items-center gap-1.5 text-xs font-mono text-muted">
-                        <IconCalendar className="w-3.5 h-3.5" />
-                        {format(parseISO(reg.event_date), 'MMMM d, yyyy')}
-                      </p>
-                    )}
+                    {(() => {
+                      const eventDate = infoMap.get(reg.event_sanity_id)?.startDate ?? reg.event_date
+                      return eventDate ? (
+                        <p className="flex items-center gap-1.5 text-xs font-mono text-muted">
+                          <IconCalendar className="w-3.5 h-3.5" />
+                          {format(parseISO(eventDate), 'MMMM d, yyyy')}
+                        </p>
+                      ) : null
+                    })()}
                     {reg.amount_paid != null && (
                       <p className="text-xs font-mono text-muted">
                         ${(reg.amount_paid / 100).toFixed(2)} {reg.currency.toUpperCase()}
@@ -180,7 +183,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
                     {reg.status !== 'cancelled' && reg.status !== 'refunded' && (
                       <UnregisterButton
                         registrationId={reg.id}
-                        eventTitle={titleMap.get(reg.event_sanity_id) ?? reg.event_title}
+                        eventTitle={infoMap.get(reg.event_sanity_id)?.title ?? reg.event_title}
                       />
                     )}
                     <Link

@@ -1,5 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
-import { getCurrentEventTitles } from '@/sanity/lib/events'
+import { getCurrentEventInfo } from '@/sanity/lib/events'
 import TeamsTable from '@/app/components/admin/TeamsTable'
 
 export const metadata = { title: 'Teams' }
@@ -28,11 +28,11 @@ export default async function AdminTeamsPage() {
   }
 
   // Override stale stored event_slug with the current Sanity title for display
-  const titleMap = await getCurrentEventTitles((teams ?? []).map((t) => t.event_sanity_id))
+  const infoMap = await getCurrentEventInfo((teams ?? []).map((t) => t.event_sanity_id))
 
   const rows = (teams ?? []).map((t) => ({
     ...t,
-    event_title: titleMap.get(t.event_sanity_id) ?? t.event_slug,
+    event_title: infoMap.get(t.event_sanity_id)?.title ?? t.event_slug,
     member_count: countMap[t.id] ?? 0,
   }))
 

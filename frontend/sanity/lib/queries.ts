@@ -218,12 +218,13 @@ export const eventRefBySlugQuery = defineQuery(`
   }
 `)
 
-// Current titles for a set of event ids — used to override stale stored
-// event_title snapshots when displaying registration lists.
-export const eventTitlesByIdsQuery = defineQuery(`
+// Current title/date/location for a set of event ids — used to override stale
+// stored event_title/event_date snapshots when displaying registration lists.
+export const eventInfoByIdsQuery = defineQuery(`
   *[_type == "event" && _id in $ids] {
     _id,
-    title
+    title,
+    startDate
   }
 `)
 
