@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
           player_first_name: captainName.split(' ')[0],
           player_last_name: captainName.split(' ').slice(1).join(' ') || '',
           player_email: user.email!,
-          player_phone: null as string | null,
+          player_phone: ((registrationData?.phone as string | undefined)?.trim() || null) as string | null,
           app_user_id: user.id,
           invited_by_user_id: user.id,
           invite_token: captainToken,
@@ -211,6 +211,7 @@ export async function POST(request: NextRequest) {
           amount_due: entryFeeInCents,
           currency: 'usd',
           expires_at: expiresAt,
+          metadata: { shirtSize: (registrationData?.shirtSize as string | undefined) || null },
         },
         ...invitees.map((inv) => ({
           team_id: teamData!.id,

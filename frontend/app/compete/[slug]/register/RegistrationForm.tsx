@@ -3,6 +3,7 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { IconLoader } from '@/app/components/icons'
+import { SHIRT_SIZES } from '@/lib/shirt-sizes'
 import type { SanityEventAddOn } from '@/app/compete/types'
 
 type RegistrationType = 'individual' | 'duo' | 'team' | 'volunteer'
@@ -51,8 +52,6 @@ interface Props {
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const SHIRT_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'] as const
 
 const REFERRAL_OPTIONS = [
   'Social Media',

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stripe } from '@/lib/stripe/client'
+import { client } from '@/sanity/lib/client'
+import { eventByIdQuery } from '@/sanity/lib/queries'
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Guard: verify the parent team is not cancelled
     const { data: team } = await admin
       .from('teams')
-      .select('team_status, team_name, registration_type')
+      .select('team_status, team_name, registration_type, invite_code')
       .eq('id', slot.team_id)
       .maybeSingle()
 
@@ -59,6 +61,12 @@ export async function POST(request: NextRequest) {
     const baseUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+
+    // Resolve current event title/date from Sanity (slug may have changed since slot was created)
+    const eventData = await client
+      .fetch(eventByIdQuery, { id: slot.event_sanity_id }, { next: { revalidate: 3600 } })
+    const eventTitle = (eventData as { title?: string } | null)?.title ?? slot.event_slug
+    const eventDate = (eventData as { startDate?: string } | null)?.startDate ?? ''
 
     const teamType = team.registration_type === 'duo' ? 'Duo' : 'Foursome'
     const playerName = `${slot.player_first_name} ${slot.player_last_name}`
@@ -90,6 +98,10 @@ export async function POST(request: NextRequest) {
         teamId: slot.team_id,
         eventSanityId: slot.event_sanity_id,
         eventSlug: slot.event_slug,
+        eventTitle,
+        eventDate,
+        teamName: team.team_name,
+        inviteCode: team.invite_code ?? '',
         inviteToken: token,
       },
     })

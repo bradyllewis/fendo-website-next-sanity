@@ -3,12 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { format, parseISO, formatDistanceToNow, isPast } from 'date-fns'
 import Link from 'next/link'
 import MyTeamsSlotActions from './MyTeamsSlotActions'
+import ShirtSizeSelect from './ShirtSizeSelect'
 import { getCurrentEventInfo } from '@/sanity/lib/events'
 import type { RegistrationSlot, TeamRecord } from '@/lib/supabase/types'
 
 type SlotRow = Pick<
   RegistrationSlot,
-  'id' | 'is_captain' | 'player_first_name' | 'player_last_name' | 'player_email' | 'status' | 'expires_at' | 'amount_due' | 'invite_token'
+  'id' | 'is_captain' | 'player_first_name' | 'player_last_name' | 'player_email' | 'status' | 'expires_at' | 'amount_due' | 'invite_token' | 'metadata'
 >
 
 type TeamWithSlots = TeamRecord & { slots: SlotRow[] }
@@ -42,7 +43,7 @@ export default async function MyTeams() {
 
   const { data: allSlots } = await admin
     .from('registration_slots')
-    .select('id, team_id, is_captain, player_first_name, player_last_name, player_email, status, expires_at, amount_due, invite_token')
+    .select('id, team_id, is_captain, player_first_name, player_last_name, player_email, status, expires_at, amount_due, invite_token, metadata')
     .in('team_id', teamIds)
     .order('created_at', { ascending: true })
 
@@ -87,7 +88,7 @@ export default async function MyTeams() {
                 parseISO(slot.expires_at).getTime() - Date.now() < 48 * 60 * 60 * 1000
 
               return (
-                <div key={slot.id} className="px-5 py-4 flex items-start justify-between gap-4">
+                <div key={slot.id} className="px-5 py-4 flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-fg">
@@ -107,10 +108,22 @@ export default async function MyTeams() {
                     )}
                   </div>
 
-                  {/* Actions for unpaid, non-captain, non-expired slots */}
-                  {!slot.is_captain && slot.status !== 'paid' && slot.status !== 'claimed' && !expired && (
-                    <MyTeamsSlotActions token={slot.invite_token} />
-                  )}
+                  <div className="flex items-center gap-3 shrink-0">
+                    {/* Shirt size (editable by captain) for non-expired slots */}
+                    {!expired && (
+                      <ShirtSizeSelect
+                        token={slot.invite_token}
+                        shirtSize={
+                          (slot.metadata as Record<string, unknown> | null)?.shirtSize as string | null
+                        }
+                      />
+                    )}
+
+                    {/* Actions for unpaid, non-captain, non-expired slots */}
+                    {!slot.is_captain && slot.status !== 'paid' && slot.status !== 'claimed' && !expired && (
+                      <MyTeamsSlotActions token={slot.invite_token} />
+                    )}
+                  </div>
                 </div>
               )
             })}

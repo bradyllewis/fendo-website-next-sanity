@@ -14,8 +14,9 @@ export default async function AdminRegistrationsPage() {
     .select('*')
     .order('created_at', { ascending: false })
 
-  // Fetch all referenced profiles in one query
-  const userIds = [...new Set((registrations ?? []).map((r) => r.user_id))]
+  // Fetch all referenced profiles in one query (filter out null user_ids —
+  // unauthenticated slot-payers have no profile row)
+  const userIds = [...new Set((registrations ?? []).map((r) => r.user_id).filter((id): id is string => !!id))]
   const { data: profiles } = userIds.length > 0
     ? await db.from('profiles').select('id, full_name, display_name, email').in('id', userIds)
     : { data: [] }
@@ -26,13 +27,13 @@ export default async function AdminRegistrationsPage() {
   const infoMap = await getCurrentEventInfo((registrations ?? []).map((r) => r.event_sanity_id))
 
   const rows = (registrations ?? []).map((r) => {
-    const profile = profileMap[r.user_id]
+    const profile = r.user_id ? profileMap[r.user_id] : undefined
     return {
       ...(r as EventRegistration),
       event_title: infoMap.get(r.event_sanity_id)?.title ?? r.event_title,
       event_date: infoMap.get(r.event_sanity_id)?.startDate ?? r.event_date,
-      user_email: profile?.email,
-      user_name: profile?.display_name || profile?.full_name || undefined,
+      user_email: profile?.email ?? r.player_email ?? undefined,
+      user_name: profile?.display_name || profile?.full_name || [r.player_first_name, r.player_last_name].filter(Boolean).join(' ') || undefined,
     }
   })
 

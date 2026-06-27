@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
 
         // ── Slot payment (individual team self-pay) ────────────────────────────
         if (meta.type === 'slot') {
-          const { registrationSlotId, teamId, userId, eventSanityId, eventSlug, teamName, inviteCode } = meta
+          const { registrationSlotId, userId, eventSanityId, eventSlug, teamName, inviteCode } = meta
 
           // Idempotency via registration_payments.stripe_event_id UNIQUE constraint
           const { data: existingPayment } = await supabase
@@ -181,68 +181,88 @@ export async function POST(request: NextRequest) {
               paid_at: new Date().toISOString(),
             })
 
-          // Mirror to event_registrations for authenticated users (captain or claimed player)
+          // Mirror to event_registrations — always write a ledger row, even for
+          // unauthenticated non-captain slot-payers (user_id will be null; PII comes
+          // from the slot). Idempotent via registration_slot_id unique partial index
+          // and stripe_checkout_session_id lookup.
           const mirrorUserId = userId ?? null
-          if (mirrorUserId) {
-            const { data: existingEventReg } = await supabase
+
+          const { data: existingEventReg } = await supabase
+            .from('event_registrations')
+            .select('id, status')
+            .eq('stripe_checkout_session_id', session.id)
+            .maybeSingle()
+
+          if (existingEventReg?.status === 'paid') {
+            // Already handled (e.g., inline fulfillment on success page)
+          } else if (existingEventReg) {
+            await supabase
               .from('event_registrations')
-              .select('id, status')
-              .eq('stripe_checkout_session_id', session.id)
+              .update({
+                status: 'paid',
+                stripe_payment_intent_id: (session.payment_intent as string) ?? null,
+                amount_paid: session.amount_total,
+                currency: session.currency ?? 'usd',
+              })
+              .eq('id', existingEventReg.id)
+          } else {
+            // Fetch full slot PII + team info for the ledger row
+            const { data: slotPii } = await supabase
+              .from('registration_slots')
+              .select('player_first_name, player_last_name, player_email, player_phone, metadata')
+              .eq('id', registrationSlotId)
               .maybeSingle()
 
-            if (existingEventReg?.status === 'paid') {
-              // Already handled (e.g., inline fulfillment on success page)
-            } else if (existingEventReg) {
+            const { data: slotTeamRow } = await supabase
+              .from('teams')
+              .select('registration_type, team_name')
+              .eq('id', slotCheck.team_id)
+              .maybeSingle()
+
+            const { data: insertedReg, error: regInsertError } = await supabase
+              .from('event_registrations')
+              .insert({
+                user_id: mirrorUserId,
+                event_sanity_id: eventSanityId,
+                event_slug: eventSlug,
+                event_title: meta.eventTitle ?? eventSlug,
+                event_date: meta.eventDate || null,
+                stripe_checkout_session_id: session.id,
+                stripe_payment_intent_id: (session.payment_intent as string) ?? null,
+                amount_paid: session.amount_total,
+                currency: session.currency ?? 'usd',
+                status: 'paid',
+                registration_type: slotTeamRow?.registration_type ?? (slotCheck.is_captain ? 'duo' : 'team'),
+                team_name: slotTeamRow?.team_name ?? teamName ?? null,
+                team_id: slotCheck.team_id,
+                player_first_name: slotPii?.player_first_name ?? null,
+                player_last_name: slotPii?.player_last_name ?? null,
+                player_email: slotPii?.player_email ?? null,
+                player_phone: slotPii?.player_phone ?? null,
+                registration_slot_id: registrationSlotId,
+                metadata: {
+                  isTeamCaptain: slotCheck.is_captain,
+                  paymentMode: 'individual',
+                  inviteCode: inviteCode ?? null,
+                  registrationSlotId,
+                  teamId: slotCheck.team_id,
+                  shirtSize: (slotPii?.metadata as Record<string, unknown> | null)?.shirtSize ?? null,
+                },
+              })
+              .select('id')
+              .maybeSingle()
+
+            if (regInsertError) {
+              // Non-fatal: slot is already marked paid. Log and continue so emails/team
+              // status still run. The registration_slot_id unique index prevents dupes
+              // if the webhook is replayed or the success page already created the row.
+              console.error('[webhook] Failed to mirror slot to event_registrations:', regInsertError)
+            } else if (insertedReg) {
+              // Link slot to event_registration
               await supabase
-                .from('event_registrations')
-                .update({
-                  status: 'paid',
-                  stripe_payment_intent_id: (session.payment_intent as string) ?? null,
-                  amount_paid: session.amount_total,
-                  currency: session.currency ?? 'usd',
-                })
-                .eq('id', existingEventReg.id)
-            } else {
-              const { data: slotTeamRow } = await supabase
-                .from('teams')
-                .select('registration_type')
-                .eq('id', slotCheck.team_id)
-                .maybeSingle()
-
-              const { data: insertedReg } = await supabase
-                .from('event_registrations')
-                .insert({
-                  user_id: mirrorUserId,
-                  event_sanity_id: eventSanityId,
-                  event_slug: eventSlug,
-                  event_title: meta.eventTitle ?? eventSlug,
-                  event_date: meta.eventDate || null,
-                  stripe_checkout_session_id: session.id,
-                  stripe_payment_intent_id: (session.payment_intent as string) ?? null,
-                  amount_paid: session.amount_total,
-                  currency: session.currency ?? 'usd',
-                  status: 'paid',
-                  registration_type: slotTeamRow?.registration_type ?? (slotCheck.is_captain ? 'duo' : 'team'),
-                  team_name: teamName ?? null,
-                  team_id: slotCheck.team_id,
-                  metadata: {
-                    isTeamCaptain: slotCheck.is_captain,
-                    paymentMode: 'individual',
-                    inviteCode: inviteCode ?? null,
-                    registrationSlotId,
-                    teamId: slotCheck.team_id,
-                  },
-                })
-                .select('id')
-                .maybeSingle()
-
-              if (insertedReg) {
-                // Link slot to event_registration
-                await supabase
-                  .from('registration_slots')
-                  .update({ event_registration_id: insertedReg.id })
-                  .eq('id', registrationSlotId)
-              }
+                .from('registration_slots')
+                .update({ event_registration_id: insertedReg.id })
+                .eq('id', registrationSlotId)
             }
           }
 

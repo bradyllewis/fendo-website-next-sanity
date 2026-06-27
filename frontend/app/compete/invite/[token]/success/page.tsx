@@ -22,7 +22,7 @@ export default async function InviteSuccessPage({ params, searchParams }: Props)
 
   const { data: slot } = await admin
     .from('registration_slots')
-    .select('id, status, player_first_name, player_last_name, player_email, amount_due, expires_at, team_id, event_slug, is_captain, paid_at')
+    .select('id, status, player_first_name, player_last_name, player_email, player_phone, amount_due, expires_at, team_id, event_sanity_id, event_slug, is_captain, paid_at, metadata')
     .eq('invite_token', token)
     .maybeSingle()
 
@@ -46,6 +46,65 @@ export default async function InviteSuccessPage({ params, searchParams }: Props)
           })
           .eq('id', slot.id)
           .eq('status', 'payment_started')
+
+        // Mirror to event_registrations (idempotent via registration_slot_id unique index).
+        // The webhook also does this, but we do it here too so the row exists immediately
+        // even if the webhook is delayed — whichever runs first wins, the other no-ops.
+        const { data: existingReg } = await admin
+          .from('event_registrations')
+          .select('id')
+          .eq('registration_slot_id', slot.id)
+          .maybeSingle()
+
+        if (!existingReg) {
+          const meta = stripeSession.metadata ?? {}
+          const { data: slotTeam } = await admin
+            .from('teams')
+            .select('registration_type, team_name, invite_code')
+            .eq('id', slot.team_id)
+            .maybeSingle()
+
+          const { data: insertedReg } = await admin
+            .from('event_registrations')
+            .insert({
+              user_id: null,
+              event_sanity_id: slot.event_sanity_id,
+              event_slug: slot.event_slug,
+              event_title: meta.eventTitle ?? slot.event_slug,
+              event_date: meta.eventDate || null,
+              stripe_checkout_session_id: session_id,
+              stripe_payment_intent_id: (stripeSession.payment_intent as string) ?? null,
+              amount_paid: stripeSession.amount_total ?? slot.amount_due,
+              currency: stripeSession.currency ?? 'usd',
+              status: 'paid',
+              registration_type: slotTeam?.registration_type ?? (slot.is_captain ? 'duo' : 'team'),
+              team_name: slotTeam?.team_name ?? meta.teamName ?? null,
+              team_id: slot.team_id,
+              player_first_name: slot.player_first_name,
+              player_last_name: slot.player_last_name,
+              player_email: slot.player_email,
+              player_phone: slot.player_phone,
+              registration_slot_id: slot.id,
+              metadata: {
+                isTeamCaptain: slot.is_captain,
+                paymentMode: 'individual',
+                inviteCode: slotTeam?.invite_code ?? meta.inviteCode ?? null,
+                registrationSlotId: slot.id,
+                teamId: slot.team_id,
+                shirtSize: (slot.metadata as Record<string, unknown> | null)?.shirtSize ?? null,
+              },
+            })
+            .select('id')
+            .maybeSingle()
+
+          if (insertedReg) {
+            await admin
+              .from('registration_slots')
+              .update({ event_registration_id: insertedReg.id })
+              .eq('id', slot.id)
+          }
+        }
+
         // Re-fetch after inline fulfillment
         const { data: refreshed } = await admin
           .from('registration_slots')

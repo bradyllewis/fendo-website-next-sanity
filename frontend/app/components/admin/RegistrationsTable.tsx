@@ -95,14 +95,20 @@ export default function RegistrationsTable({ registrations }: Props) {
                 {/* Member */}
                 <div>
                   {reg.user_name ? (
-                    <Link
-                      href={`/admin/users/${reg.user_id}`}
-                      className="text-sm font-medium text-fg hover:text-accent transition-colors"
-                    >
-                      {reg.user_name}
-                    </Link>
-                  ) : (
+                    reg.user_id ? (
+                      <Link
+                        href={`/admin/users/${reg.user_id}`}
+                        className="text-sm font-medium text-fg hover:text-accent transition-colors"
+                      >
+                        {reg.user_name}
+                      </Link>
+                    ) : (
+                      <p className="text-sm font-medium text-fg">{reg.user_name}</p>
+                    )
+                  ) : reg.user_id ? (
                     <p className="text-sm text-muted font-mono truncate">{reg.user_id.slice(0, 8)}…</p>
+                  ) : (
+                    <p className="text-sm text-muted font-mono truncate">no account</p>
                   )}
                   {reg.user_email && (
                     <p className="text-xs text-muted truncate">{reg.user_email}</p>

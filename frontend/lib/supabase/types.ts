@@ -118,7 +118,7 @@ export type RegistrationPayment = {
 
 export type EventRegistration = {
   id: string
-  user_id: string
+  user_id: string | null
   event_sanity_id: string
   event_slug: string
   event_title: string
@@ -130,9 +130,14 @@ export type EventRegistration = {
   status: EventRegistrationStatus
   notes: string | null
   metadata: Record<string, unknown>
-  registration_type: 'individual' | 'duo' | 'team' | null
+  registration_type: 'individual' | 'duo' | 'team' | 'volunteer' | null
   team_name: string | null
   team_id: string | null
+  player_first_name: string | null
+  player_last_name: string | null
+  player_email: string | null
+  player_phone: string | null
+  registration_slot_id: string | null
   created_at: string
   updated_at: string
 }
