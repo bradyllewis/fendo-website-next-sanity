@@ -153,7 +153,8 @@ export default function HeroSection() {
           loop
           playsInline
           preload="auto"
-          src="/videos/short_game_fendo_video_1.MOV"
+          src="/videos/short_game_fendo_video_1.webm"
+          style={{ animation: 'hero-video-focus-mobile 1.4s cubic-bezier(0.22,1,0.36,1) 0.2s both' }}
         />
         {/* Heavy beige veil — keeps dark text readable over the video */}
         <div
@@ -177,19 +178,20 @@ export default function HeroSection() {
         className="absolute right-0 top-0 bottom-0 hidden lg:block w-[42%]"
         style={{
           clipPath: 'polygon(13% 0%, 100% 0%, 100% 100%, 13% 100%, 0% 50%)',
-          animation: 'hero-fade-up 1.4s cubic-bezier(0.16,1,0.3,1) 0.3s both',
+          animation: 'hero-chevron-reveal 1.3s cubic-bezier(0.16,1,0.3,1) 0.3s both',
         }}
         aria-hidden="true"
       >
-        {/* Video */}
+        {/* Video — cinematic focus pull: starts blurred + dark + overscaled, racks into crisp focus */}
         <video
-          className="absolute inset-0 w-full h-full object-cover scale-[1.06]"
+          className="absolute inset-0 w-full h-full object-cover"
           autoPlay
           muted
           loop
           playsInline
           preload="auto"
-          src="/videos/short_game_fendo_video_1.MOV"
+          src="/videos/short_game_fendo_video_1.webm"
+          style={{ animation: 'hero-video-focus 1.6s cubic-bezier(0.22,1,0.36,1) 0.3s both' }}
         />
 
         {/* Chevron-edge whisper — narrow, softens the two angled cuts */}
@@ -212,8 +214,11 @@ export default function HeroSection() {
           style={{ background: 'linear-gradient(to top, rgba(4,15,44,0.65) 0%, transparent 100%)' }}
         />
 
-        {/* Bottom-right label */}
-        <div className="absolute bottom-25 right-7 text-right pointer-events-none">
+        {/* Bottom-right label — lands after the video racks into focus */}
+        <div
+          className="absolute bottom-25 right-7 text-right pointer-events-none"
+          style={{ animation: 'hero-fade-up 0.6s cubic-bezier(0.16,1,0.3,1) 1.5s both' }}
+        >
           <span className="block font-mono text-[0.68rem] tracking-[0.24em] uppercase text-white/90 mb-1">
             Short Game
           </span>
@@ -222,8 +227,11 @@ export default function HeroSection() {
           </span>
         </div>
 
-        {/* Live Culture — glassmorphism pill with pulsing dot */}
-        <div className="absolute top-6 right-6 pointer-events-none">
+        {/* Live Culture — glassmorphism pill with pulsing dot, lands last */}
+        <div
+          className="absolute top-6 right-6 pointer-events-none"
+          style={{ animation: 'hero-fade-up 0.6s cubic-bezier(0.16,1,0.3,1) 1.65s both' }}
+        >
           <div
             className="flex items-center gap-2 rounded-full border border-white/20 px-3.5 py-1.5"
             style={{ background: 'rgba(4,15,44,0.35)', backdropFilter: 'blur(12px)' }}

@@ -31,5 +31,8 @@ next-env.d.ts
 # VS Code
 .vscode
 
+# Claude Code local config (machine-specific, contains secrets)
+.claude/settings.local.json
+
 # Supabase CLI binary
 /bin/

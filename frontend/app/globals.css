@@ -366,6 +366,43 @@
   100% { transform: scale(1); }
 }
 
+/* Chevron panel wipes in from the right edge — collapses to a sliver,
+   then sweeps left into the full arrowhead shape. Tip cuts in last. */
+@keyframes hero-chevron-reveal {
+  from {
+    clip-path: polygon(100% 0%, 100% 0%, 100% 100%, 100% 100%, 100% 50%);
+  }
+  to {
+    clip-path: polygon(13% 0%, 100% 0%, 100% 100%, 13% 100%, 0% 50%);
+  }
+}
+
+/* Cinematic focus pull — camera racks from soft blur + dark + overscale
+   into crisp focus. No opacity change: the video stays opaque so the
+   chevron wipe reveals dark/blurry footage sweeping in, then racks into
+   focus. (Animating opacity here previously masked the wipe-in entirely.) */
+@keyframes hero-video-focus {
+  from {
+    transform: scale(1.45);
+    filter: blur(24px) brightness(0.35);
+  }
+  to {
+    transform: scale(1.06);
+    filter: blur(0px) brightness(1);
+  }
+}
+
+@keyframes hero-video-focus-mobile {
+  from {
+    transform: scale(1.2);
+    filter: blur(16px) brightness(0.4);
+  }
+  to {
+    transform: scale(1);
+    filter: blur(0px) brightness(1);
+  }
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ============================================================
