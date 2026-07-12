@@ -366,6 +366,7 @@ export type Event = {
   status: "upcoming" | "registration_open" | "waitlist" | "completed" | "cancelled";
   startDate: string;
   endDate?: string;
+  timezone: "America/New_York" | "America/Chicago" | "America/Denver" | "America/Phoenix" | "America/Los_Angeles" | "America/Anchorage" | "Pacific/Honolulu";
   location?: {
     venueName?: string;
     city?: string;

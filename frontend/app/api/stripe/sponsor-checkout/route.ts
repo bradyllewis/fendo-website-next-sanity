@@ -7,7 +7,7 @@ import { client } from '@/sanity/lib/client'
 import { eventQuery } from '@/sanity/lib/queries'
 import { sendEmail, getBaseUrl } from '@/lib/email/resend'
 import { buildSponsorConfirmationEmail } from '@/lib/email/templates/sponsor-confirmation'
-import { format, parseISO } from 'date-fns'
+import { formatEventDateLong } from '@/lib/eventDates'
 
 export async function POST(request: NextRequest) {
   try {
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 
       // Send invoice-received confirmation to sponsor
       const siteUrl = getBaseUrl()
-      const eventDateStr = event.startDate ? format(parseISO(event.startDate), 'EEEE, MMMM d, yyyy') : ''
+      const eventDateStr = event.startDate ? formatEventDateLong(event.startDate, event.timezone) : ''
       await sendEmail({
         to: sponsorData.email,
         subject: `Sponsorship request received — ${event.title}`,
@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
         eventSlug,
         eventTitle: event.title,
         eventDate: event.startDate ?? '',
+        eventTimezone: event.timezone ?? '',
       },
       payment_intent_data: {
         metadata: {

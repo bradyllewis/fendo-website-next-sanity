@@ -32,6 +32,7 @@ export default async function AdminRegistrationsPage() {
       ...(r as EventRegistration),
       event_title: infoMap.get(r.event_sanity_id)?.title ?? r.event_title,
       event_date: infoMap.get(r.event_sanity_id)?.startDate ?? r.event_date,
+      event_timezone: infoMap.get(r.event_sanity_id)?.timezone ?? null,
       user_email: profile?.email ?? r.player_email ?? undefined,
       user_name: profile?.display_name || profile?.full_name || [r.player_first_name, r.player_last_name].filter(Boolean).join(' ') || undefined,
     }

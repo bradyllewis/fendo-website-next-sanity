@@ -4,6 +4,7 @@ import { eventInfoByIdsQuery } from './queries'
 export interface CurrentEventInfo {
   title: string
   startDate: string | null
+  timezone: string | null
 }
 
 /**
@@ -24,6 +25,6 @@ export async function getCurrentEventInfo(
   return new Map(
     (rows ?? [])
       .filter((r) => !!r.title)
-      .map((r) => [r._id, { title: r.title, startDate: r.startDate ?? null }]),
+      .map((r) => [r._id, { title: r.title, startDate: r.startDate ?? null, timezone: r.timezone ?? null }]),
   )
 }

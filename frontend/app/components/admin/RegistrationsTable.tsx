@@ -5,10 +5,12 @@ import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import StatusSelector from './StatusSelector'
 import type { EventRegistration } from '@/lib/supabase/types'
+import { formatEventDateRange } from '@/lib/eventDates'
 
 interface RegistrationRow extends EventRegistration {
   user_email?: string
   user_name?: string
+  event_timezone?: string | null
 }
 
 interface Props {
@@ -125,7 +127,7 @@ export default function RegistrationsTable({ registrations }: Props) {
                   </Link>
                   {reg.event_date && (
                     <p className="text-xs font-mono text-muted">
-                      {format(parseISO(reg.event_date), 'MMM d, yyyy')}
+                      {formatEventDateRange(reg.event_date, null, reg.event_timezone)}
                     </p>
                   )}
                 </div>

@@ -1,11 +1,12 @@
 import Link from 'next/link'
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 import { IconCalendar, IconTicket, IconArrow } from '@/app/components/icons'
 import type { EventRegistration } from '@/lib/supabase/types'
+import { zonedDate } from '@/lib/eventDates'
 import UnregisterButton from './UnregisterButton'
 
 interface Props {
-  registrations: EventRegistration[]
+  registrations: (EventRegistration & { event_timezone?: string | null })[]
 }
 
 export default function RegistrationsList({ registrations }: Props) {
@@ -28,7 +29,7 @@ export default function RegistrationsList({ registrations }: Props) {
             {reg.event_date && (
               <p className="flex items-center gap-1.5 text-xs font-mono text-muted mt-1">
                 <IconCalendar className="w-3.5 h-3.5 shrink-0" />
-                {format(parseISO(reg.event_date), 'MMMM d, yyyy')}
+                {format(zonedDate(reg.event_date, reg.event_timezone), 'MMMM d, yyyy')}
               </p>
             )}
             {reg.amount_paid != null && (

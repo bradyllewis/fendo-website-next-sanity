@@ -2,8 +2,8 @@ import type {Metadata, ResolvingMetadata} from 'next'
 import {notFound} from 'next/navigation'
 import {type PortableTextBlock} from 'next-sanity'
 import Link from 'next/link'
-import {format, parseISO} from 'date-fns'
 
+import {formatEventDateRange, formatEventTime} from '@/lib/eventDates'
 import PortableText from '@/app/components/PortableText'
 import SanityImage from '@/app/components/SanityImage'
 import {sanityFetch} from '@/sanity/lib/live'
@@ -66,23 +66,6 @@ const STATUS_STYLES: Record<string, string> = {
   waitlist:           'text-fg bg-mustard/60 border border-mustard/70',
   completed:          'text-muted bg-surface border border-border',
   cancelled:          'text-danger bg-danger/20 border border-danger/40',
-}
-
-function formatEventDate(startDate: string, endDate?: string | null): string {
-  const start = parseISO(startDate)
-  if (!endDate) return format(start, 'EEEE, MMMM d, yyyy')
-  const end = parseISO(endDate)
-  if (start.toDateString() === end.toDateString()) {
-    return format(start, 'EEEE, MMMM d, yyyy')
-  }
-  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
-    return `${format(start, 'MMMM d')}–${format(end, 'd, yyyy')}`
-  }
-  return `${format(start, 'MMMM d')} – ${format(end, 'MMMM d, yyyy')}`
-}
-
-function formatTime(dateStr: string): string {
-  return format(parseISO(dateStr), 'h:mm a')
 }
 
 function formatLocation(location: SanityEventFull['location']): string | null {
@@ -204,16 +187,16 @@ export default async function EventDetailPage(props: Props) {
               {entry.startDate && (
                 <div className="flex items-center gap-2">
                   <IconCalendar className="w-4 h-4" />
-                  <span>{formatEventDate(entry.startDate, entry.endDate)}</span>
+                  <span>{formatEventDateRange(entry.startDate, entry.endDate, entry.timezone, {long: true})}</span>
                 </div>
               )}
               {entry.startDate && (
                 <div className="flex items-center gap-2">
-                  <span>{formatTime(entry.startDate)}</span>
+                  <span>{formatEventTime(entry.startDate, entry.timezone)}</span>
                   {entry.endDate && (
                     <>
                       <span className="text-muted-2">–</span>
-                      <span>{formatTime(entry.endDate)}</span>
+                      <span>{formatEventTime(entry.endDate, entry.timezone)}</span>
                     </>
                   )}
                 </div>
@@ -296,11 +279,11 @@ export default async function EventDetailPage(props: Props) {
                     <IconCalendar className="w-4 h-4 text-muted-2 mt-0.5 shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-fg">
-                        {formatEventDate(entry.startDate, entry.endDate)}
+                        {formatEventDateRange(entry.startDate, entry.endDate, entry.timezone, {long: true})}
                       </p>
                       <p className="text-xs text-muted-2 font-mono mt-0.5">
-                        {formatTime(entry.startDate)}
-                        {entry.endDate && ` – ${formatTime(entry.endDate)}`}
+                        {formatEventTime(entry.startDate, entry.timezone)}
+                        {entry.endDate && ` – ${formatEventTime(entry.endDate, entry.timezone)}`}
                       </p>
                     </div>
                   </div>

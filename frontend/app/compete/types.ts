@@ -19,6 +19,7 @@ export interface SanityEvent {
   status: EventStatus | string | null
   startDate: string | null
   endDate: string | null
+  timezone: string | null
   location: {
     venueName?: string | null
     city?: string | null

@@ -33,6 +33,7 @@ export default async function AccountEventsPage() {
     ...r,
     event_title: infoMap.get(r.event_sanity_id)?.title ?? r.event_title,
     event_date: infoMap.get(r.event_sanity_id)?.startDate ?? r.event_date,
+    event_timezone: infoMap.get(r.event_sanity_id)?.timezone ?? null,
   }))
 
   return (

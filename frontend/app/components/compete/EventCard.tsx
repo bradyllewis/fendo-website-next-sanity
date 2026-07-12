@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import {format, parseISO} from 'date-fns'
 
+import {formatEventDateRange} from '@/lib/eventDates'
 import SanityImage from '@/app/components/SanityImage'
 import {IconCalendar, IconMapPin, IconUsersSmall, IconArrow} from '@/app/components/icons'
 import type {SanityEvent} from '@/app/compete/types'
@@ -30,19 +30,6 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function formatEventDate(startDate: string, endDate?: string | null): string {
-  const start = parseISO(startDate)
-  if (!endDate) return format(start, 'MMM d, yyyy')
-  const end = parseISO(endDate)
-  if (start.toDateString() === end.toDateString()) {
-    return format(start, 'MMM d, yyyy')
-  }
-  if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
-    return `${format(start, 'MMM d')}–${format(end, 'd, yyyy')}`
-  }
-  return `${format(start, 'MMM d')} – ${format(end, 'MMM d, yyyy')}`
-}
 
 function formatLocation(location: SanityEvent['location']): string | null {
   if (!location) return null
@@ -72,6 +59,7 @@ export default function EventCard({event, paidCount, isRegistered = false}: Even
     status,
     startDate,
     endDate,
+    timezone,
     location,
     coverImage,
     shortDescription,
@@ -188,7 +176,7 @@ export default function EventCard({event, paidCount, isRegistered = false}: Even
           {startDate && (
             <div className="flex items-center gap-2 text-xs font-mono text-muted-2">
               <IconCalendar />
-              <span>{formatEventDate(startDate, endDate)}</span>
+              <span>{formatEventDateRange(startDate, endDate, timezone)}</span>
             </div>
           )}
           {locationStr && (

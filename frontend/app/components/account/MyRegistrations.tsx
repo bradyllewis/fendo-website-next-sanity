@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 import { createClient } from '@/lib/supabase/server'
 import { getCurrentEventInfo } from '@/sanity/lib/events'
+import { zonedDate } from '@/lib/eventDates'
 import { IconCalendar } from '@/app/components/icons'
 import type { EventRegistration } from '@/lib/supabase/types'
 
@@ -53,11 +54,12 @@ export default async function MyRegistrations() {
                   <RegistrationStatusBadge status={reg.status} />
                 </div>
                 {(() => {
-                  const eventDate = infoMap.get(reg.event_sanity_id)?.startDate ?? reg.event_date
+                  const info = infoMap.get(reg.event_sanity_id)
+                  const eventDate = info?.startDate ?? reg.event_date
                   return eventDate ? (
                     <p className="flex items-center gap-1.5 text-xs font-mono text-muted-2 mt-1">
                       <IconCalendar className="w-3.5 h-3.5 shrink-0" />
-                      {format(parseISO(eventDate), 'MMMM d, yyyy')}
+                      {format(zonedDate(eventDate, info?.timezone), 'MMMM d, yyyy')}
                     </p>
                   ) : null
                 })()}

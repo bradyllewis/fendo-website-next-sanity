@@ -10,7 +10,7 @@ import { buildRegistrationConfirmationEmail } from '@/lib/email/templates/regist
 import { buildSponsorConfirmationEmail } from '@/lib/email/templates/sponsor-confirmation'
 import { buildTeammatePaidEmail } from '@/lib/email/templates/teammate-paid'
 import { buildRefundConfirmationEmail } from '@/lib/email/templates/refund-confirmation'
-import { format, parseISO } from 'date-fns'
+import { formatEventDateLong } from '@/lib/eventDates'
 
 // Stripe requires the raw request body for signature verification
 export const runtime = 'nodejs'
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
             if (sponsorRow?.email) {
               const siteUrl = getBaseUrl()
               const eventDateStr = sponsorRow.event_date
-                ? format(parseISO(sponsorRow.event_date), 'EEEE, MMMM d, yyyy')
+                ? formatEventDateLong(sponsorRow.event_date, meta.eventTimezone)
                 : ''
               await sendEmail({
                 to: sponsorRow.email,
@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
               .eq('id', slotCheck.team_id)
               .maybeSingle()
 
-            const eventDate = meta.eventDate ? format(parseISO(meta.eventDate), 'EEEE, MMMM d, yyyy') : ''
+            const eventDate = meta.eventDate ? formatEventDateLong(meta.eventDate, meta.eventTimezone) : ''
             const claimUrl = `${siteUrl}/compete/invite/${
               // We need the token from the slot — re-fetch just the token
               (await supabase.from('registration_slots').select('invite_token').eq('id', registrationSlotId).maybeSingle())?.data?.invite_token ?? ''
@@ -477,7 +477,7 @@ export async function POST(request: NextRequest) {
 
           if (playerProfile?.email) {
             const playerFirstName = (playerProfile.full_name ?? 'there').split(' ')[0]
-            const eventDateStr = eventDate ? format(parseISO(eventDate), 'EEEE, MMMM d, yyyy') : ''
+            const eventDateStr = eventDate ? formatEventDateLong(eventDate, meta.eventTimezone) : ''
             const siteUrl = getBaseUrl()
 
             await sendEmail({
@@ -532,7 +532,7 @@ export async function POST(request: NextRequest) {
             const teamType: 'Duo' | 'Foursome' = teamRow?.registration_type === 'duo' ? 'Duo' : 'Foursome'
 
             const siteUrl = getBaseUrl()
-            const eventDateStr = meta.eventDate ? format(parseISO(meta.eventDate), 'EEEE, MMMM d, yyyy') : ''
+            const eventDateStr = meta.eventDate ? formatEventDateLong(meta.eventDate, meta.eventTimezone) : ''
 
             Promise.all(
               captainRegInviteeSlots.map((slot) =>

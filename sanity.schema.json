@@ -2479,6 +2479,43 @@
         },
         "optional": true
       },
+      "timezone": {
+        "type": "objectAttribute",
+        "value": {
+          "type": "union",
+          "of": [
+            {
+              "type": "string",
+              "value": "America/New_York"
+            },
+            {
+              "type": "string",
+              "value": "America/Chicago"
+            },
+            {
+              "type": "string",
+              "value": "America/Denver"
+            },
+            {
+              "type": "string",
+              "value": "America/Phoenix"
+            },
+            {
+              "type": "string",
+              "value": "America/Los_Angeles"
+            },
+            {
+              "type": "string",
+              "value": "America/Anchorage"
+            },
+            {
+              "type": "string",
+              "value": "Pacific/Honolulu"
+            }
+          ]
+        },
+        "optional": false
+      },
       "location": {
         "type": "objectAttribute",
         "value": {

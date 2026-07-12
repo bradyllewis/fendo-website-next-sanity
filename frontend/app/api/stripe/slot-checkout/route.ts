@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
       .fetch(eventByIdQuery, { id: slot.event_sanity_id }, { next: { revalidate: 3600 } })
     const eventTitle = (eventData as { title?: string } | null)?.title ?? slot.event_slug
     const eventDate = (eventData as { startDate?: string } | null)?.startDate ?? ''
+    const eventTimezone = (eventData as { timezone?: string } | null)?.timezone ?? ''
 
     const teamType = team.registration_type === 'duo' ? 'Duo' : 'Foursome'
     const playerName = `${slot.player_first_name} ${slot.player_last_name}`
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
         eventSlug: slot.event_slug,
         eventTitle,
         eventDate,
+        eventTimezone,
         teamName: team.team_name,
         inviteCode: team.invite_code ?? '',
         inviteToken: token,

@@ -2,8 +2,9 @@
 
 import {useState, useEffect, useCallback} from 'react'
 import Link from 'next/link'
-import {format, parseISO} from 'date-fns'
+import {format} from 'date-fns'
 
+import {zonedDate} from '@/lib/eventDates'
 import SanityImage from '@/app/components/SanityImage'
 import {IconCalendar, IconMapPin, IconArrow} from '@/app/components/icons'
 import type {SanityEvent} from '@/app/compete/types'
@@ -19,12 +20,16 @@ interface FeaturedEventProps {
   registeredIds?: string[]
 }
 
-function getDateStr(startDate: string | null, endDate: string | null) {
+function getDateStr(startDate: string | null, endDate: string | null, tz: string | null) {
   if (!startDate) return null
-  if (endDate && startDate.slice(0, 10) !== endDate.slice(0, 10)) {
-    return `${format(parseISO(startDate), 'MMM d')} – ${format(parseISO(endDate), 'MMM d, yyyy')}`
+  const start = zonedDate(startDate, tz)
+  if (endDate) {
+    const end = zonedDate(endDate, tz)
+    if (format(start, 'yyyy-MM-dd') !== format(end, 'yyyy-MM-dd')) {
+      return `${format(start, 'MMM d')} – ${format(end, 'MMM d, yyyy')}`
+    }
   }
-  return format(parseISO(startDate), 'EEEE, MMMM d, yyyy')
+  return format(start, 'EEEE, MMMM d, yyyy')
 }
 
 function getLocationStr(location: SanityEvent['location']) {
@@ -118,10 +123,10 @@ export default function FeaturedEvent({events, registeredIds = []}: FeaturedEven
       {/* Slide contents — stacked, opacity-crossfade */}
       {events.map((event, idx) => {
         const isActive = idx === activeIndex
-        const {title, eventType, startDate, endDate, location, shortDescription, registrationUrl, slug, _id} = event
+        const {title, eventType, startDate, endDate, timezone, location, shortDescription, registrationUrl, slug, _id} = event
         const isRegistered = registeredIds.includes(_id)
         const locationStr = getLocationStr(location)
-        const dateStr = getDateStr(startDate, endDate)
+        const dateStr = getDateStr(startDate, endDate, timezone)
 
         return (
           <div

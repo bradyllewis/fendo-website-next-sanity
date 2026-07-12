@@ -75,6 +75,26 @@ export const event = defineType({
       type: 'datetime',
     }),
     defineField({
+      name: 'timezone',
+      title: 'Timezone',
+      type: 'string',
+      description:
+        'The venue’s local timezone. Enter the start/end times above as the local wall-clock time at the venue — the website displays them in this zone for all visitors.',
+      options: {
+        list: [
+          {title: 'Eastern (New York)', value: 'America/New_York'},
+          {title: 'Central (Chicago)', value: 'America/Chicago'},
+          {title: 'Mountain (Denver)', value: 'America/Denver'},
+          {title: 'Mountain – no DST (Phoenix)', value: 'America/Phoenix'},
+          {title: 'Pacific (Los Angeles)', value: 'America/Los_Angeles'},
+          {title: 'Alaska (Anchorage)', value: 'America/Anchorage'},
+          {title: 'Hawaii (Honolulu)', value: 'Pacific/Honolulu'},
+        ],
+      },
+      initialValue: 'America/New_York',
+      validation: (rule) => rule.required(),
+    }),
+    defineField({
       name: 'location',
       title: 'Location',
       type: 'object',

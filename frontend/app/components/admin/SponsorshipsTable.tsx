@@ -5,9 +5,10 @@ import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { updateSponsorshipStatus } from '@/app/admin/actions'
 import type { SponsorRegistration } from '@/lib/supabase/types'
+import { formatEventDateRange } from '@/lib/eventDates'
 
 interface Props {
-  sponsorships: SponsorRegistration[]
+  sponsorships: (SponsorRegistration & { event_timezone?: string | null })[]
 }
 
 const STATUS_FILTERS = ['all', 'paid', 'invoiced', 'pending', 'cancelled', 'refunded'] as const
@@ -109,7 +110,7 @@ export default function SponsorshipsTable({ sponsorships }: Props) {
                   </Link>
                   {s.event_date && (
                     <p className="text-xs font-mono text-muted">
-                      {format(parseISO(s.event_date), 'MMM d, yyyy')}
+                      {formatEventDateRange(s.event_date, null, s.event_timezone)}
                     </p>
                   )}
                 </div>

@@ -111,6 +111,7 @@ const eventFields = /* groq */ `
   status,
   startDate,
   endDate,
+  timezone,
   location,
   coverImage,
   shortDescription,
@@ -200,6 +201,7 @@ export const eventByIdQuery = defineQuery(`
   *[_type == "event" && _id == $id] [0] {
     title,
     startDate,
+    timezone,
     location,
     "slug": slug.current
   }
@@ -224,7 +226,8 @@ export const eventInfoByIdsQuery = defineQuery(`
   *[_type == "event" && _id in $ids] {
     _id,
     title,
-    startDate
+    startDate,
+    timezone
   }
 `)
 

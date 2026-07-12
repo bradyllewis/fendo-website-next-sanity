@@ -11,7 +11,8 @@ import { getEventSeatCounts } from '@/sanity/lib/eventSeats'
 import { sendEmail, getBaseUrl } from '@/lib/email/resend'
 import { buildInviteEmail } from '@/lib/email/templates/invite'
 import { buildTeamNotificationEmail } from '@/lib/email/templates/team-notification'
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
+import { formatEventDateLong } from '@/lib/eventDates'
 
 // Generates a 6-character invite code, skipping visually ambiguous characters
 function generateInviteCode(): string {
@@ -256,7 +257,7 @@ export async function POST(request: NextRequest) {
         ? [event.location.venueName, event.location.city, event.location.state].filter(Boolean).join(', ')
         : null
       const eventDateStr = event.startDate
-        ? format(parseISO(event.startDate), 'EEEE, MMMM d, yyyy')
+        ? formatEventDateLong(event.startDate, event.timezone)
         : ''
       const expiresAtStr = format(new Date(expiresAt), 'MMMM d, yyyy')
       const teamType = formRegistrationType === 'duo' ? 'Duo' : 'Foursome'
@@ -354,6 +355,7 @@ export async function POST(request: NextRequest) {
             eventSlug,
             eventTitle: event.title ?? '',
             eventDate: event.startDate ?? '',
+            eventTimezone: event.timezone ?? '',
             teamName,
             inviteCode: teamData.invite_code,
             paymentMode: 'individual',
@@ -622,7 +624,7 @@ export async function POST(request: NextRequest) {
             .eq('id', teamId)
             .maybeSingle()
           const freeTeamType: 'Duo' | 'Foursome' = freeTeamRow?.registration_type === 'duo' ? 'Duo' : 'Foursome'
-          const freeEventDateStr = event.startDate ? format(parseISO(event.startDate), 'EEEE, MMMM d, yyyy') : ''
+          const freeEventDateStr = event.startDate ? formatEventDateLong(event.startDate, event.timezone) : ''
           const freeEventLocation = event.location
             ? [event.location.venueName, event.location.city, event.location.state].filter(Boolean).join(', ')
             : null
@@ -732,6 +734,7 @@ export async function POST(request: NextRequest) {
         eventSlug,
         eventTitle,
         eventDate: event.startDate ?? '',
+        eventTimezone: event.timezone ?? '',
         donationAmount: donationAmountCents > 0 ? String(donationAmountCents / 100) : '',
         teamId: teamId ?? '',
       },

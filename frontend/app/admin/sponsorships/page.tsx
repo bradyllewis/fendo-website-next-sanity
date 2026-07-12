@@ -21,6 +21,7 @@ export default async function AdminSponsorshipsPage() {
     ...s,
     event_title: infoMap.get(s.event_sanity_id)?.title ?? s.event_title,
     event_date: infoMap.get(s.event_sanity_id)?.startDate ?? s.event_date,
+    event_timezone: infoMap.get(s.event_sanity_id)?.timezone ?? null,
   }))
 
   return (
