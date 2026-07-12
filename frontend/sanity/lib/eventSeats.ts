@@ -41,10 +41,12 @@ export async function getEventSeatCounts(
 
   for (const s of slots ?? []) add(s.event_sanity_id)
 
-  // 2. Active registrations, excluding individual-pay mirror rows
+  // 2. Active registrations, excluding individual-pay mirror rows.
+  // Volunteers hold a registration row but do not occupy a player seat, so
+  // they are filtered out below.
   const { data: regs } = await admin
     .from('event_registrations')
-    .select('event_sanity_id, team_id')
+    .select('event_sanity_id, team_id, registration_type')
     .in('event_sanity_id', unique)
     .in('status', ['paid', 'pending'])
 
@@ -60,6 +62,8 @@ export async function getEventSeatCounts(
   }
 
   for (const r of regs ?? []) {
+    // Volunteers do not occupy a player seat.
+    if (r.registration_type === 'volunteer') continue
     // Skip individual-pay mirror rows — their seat is already counted via the slot.
     if (r.team_id && modeByTeamId.get(r.team_id) !== 'captain_pays_all') continue
     add(r.event_sanity_id)

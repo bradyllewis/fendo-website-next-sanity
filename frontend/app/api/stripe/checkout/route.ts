@@ -392,7 +392,8 @@ export async function POST(request: NextRequest) {
 
     // ── Check spots availability for standard flows ──────────────────────────
     // A captain_pays_all duo/team consumes one seat per member; everyone else consumes one.
-    if (event.spotsTotal) {
+    // Volunteers do not occupy a player seat, so they bypass the capacity gate.
+    if (event.spotsTotal && formRegistrationType !== 'volunteer') {
       const neededSeats =
         formRegistrationType === 'duo' ? 2 : formRegistrationType === 'team' ? 4 : 1
       const seatMap = await getEventSeatCounts([event._id])

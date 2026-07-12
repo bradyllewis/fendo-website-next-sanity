@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { IconTarget, IconUsers, IconBook, IconTicket } from '@/app/components/icons'
+import { WhatsNextCarousel } from '@/app/components/WhatsNextCarousel'
 
 export const metadata = {
   title: 'The Collective',
@@ -28,14 +29,16 @@ export default async function CollectivePage() {
 
   return (
     <>
+    <div>
+        {/* <WhatsNextCarousel /> */}
       {/* Hero */}
-      <section className="relative border-b border-border overflow-hidden">
+      <section className="relative overflow-hidden">
         <div
           className="absolute inset-0 bg-[url('/images/tile-grid-black.png')] opacity-[0.025]"
           style={{ backgroundSize: '24px' }}
           aria-hidden="true"
         />
-        <div className="container relative py-24 lg:py-32">
+        <div className="container relative pt-24 lg:pt-32">
           <span
             className="label-mono-accent"
             style={{ animationDelay: '0.1s', animationFillMode: 'both', animationName: 'hero-fade-up', animationDuration: '0.7s' }}
@@ -58,8 +61,8 @@ export default async function CollectivePage() {
       </section>
 
       {/* Quick links */}
-      <section className="section-padding" id="hub">
-        <div className="container">
+      <section className="relative section-padding overflow-hidden" id="hub">
+        <div className="container relative">
           <span className="label-mono text-muted">Your Hub</span>
           <h2 className="display-md mt-3 mb-10">What&apos;s Next</h2>
 
@@ -91,6 +94,7 @@ export default async function CollectivePage() {
           </div>
         </div>
       </section>
+      </div>
 
       {/* Bottom CTA */}
       <section className="relative bg-fg border-t border-bg/10 section-padding">
@@ -129,7 +133,7 @@ function QuickCard({
   description: string
 }) {
   return (
-    <Link href={href} className="card-base overflow-hidden p-6 group flex gap-5 items-start">
+    <Link href={href} className="card-base bg-surface overflow-hidden p-6 group flex gap-5 items-start">
       <div className="shrink-0 w-12 h-12 rounded-xl bg-surface flex items-center justify-center text-fg group-hover:bg-accent group-hover:text-white transition-colors duration-200">
         {icon}
       </div>
