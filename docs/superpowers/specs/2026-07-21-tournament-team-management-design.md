@@ -61,6 +61,19 @@ type RosterEntry = {
 
 - `getTournamentRoster` is the single source of truth for grouping logic, reused by both the page (render) and the export route.
 
+**Dedup rule (critical — mirrors `getEventSeatCounts` in `sanity/lib/eventSeats.ts`):** individual-pay non-captain members exist in BOTH `registration_slots` and a mirrored `event_registrations` row (linked via `event_registrations.registration_slot_id`, reliably set by both the live webhook and the backfill migration). A naive union double-counts them. To match the established seat-count source of truth exactly:
+  - **Slot members:** every `registration_slots` row for the event with status NOT IN (`expired`, `cancelled`). Covers individual-pay members (captain + non-captain) and captain_pays_all invitees.
+  - **Registration members:** `event_registrations` rows for the event with status IN (`paid`, `pending`), EXCLUDING volunteers (`registration_type = 'volunteer'`) and EXCLUDING individual-pay mirrors (`team_id IS NULL OR teams.payment_mode = 'captain_pays_all'`). Covers solos and captain_pays_all captains.
+  - By construction the roster's player count equals the `seats_filled` shown on `/admin/tournaments`.
+  - Volunteers and waitlisted registrations are intentionally out of scope for this roster view.
+
+**Cross-link for mutations:** build a `Map<slotId, eventRegRow>` from `event_registrations` where `registration_slot_id IS NOT NULL`. Each slot-sourced `RosterMember` carries `linkedRegistrationId` (the mirror's id, or null). `updateMember`/`cancelMember` on a slot member must also update the linked mirror row so PII/status never drift between the two tables.
+
+**Amount & refund source per member type:**
+  - Solo / captain_pays_all captain (event_registrations source): `amount_paid`; refund via `stripe_payment_intent_id` on the reg row.
+  - Individual-pay member (slot source): amount from the linked mirror's `amount_paid` (fallback `slot.amount_due`); refund via `slot.stripe_payment_intent_id`.
+  - captain_pays_all invitee (slot source): amount is 0 / "covered by captain"; no individual Stripe charge exists, so the refund option is hidden/disabled for these members (the captain's single payment covers the team).
+
 ### 2. UI components
 
 - `TournamentRosterTable` (client component, `frontend/app/components/admin/TournamentRosterTable.tsx`): renders roster entries grouped by team — each team as a card/section with a header (team name, type, payment mode, status) and its members listed beneath; solo entries render as single-row cards. Follows the visual pattern of `RegistrationsTable`/`TeamsTable`.
@@ -75,8 +88,12 @@ New file: `frontend/app/admin/tournaments/[id]/teams/actions.ts`, guarded by the
 
 - `updateTeamName(teamId, newName)` — updates `teams.team_name`, and also updates the denormalized `team_name` on all matching `event_registrations` rows for that team (keeps `/admin/registrations` display consistent).
 - `updateMember(sourceTable, sourceId, { firstName, lastName, email, shirtSize })` — updates `player_first_name`, `player_last_name`, `player_email`, and `metadata.shirtSize` on whichever table `sourceTable` names (`event_registrations` or `registration_slots`).
-- `cancelMember(sourceTable, sourceId, { refund: boolean })` — soft-cancels (`status = 'cancelled'`) the given record; if `refund` is true and the record has a Stripe payment intent, issues a refund first (reusing the refund helper already built for `/api/admin/delete-tournament`).
-- `cancelTeam(teamId, { refund: boolean })` — iterates all non-cancelled members of the team across both source tables, soft-cancels each (with per-member refund if requested and paid), and sets `teams.team_status = 'cancelled'`.
+- `cancelMember(sourceTable, sourceId, { refund: boolean })` — soft-cancels (`status = 'cancelled'`) the given record and its linked mirror row (if a slot member); if `refund` is true and the record has a Stripe payment intent, issues a refund first.
+- `cancelTeam(teamId, { refund: boolean })` — iterates all active members of the team across both source tables, soft-cancels each (with per-member refund if requested and paid), and sets `teams.team_status = 'cancelled'`.
+
+**Refund helper:** the refund logic currently lives inline in `/api/admin/delete-tournament/route.ts` (Step 3) and is not exported. Extract a small shared helper `frontend/lib/stripe/refund.ts` exporting `refundPaymentIntent(paymentIntentId): Promise<{ ok: boolean; error?: string }>` (idempotent — treats `charge_already_refunded` as success, matching existing behavior). Use it in the new actions. Refactoring the existing delete-tournament route to use it is optional and out of scope unless trivial.
+
+**Admin guards:** server actions reuse the `requireAdmin()` pattern from `frontend/app/admin/actions.ts` (Supabase session + `profiles.role` check via admin client). The export API route reuses the Supabase-session admin check (the same fallback branch used by `verifyAdmin` in delete-tournament; the `x-admin-secret` Studio branch is not needed here).
 
 ### 4. CSV/XLSX export
 
