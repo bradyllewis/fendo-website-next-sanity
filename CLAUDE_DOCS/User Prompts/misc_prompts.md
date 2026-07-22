@@ -1,5 +1,7 @@
  /goal Review your goal here: CLAUDE_DOCS/goal.md. Flawlessly, methodically, and thoroughly complete all requests/tasks in the goal.md doc. Always make sure the app builds without errors before considering your goal achieved. Always kill any dev servers you have launched prior to responding.
 
+ We have a new global design system (C:\Users\brady\fendo-website-next-sanity\CLAUDE_DOCS\UI\Fendo-DESIGN.md) that has some small differences between itself and our current global design system (C:\Users\brady\fendo-website-next-sanity\CLAUDE_DOCS\UI\Design System.md). We need to update our current global design to match our new design guidelines, and we need to update any existing instructions, guidance, memories, etc., to leverage our new design system for everything moving forward.
+
 
  live-resolve stale event_date and sponsor tier snapshots
  

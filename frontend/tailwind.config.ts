@@ -95,8 +95,9 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['var(--font-inter)'],
-        mono: ['var(--font-ibm-plex-mono)'],
+        sans: ['var(--font-dm-sans)'],
+        display: ['var(--font-outfit)'],
+        mono: ['var(--font-outfit)'],
       },
     },
   },

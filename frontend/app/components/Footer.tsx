@@ -5,6 +5,21 @@ import EmailCaptureForm from '@/app/components/EmailCaptureForm'
 
 const FOOTER_LINKS = {
   Compete: [
+    {label: 'Events', href: '/compete'}
+  ],
+  Learn: [
+    {label: 'The Playbook', href: '/playbook'}
+  ],
+  Community: [
+    {label: 'The Collective', href: '/collective'}
+  ],
+  Gear: [
+    {label: 'GS1 Groove System', href: '/gear/gs1'}
+  ],
+}
+
+{/*const FOOTER_LINKS = {
+  Compete: [
     {label: 'Events', href: '/compete'},
     {label: 'Tournaments', href: '/compete/tournaments'},
     {label: 'Clinics', href: '/compete/clinics'},
@@ -28,7 +43,7 @@ const FOOTER_LINKS = {
     {label: 'Bulk & Custom Orders', href: '/gear/bulk'},
     {label: 'FAQs', href: '/faqs'},
   ],
-}
+}*/}
 
 export default function Footer() {
   return (

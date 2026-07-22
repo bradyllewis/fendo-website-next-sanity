@@ -8,22 +8,31 @@
    ============================================================ */
 
 @theme {
-  /* --- Core Brand Palette --- */
-  --color-bg:           #F8EDD9;   /* Beige - page background */
-  --color-fg:           #0C1C23;   /* Dark Green - primary text, dark surfaces */
-  --color-muted:        #4D6B59;   /* Forest muted - body copy, secondary text */
-  --color-muted-2:      #6E8880;   /* Light forest gray - timestamps, meta */
-  --color-border:       #C8B596;   /* Warm tan - dividers and borders */
-  --color-surface:      #F1E2C5;   /* Lighter beige - subtle section backgrounds */
-  --color-accent:       #BD5846;   /* Earthy red - primary CTA, active states */
-  --color-accent-hover: #A84136;   /* Darker red - accent hover state */
-  --color-success:      #31483B;   /* Forest green - success states */
-  --color-danger:       #9E3525;   /* Deep red - error/danger states */
+  /* --- Approved Brand Palette (2026 Fendo Brand Guide) ---
+     Six approved colors: Warm White, Brand Black, Dark Cyan, Deep Navy,
+     Course Green, Rust. See CLAUDE_DOCS/UI/Fendo-DESIGN.md §6. */
+  --color-bg:           #F8EDD9;   /* Warm White - default page background */
+  --color-fg:           #0C1C23;   /* Dark Cyan - primary text + dark surfaces */
+  --color-brand-black:  #0A0A0A;   /* Brand Black - default text on light fields */
+  --color-dark-cyan:    #0C1C23;   /* Dark Cyan - primary dark surface, editorial */
+  --color-accent:       #BD5846;   /* Rust - the single approved accent */
+  --color-accent-hover: #A84136;   /* Rust, darkened - accent hover state */
+  --color-navy:         #040F2C;   /* Deep Navy - darkest dark, deep hero sections */
+  --color-green:        #31483B;   /* Course Green - restrained supporting color */
 
-  /* --- Additional Brand Colors --- */
-  --color-navy:         #040F2C;   /* Navy - darkest dark, deep hero sections */
-  --color-green:        #31483B;   /* Forest Green - secondary brand color */
-  --color-mustard:      #F2E19E;   /* Mustard - warm highlight accent */
+  /* --- Derived warm neutrals (Brand Black composited over Warm White) ---
+     Not stand-alone hues; used for text hierarchy the 6-color palette
+     doesn't cover. muted ≈ 72% Brand Black, muted-2 ≈ 55%. */
+  --color-muted:        #45443F;   /* Secondary / body copy */
+  --color-muted-2:      #726C61;   /* Timestamps, meta */
+  --color-border:       #C8B596;   /* Warm White hairline - dividers, borders */
+  --color-surface:      #F1E2C5;   /* Warm White, deepened - subtle section fills */
+
+  /* --- Functional status colors (NOT brand colors; states only) ---
+     Do not use decoratively. Reserved for success / warning / error UI. */
+  --color-success:      #31483B;   /* Course Green - success states */
+  --color-danger:       #9E3525;   /* Deep red - error / danger states */
+  --color-mustard:      #F2E19E;   /* Warm amber - pending / waitlist / warning */
 
   /* --- Neutral Scale (warm earth-toned) --- */
   --color-gray-50:  #F0E4CC;
@@ -37,12 +46,17 @@
   --color-gray-800: #2B241B;
   --color-gray-900: #1A150E;
   --color-gray-950: #0E0C07;
-  --color-black: #040F2C;   /* Navy */
-  --color-white: #F8EDD9;   /* Beige */
+  --color-black: #040F2C;   /* Deep Navy */
+  --color-white: #F8EDD9;   /* Warm White */
 
-  /* --- Typography --- */
-  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
-  --font-mono: var(--font-ibm-plex-mono), 'Courier New', monospace;
+  /* --- Typography ---
+     Outfit -> headers, editorial display, uppercase labels, CTAs.
+     DM Sans -> body copy (Light 300). No monospace in the brand system:
+     --font-mono is repurposed to Outfit so `label-mono` labels render
+     in the brand display face. See Fendo-DESIGN.md §7. */
+  --font-sans:    var(--font-dm-sans), system-ui, -apple-system, sans-serif;
+  --font-display: var(--font-outfit), system-ui, -apple-system, sans-serif;
+  --font-mono:    var(--font-outfit), system-ui, -apple-system, sans-serif;
 
   /* --- Shadows --- */
   --shadow-card:       0 1px 3px rgba(12,28,35,0.06), 0 4px 16px rgba(12,28,35,0.04);
@@ -71,10 +85,12 @@
 
   body {
     font-family: var(--font-sans);
+    font-weight: 300;        /* DM Sans Light per brand guide */
     line-height: 1.6;
   }
 
   h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);   /* Outfit */
     @apply font-semibold tracking-tight;
     line-height: 1.05;
   }
@@ -124,24 +140,30 @@
    ============================================================ */
 
 @utility display-xl {
+  font-family: var(--font-display);
   font-size: clamp(3.5rem, 8vw, 7.5rem);
   font-weight: 600;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.02em;
   line-height: 0.92;
+  text-transform: uppercase;
 }
 
 @utility display-lg {
+  font-family: var(--font-display);
   font-size: clamp(2.5rem, 5vw, 4.5rem);
   font-weight: 600;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.015em;
   line-height: 0.95;
+  text-transform: uppercase;
 }
 
 @utility display-md {
+  font-family: var(--font-display);
   font-size: clamp(1.75rem, 3vw, 2.5rem);
   font-weight: 600;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.01em;
   line-height: 1.05;
+  text-transform: uppercase;
 }
 
 @utility label-mono {
@@ -174,14 +196,18 @@
 @utility btn-primary {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   background-color: var(--color-fg);
   color: var(--color-bg);
+  min-height: 48px;
   padding: 0.75rem 1.75rem;
-  border-radius: 0.75rem;
+  border-radius: 0;
+  font-family: var(--font-display);
   font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
   text-decoration: none;
@@ -200,14 +226,18 @@
 @utility btn-accent {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   background-color: var(--color-accent);
   color: #ffffff;
+  min-height: 48px;
   padding: 0.75rem 1.75rem;
-  border-radius: 0.75rem;
+  border-radius: 0;
+  font-family: var(--font-display);
   font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
   text-decoration: none;
@@ -245,14 +275,18 @@
 @utility btn-outline {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-fg);
   color: var(--color-fg);
+  min-height: 48px;
   padding: 0.75rem 1.75rem;
-  border-radius: 0.75rem;
+  border-radius: 0;
+  font-family: var(--font-display);
   font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
   text-decoration: none;
@@ -277,7 +311,7 @@
 @utility card-base {
   background-color: var(--color-bg);
   border: 1px solid var(--color-border);
-  border-radius: 1rem;
+  border-radius: 0;
   transition: border-color 200ms ease, box-shadow 200ms ease;
 
   &:hover {

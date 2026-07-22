@@ -9,6 +9,7 @@ import {
   IconTrophy,
   IconLoader,
   IconCheck,
+  IconUsers,
 } from '@/app/components/icons'
 import type { DeleteTournamentResult } from '@/app/api/admin/delete-tournament/route'
 
@@ -540,14 +541,23 @@ export default function TournamentsClient({ events: initialEvents }: Tournaments
                       </span>
                     </td>
 
-                    {/* Delete */}
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => setDeleteTarget(ev)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-all duration-150 active:scale-[0.97]"
-                      >
-                        Delete
-                      </button>
+                    {/* Actions */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <a
+                          href={`/admin/tournaments/${ev._id}/teams`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-fg border border-border hover:bg-surface transition-all duration-150 active:scale-[0.97]"
+                        >
+                          <IconUsers className="w-3.5 h-3.5" />
+                          Teams
+                        </a>
+                        <button
+                          onClick={() => setDeleteTarget(ev)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-all duration-150 active:scale-[0.97]"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

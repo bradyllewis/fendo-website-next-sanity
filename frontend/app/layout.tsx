@@ -3,7 +3,7 @@ import 'lenis/dist/lenis.css'
 
 import {SpeedInsights} from '@vercel/speed-insights/next'
 import type {Metadata, Viewport} from 'next'
-import {Inter, IBM_Plex_Mono} from 'next/font/google'
+import {Outfit, DM_Sans} from 'next/font/google'
 import {draftMode} from 'next/headers'
 import {toPlainText} from 'next-sanity'
 import {VisualEditing} from 'next-sanity/visual-editing'
@@ -57,18 +57,20 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-const inter = Inter({
-  variable: '--font-inter',
+// Outfit -> headers, editorial display, uppercase labels, CTAs
+const outfit = Outfit({
+  variable: '--font-outfit',
   subsets: ['latin'],
   display: 'swap',
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '600'],
 })
 
-const ibmPlexMono = IBM_Plex_Mono({
-  variable: '--font-ibm-plex-mono',
-  weight: ['400', '500'],
+// DM Sans -> body copy (Light 300 default)
+const dmSans = DM_Sans({
+  variable: '--font-dm-sans',
   subsets: ['latin'],
   display: 'swap',
+  weight: ['300', '400', '500'],
 })
 
 export default async function RootLayout({children}: {children: React.ReactNode}) {
@@ -77,7 +79,7 @@ export default async function RootLayout({children}: {children: React.ReactNode}
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${ibmPlexMono.variable}`}
+      className={`${outfit.variable} ${dmSans.variable}`}
     >
       <body className="bg-bg text-fg antialiased">
         <ReactLenis root options={{lerp: 0.1, duration: 1.5}}>
