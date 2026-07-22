@@ -41,11 +41,11 @@ export default function Header() {
             onClick={closeMenu}
           >
             <Image
-              src="/images/Fendo-golf-blue-logo.webp"
+              src="/images/fendo-logo-horizontal-dark.webp"
               alt="Fendo Golf"
               width={240}
               height={64}
-              className="h-18 w-auto"
+              className="h-10 w-auto"
               priority
             />
           </Link>

@@ -82,11 +82,11 @@ export default function Footer() {
           <div className="col-span-2 lg:col-span-1">
             <Link href="/" aria-label="Fendo Golf — Home">
               <Image
-                src="/images/Fendo-golf-blue-logo.webp"
+                src="/images/fendo-logo-horizontal-dark.webp"
                 alt="Fendo Golf"
                 width={100}
                 height={28}
-                className="h-20 w-auto brightness-0 invert mb-5"
+                className="h-10 w-auto brightness-0 invert mb-5"
               />
             </Link>
             <p className="text-bg/40 text-xs leading-relaxed max-w-[180px]">
