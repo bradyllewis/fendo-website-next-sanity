@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import AuthFormCard from '@/app/components/auth/AuthFormCard'
 import FormInput from '@/app/components/auth/FormInput'
@@ -9,7 +9,6 @@ import SubmitButton from '@/app/components/auth/SubmitButton'
 import { createClient } from '@/lib/supabase/client'
 
 function SignInForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const next = searchParams.get('next') || '/collective'
   const authError = searchParams.get('error')
@@ -36,7 +35,12 @@ function SignInForm() {
       return
     }
 
-    router.push(next)
+    // Full document navigation, not router.push: signing in on the browser client changes
+    // the auth cookies but leaves Next's client-side Router Cache holding entries captured
+    // while unauthenticated — including the middleware redirect for /collective that gets
+    // prefetched from the header nav. A router.push would resolve against that stale entry
+    // and never navigate. Matches the sign-up page.
+    window.location.assign(next)
   }
 
   const errorMessage =
