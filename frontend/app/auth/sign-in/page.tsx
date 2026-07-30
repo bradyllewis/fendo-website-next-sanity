@@ -7,10 +7,11 @@ import AuthFormCard from '@/app/components/auth/AuthFormCard'
 import FormInput from '@/app/components/auth/FormInput'
 import SubmitButton from '@/app/components/auth/SubmitButton'
 import { createClient } from '@/lib/supabase/client'
+import { safeRedirectPath } from '@/lib/safeRedirect'
 
 function SignInForm() {
   const searchParams = useSearchParams()
-  const next = searchParams.get('next') || '/collective'
+  const next = safeRedirectPath(searchParams.get('next'))
   const authError = searchParams.get('error')
   const prefillEmail = searchParams.get('email') ?? ''
 
