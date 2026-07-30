@@ -25,7 +25,7 @@ export default function CheckEmailPage() {
           <p className="text-xs font-semibold text-fg">What to look for:</p>
           <ul className="text-xs text-muted space-y-1 list-disc list-inside">
             <li>Subject: <span className="text-fg font-medium">Reset your Fendo Golf password</span></li>
-            <li>Sent from: <span className="text-fg font-medium">noreply@fendogolf.com</span></li>
+            <li>Sent from: <span className="text-fg font-medium">noreply@tx.fendogolf.com</span></li>
             <li>The link expires after <span className="text-fg font-medium">1 hour</span></li>
           </ul>
         </div>

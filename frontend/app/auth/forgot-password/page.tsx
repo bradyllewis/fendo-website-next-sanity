@@ -1,13 +1,26 @@
 'use client'
 
-import { useActionState } from 'react'
+import { Suspense, useActionState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import AuthFormCard from '@/app/components/auth/AuthFormCard'
 import FormInput from '@/app/components/auth/FormInput'
 import SubmitButton from '@/app/components/auth/SubmitButton'
 import { forgotPassword } from '@/app/auth/actions'
 
 export default function ForgotPasswordPage() {
+  return (
+    <Suspense>
+      <ForgotPasswordForm />
+    </Suspense>
+  )
+}
+
+function ForgotPasswordForm() {
+  const searchParams = useSearchParams()
+  const linkError = searchParams.get('error') === 'link-invalid'
+  const prefillEmail = searchParams.get('email') ?? ''
+
   const [state, formAction] = useActionState<{ error?: string } | null, FormData>(
     async (_prev, formData) => {
       const result = await forgotPassword(formData)
@@ -16,6 +29,12 @@ export default function ForgotPasswordPage() {
     null
   )
 
+  const errorMessage =
+    state?.error ||
+    (linkError
+      ? 'That password reset link is invalid or has expired. Request a new one below.'
+      : null)
+
   return (
     <AuthFormCard
       tag="Password Reset"
@@ -23,9 +42,9 @@ export default function ForgotPasswordPage() {
       description="Enter your email and we'll send you a link to reset it."
     >
       <form action={formAction} className="flex flex-col gap-4">
-        {state?.error && (
+        {errorMessage && (
           <div className="rounded-xl bg-danger/10 border border-danger/20 px-4 py-3 text-sm text-danger">
-            {state.error}
+            {errorMessage}
           </div>
         )}
 
@@ -35,6 +54,7 @@ export default function ForgotPasswordPage() {
           type="email"
           label="Email"
           placeholder="you@example.com"
+          defaultValue={prefillEmail}
           required
           autoComplete="email"
         />

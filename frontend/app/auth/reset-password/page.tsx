@@ -1,27 +1,34 @@
-'use client'
-
-import { useActionState } from 'react'
+import Link from 'next/link'
 import AuthFormCard from '@/app/components/auth/AuthFormCard'
-import FormInput from '@/app/components/auth/FormInput'
-import SubmitButton from '@/app/components/auth/SubmitButton'
-import { resetPassword } from '@/app/auth/actions'
+import { createClient } from '@/lib/supabase/server'
+import ResetPasswordForm from './ResetPasswordForm'
 
-export default function ResetPasswordPage() {
-  const [state, formAction] = useActionState(
-    async (_prev: { error?: string } | null, formData: FormData) => {
-      const password = formData.get('password') as string
-      const confirm = formData.get('confirm_password') as string
-      if (password !== confirm) {
-        return { error: 'Passwords do not match' }
-      }
-      if (password.length < 6) {
-        return { error: 'Password must be at least 6 characters' }
-      }
-      const result = await resetPassword(formData)
-      return result ?? null
-    },
-    null
-  )
+export default async function ResetPasswordPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  // Reaching this page without a session means the recovery link was never redeemed
+  // (expired, already used, or opened directly).
+  if (!user) {
+    return (
+      <AuthFormCard
+        tag="Security"
+        heading="Link Expired"
+        description="This password reset link is no longer valid. Reset links expire one hour after they're sent and can only be used once."
+      >
+        <div className="flex flex-col gap-3">
+          <Link href="/auth/forgot-password" className="btn-accent w-full justify-center">
+            Request a New Link
+          </Link>
+          <Link href="/auth/sign-in" className="btn-ghost text-sm text-center">
+            Back to sign in
+          </Link>
+        </div>
+      </AuthFormCard>
+    )
+  }
 
   return (
     <AuthFormCard
@@ -29,35 +36,7 @@ export default function ResetPasswordPage() {
       heading="Set New Password"
       description="Choose a strong password for your account."
     >
-      <form action={formAction} className="flex flex-col gap-4">
-        {state?.error && (
-          <div className="rounded-xl bg-danger/10 border border-danger/20 px-4 py-3 text-sm text-danger">
-            {state.error}
-          </div>
-        )}
-
-        <FormInput
-          id="password"
-          name="password"
-          type="password"
-          label="New Password"
-          placeholder="At least 6 characters"
-          required
-          autoComplete="new-password"
-        />
-
-        <FormInput
-          id="confirm_password"
-          name="confirm_password"
-          type="password"
-          label="Confirm Password"
-          placeholder="Repeat your password"
-          required
-          autoComplete="new-password"
-        />
-
-        <SubmitButton>Update Password</SubmitButton>
-      </form>
+      <ResetPasswordForm />
     </AuthFormCard>
   )
 }

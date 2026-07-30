@@ -23,11 +23,15 @@ function SignUpForm() {
   const prefillEmail = searchParams.get('email') ?? ''
 
   const [error, setError] = useState<string | null>(null)
+  const [existingEmail, setExistingEmail] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
+
+  const signInHref = claimToken ? `/auth/sign-in?next=/account/claim/${claimToken}` : '/auth/sign-in'
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
+    setExistingEmail(null)
     setIsPending(true)
 
     const formData = new FormData(e.currentTarget)
@@ -48,7 +52,11 @@ function SignUpForm() {
 
     const result = await signUp(formData)
     if (result?.error) {
-      setError(result.error)
+      if (result.code === 'email_exists') {
+        setExistingEmail(email)
+      } else {
+        setError(result.error)
+      }
       setIsPending(false)
       return
     }
@@ -76,6 +84,30 @@ function SignUpForm() {
       }
     >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {existingEmail && (
+          <div className="rounded-xl bg-mustard/10 border border-mustard/30 px-4 py-3 text-sm">
+            <p className="font-semibold text-fg">You already have an account</p>
+            <p className="text-muted mt-1 leading-relaxed">
+              <span className="text-fg font-medium">{existingEmail}</span> is already registered
+              with Fendo Golf. Sign in instead, or reset your password if you&apos;ve forgotten it.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+              <Link
+                href={`${signInHref}${signInHref.includes('?') ? '&' : '?'}email=${encodeURIComponent(existingEmail)}`}
+                className="text-fg font-medium underline underline-offset-2 hover:text-accent transition-colors"
+              >
+                Sign in
+              </Link>
+              <Link
+                href={`/auth/forgot-password?email=${encodeURIComponent(existingEmail)}`}
+                className="text-fg font-medium underline underline-offset-2 hover:text-accent transition-colors"
+              >
+                Reset your password
+              </Link>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="rounded-xl bg-danger/10 border border-danger/20 px-4 py-3 text-sm text-danger">
             {error}
@@ -128,7 +160,7 @@ function SignUpForm() {
         <p className="text-center text-sm text-muted">
           Already have an account?{' '}
           <Link
-            href={claimToken ? `/auth/sign-in?next=/account/claim/${claimToken}` : '/auth/sign-in'}
+            href={signInHref}
             className="text-fg font-medium hover:text-accent transition-colors"
           >
             Sign in

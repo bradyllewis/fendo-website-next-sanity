@@ -21,6 +21,14 @@ export async function signUp(formData: FormData) {
   })
 
   if (createError) {
+    // Supabase sets code 'email_exists' when the address is already registered.
+    // Match on the code only — a bare 422 also covers other validation failures.
+    if (createError.code === 'email_exists') {
+      return {
+        error: 'An account with this email already exists.',
+        code: 'email_exists' as const,
+      }
+    }
     return { error: createError.message }
   }
 
@@ -43,31 +51,41 @@ export async function forgotPassword(formData: FormData) {
   const { data, error } = await adminClient.auth.admin.generateLink({
     type: 'recovery',
     email,
-    options: {
-      redirectTo: `${getBaseUrl()}/auth/callback?next=/auth/reset-password`,
-    },
   })
 
   // Only send if the user exists — silently skip otherwise to prevent enumeration
-  if (!error && data?.properties?.action_link) {
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL,
-        to: [email],
-        subject: 'Reset your Fendo Golf password',
-        html: `
+  if (!error && data?.properties?.hashed_token) {
+    // Link to our own /auth/confirm route rather than Supabase's action_link: that
+    // endpoint returns the session in a URL fragment, which a server route can never read.
+    const resetLink = `${getBaseUrl()}/auth/confirm?token_hash=${encodeURIComponent(
+      data.properties.hashed_token
+    )}&type=recovery&next=${encodeURIComponent('/auth/reset-password')}`
+
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: process.env.RESEND_FROM_EMAIL,
+          to: [email],
+          subject: 'Reset your Fendo Golf password',
+          html: `
           <p>Hi,</p>
           <p>We received a request to reset the password for your Fendo Golf account.</p>
-          <p><a href="${data.properties.action_link}">Click here to reset your password</a></p>
+          <p><a href="${resetLink}">Click here to reset your password</a></p>
           <p>This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
         `,
-      }),
-    })
+        }),
+      })
+      if (!res.ok) {
+        console.error('[forgotPassword] Resend failed', res.status, await res.text())
+      }
+    } catch (err) {
+      console.error('[forgotPassword] Resend request threw', err)
+    }
   }
 
   // Always redirect — never reveal whether the address is registered

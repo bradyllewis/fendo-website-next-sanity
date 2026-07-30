@@ -13,6 +13,7 @@ function SignInForm() {
   const searchParams = useSearchParams()
   const next = searchParams.get('next') || '/collective'
   const authError = searchParams.get('error')
+  const prefillEmail = searchParams.get('email') ?? ''
 
   const [error, setError] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
@@ -56,6 +57,7 @@ function SignInForm() {
         type="email"
         label="Email"
         placeholder="you@example.com"
+        defaultValue={prefillEmail}
         required
         autoComplete="email"
       />

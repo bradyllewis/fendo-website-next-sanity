@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { signUp } from '@/app/auth/actions'
 import { IconLoader } from '@/app/components/icons'
 
-type View = 'sign-in' | 'sign-up' | 'check-email'
+type View = 'sign-in' | 'sign-up'
 
 interface AuthGateModalProps {
   isOpen: boolean
@@ -22,6 +23,7 @@ export default function AuthGateModal({
   const [view, setView] = useState<View>('sign-in')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [prefillEmail, setPrefillEmail] = useState('')
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export default function AuthGateModal({
     if (isOpen) {
       setView('sign-in')
       setError(null)
+      setPrefillEmail('')
     }
   }, [isOpen])
 
@@ -66,37 +69,48 @@ export default function AuthGateModal({
   async function handleSignUp(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
-    setIsLoading(true)
 
     const formData = new FormData(e.currentTarget)
     const email = formData.get('email') as string
     const password = formData.get('password') as string
-    const fullName = formData.get('full_name') as string
 
-    const supabase = createClient()
-    const { data, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-
-    setIsLoading(false)
-
-    if (authError) {
-      setError(authError.message)
+    // admin.createUser bypasses Supabase's password policy, so enforce the minimum here
+    // (matches the /auth/sign-up page).
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters')
       return
     }
 
-    // When email confirmation is disabled, Supabase returns a session immediately.
-    // In that case, proceed directly to checkout instead of showing check-email.
-    if (data.session) {
-      onSuccess()
-    } else {
-      setView('check-email')
+    setIsLoading(true)
+
+    // Same server action the /auth/sign-up page uses — creates the user with the email
+    // pre-confirmed and reliably reports an already-registered address.
+    const result = await signUp(formData)
+
+    if (result?.error) {
+      setIsLoading(false)
+      if (result.code === 'email_exists') {
+        setPrefillEmail(email)
+        setView('sign-in')
+        setError(`${email} is already registered. Sign in below to continue your registration.`)
+      } else {
+        setError(result.error)
+      }
+      return
     }
+
+    // Sign in on the browser client so the session cookie is set before checkout
+    const supabase = createClient()
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+
+    setIsLoading(false)
+
+    if (signInError) {
+      setError(signInError.message)
+      return
+    }
+
+    onSuccess()
   }
 
   return (
@@ -114,7 +128,7 @@ export default function AuthGateModal({
           <div>
             <p className="label-mono-accent text-xs mb-0.5">Registration</p>
             <h2 className="font-semibold text-fg tracking-tight text-base">
-              {view === 'check-email' ? 'Check your email' : 'Sign in to register'}
+              Sign in to register
             </h2>
           </div>
           <button
@@ -128,28 +142,7 @@ export default function AuthGateModal({
           </button>
         </div>
 
-        {view === 'check-email' ? (
-          <div className="px-6 py-8 text-center">
-            <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-7 h-7 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-              </svg>
-            </div>
-            <h3 className="font-semibold text-fg mb-2">Verify your email</h3>
-            <p className="text-sm text-muted leading-relaxed">
-              We sent a verification link to your inbox. Click it to activate your account,
-              then come back and sign in to complete your registration for{' '}
-              <strong className="text-fg">{eventTitle}</strong>.
-            </p>
-            <button
-              onClick={() => setView('sign-in')}
-              className="mt-6 btn-ghost text-sm"
-            >
-              Back to sign in
-            </button>
-          </div>
-        ) : (
-          <div className="px-6 py-5">
+        <div className="px-6 py-5">
             {/* Tab switcher */}
             <div className="flex gap-1 p-1 bg-surface rounded-xl mb-5 border border-border">
               <button
@@ -185,11 +178,13 @@ export default function AuthGateModal({
             {view === 'sign-in' ? (
               <form onSubmit={handleSignIn} className="flex flex-col gap-4">
                 <ModalInput
+                  key={prefillEmail}
                   id="modal-email"
                   name="email"
                   type="email"
                   label="Email"
                   placeholder="you@example.com"
+                  defaultValue={prefillEmail}
                   required
                   autoComplete="email"
                 />
@@ -217,7 +212,8 @@ export default function AuthGateModal({
                   )}
                 </button>
                 <p className="text-center text-xs text-muted">
-                  After signing in you&apos;ll be taken to the secure checkout page.
+                  After signing in you&apos;ll be taken to the secure checkout page for{' '}
+                  <span className="text-fg font-medium">{eventTitle}</span>.
                 </p>
               </form>
             ) : (
@@ -264,12 +260,11 @@ export default function AuthGateModal({
                   )}
                 </button>
                 <p className="text-center text-xs text-muted">
-                  You&apos;ll verify your email first, then sign in to complete checkout.
+                  Your account is created instantly — you&apos;ll go straight to checkout.
                 </p>
               </form>
             )}
-          </div>
-        )}
+        </div>
       </div>
     </dialog>
   )
@@ -281,6 +276,7 @@ function ModalInput({
   type = 'text',
   label,
   placeholder,
+  defaultValue,
   required,
   autoComplete,
 }: {
@@ -289,6 +285,7 @@ function ModalInput({
   type?: string
   label: string
   placeholder?: string
+  defaultValue?: string
   required?: boolean
   autoComplete?: string
 }) {
@@ -302,6 +299,7 @@ function ModalInput({
         name={name}
         type={type}
         placeholder={placeholder}
+        defaultValue={defaultValue}
         required={required}
         autoComplete={autoComplete}
         className="w-full bg-bg border border-border rounded-xl px-4 py-3 text-base sm:text-sm transition-colors placeholder:text-muted-2 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
