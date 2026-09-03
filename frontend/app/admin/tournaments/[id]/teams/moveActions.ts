@@ -243,6 +243,15 @@ async function applyMemberMove(
   return error ? error.message : null
 }
 
+/**
+ * 6-character invite code. Alphabet matches `generateInviteCode` in
+ * app/api/stripe/checkout/route.ts exactly (no I, L, O, 0 or 1).
+ */
+function generateInviteCode(): string {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+}
+
 /** auth user id of a team's current captain, for slot ownership rewrites. */
 async function resolveCaptainUserId(db: AdminDb, teamId: string): Promise<string | null> {
   const { data: captainSlot } = await db
@@ -383,6 +392,88 @@ export async function movePlayers(
       registrationType: team.registration_type,
       inviteCode: team.invite_code,
       captainUserId: await resolveCaptainUserId(db, team.id),
+    }
+  }
+
+  if (destination.kind === 'newTeam') {
+    const name = destination.name.trim()
+    if (!name) return { error: 'Team name is required', moved: 0, failed: [], notes: [] }
+    if (!options.newTeamCaptain) {
+      return {
+        error: 'Choose which player captains the new team',
+        moved: 0,
+        failed: [],
+        notes: [],
+      }
+    }
+    const captainRef = options.newTeamCaptain
+    if (!resolved.some((r) => r.member.sourceId === captainRef.sourceId)) {
+      return {
+        error: 'The chosen captain is not among the selected players',
+        moved: 0,
+        failed: [],
+        notes: [],
+      }
+    }
+
+    const size = Math.max(destination.teamSize, resolved.length)
+
+    // event_slug is a historical snapshot column. Copy it from an existing team
+    // on this event so the new team carries the same value as its members.
+    const { data: slugRow } = await db
+      .from('teams')
+      .select('event_slug')
+      .eq('event_sanity_id', eventSanityId)
+      .limit(1)
+      .maybeSingle()
+
+    let created: {
+      id: string
+      invite_code: string
+      team_name: string
+      registration_type: string
+    } | null = null
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data, error } = await db
+        .from('teams')
+        .insert({
+          event_sanity_id: eventSanityId,
+          event_slug: slugRow?.event_slug ?? eventSanityId,
+          team_name: name,
+          invite_code: generateInviteCode(),
+          created_by: null,
+          registration_type: size === 2 ? 'duo' : 'team',
+          max_members: size,
+          payment_mode: 'individual',
+          team_status: 'pending',
+          expires_at: null,
+        })
+        .select('id, invite_code, team_name, registration_type')
+        .single()
+
+      if (!error && data) {
+        created = data
+        break
+      }
+      if (error && error.code !== '23505') {
+        return { error: 'Failed to create the new team', moved: 0, failed: [], notes: [] }
+      }
+    }
+
+    if (!created) {
+      return { error: 'Could not generate a unique invite code', moved: 0, failed: [], notes: [] }
+    }
+
+    notes.push(`Created team ${created.team_name} (code ${created.invite_code}).`)
+    dest = {
+      teamId: created.id,
+      teamName: created.team_name,
+      registrationType: created.registration_type,
+      inviteCode: created.invite_code,
+      // A new team has no captain until its members arrive; executeMoves
+      // resolves ownership after the moves are applied.
+      captainUserId: null,
     }
   }
 
