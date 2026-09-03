@@ -37,6 +37,8 @@ export interface RosterEntry {
   teamName: string | null
   inviteCode: string | null
   registrationType: 'individual' | 'duo' | 'team'
+  /** Team size cap. 1 for solo entries (no team row). */
+  maxMembers: number
   paymentMode: 'captain_pays_all' | 'individual' | null
   teamStatus: string | null
   members: RosterMember[]
@@ -109,7 +111,7 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
   const [teamsRes, regsRes, slotsRes] = await Promise.all([
     db
       .from('teams')
-      .select('id, team_name, invite_code, registration_type, payment_mode, team_status, created_at')
+      .select('id, team_name, invite_code, registration_type, max_members, payment_mode, team_status, created_at')
       .eq('event_sanity_id', eventSanityId),
     db
       .from('event_registrations')
@@ -223,6 +225,7 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
         teamName: null,
         inviteCode: null,
         registrationType: (r.registration_type as RosterEntry['registrationType']) ?? 'individual',
+        maxMembers: 1,
         paymentMode: null,
         teamStatus: null,
         members: [member],
@@ -242,6 +245,7 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
       teamName: t.team_name,
       inviteCode: t.invite_code,
       registrationType: t.registration_type as RosterEntry['registrationType'],
+      maxMembers: t.max_members,
       paymentMode: t.payment_mode as RosterEntry['paymentMode'],
       teamStatus: t.team_status,
       members,
