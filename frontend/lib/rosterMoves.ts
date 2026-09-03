@@ -1,0 +1,707 @@
+/**
+ * Roster move engine.
+ *
+ * Pure logic + database writes, deliberately free of any Next.js request
+ * context (no 'use server', no cookies, no revalidatePath). The server actions
+ * in app/admin/tournaments/[id]/teams/moveActions.ts own authentication and
+ * cache revalidation and delegate here, which also lets this engine be
+ * exercised directly by a verification harness.
+ */
+
+import { createAdminClient } from '@/lib/supabase/admin'
+import { buildMirrorRegIds } from '@/lib/registrationDedup'
+import {
+  getTournamentRoster,
+  type RosterEntry,
+  type RosterMember,
+  type RosterMemberSource,
+} from '@/lib/tournamentRoster'
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+export type MoveDestination =
+  | { kind: 'existingTeam'; teamId: string }
+  | { kind: 'newTeam'; name: string; teamSize: number }
+  | { kind: 'solo' }
+
+export interface MemberRef {
+  sourceTable: RosterMemberSource
+  sourceId: string
+  linkedRegistrationId: string | null
+}
+
+export interface MoveOptions {
+  /** Replacement captain for each source team left captain-less, keyed by team id. */
+  newCaptainByTeamId: Record<string, MemberRef>
+  /** Admin acknowledged that a destination team will exceed max_members. */
+  confirmOverflow: boolean
+  /** Team ids the admin acknowledged will be emptied and soft-cancelled. */
+  confirmEmptyTeams: string[]
+  /** For destination `newTeam`: which moved player becomes captain. */
+  newTeamCaptain?: MemberRef
+}
+
+export interface MoveResult {
+  error?: string
+  moved: number
+  failed: { sourceId: string; reason: string }[]
+  notes: string[]
+}
+
+const INACTIVE_SLOT_STATUSES = ['expired', 'cancelled']
+const PAID_SLOT_STATUSES = ['paid', 'claimed', 'captain_registered']
+
+type AdminDb = ReturnType<typeof createAdminClient>
+
+// ─── Team status ────────────────────────────────────────────────────────────
+
+/**
+ * Recomputes `teams.team_status` from the team's ACTIVE members only, using
+ * the same definition of "active" as getTournamentRoster. Expired and
+ * cancelled rows are absent from the calculation and never drag a team down.
+ *
+ * Never writes 'expired' — that value belongs to the expiry cron.
+ */
+async function recalcTeamStatus(db: AdminDb, teamId: string): Promise<void> {
+  const [slotsRes, regsRes] = await Promise.all([
+    db
+      .from('registration_slots')
+      .select('status, event_registration_id')
+      .eq('team_id', teamId),
+    db
+      .from('event_registrations')
+      .select('id, status, registration_slot_id')
+      .eq('team_id', teamId),
+  ])
+
+  const slots = slotsRes.data ?? []
+  const regs = regsRes.data ?? []
+
+  const activeSlots = slots.filter((s) => !INACTIVE_SLOT_STATUSES.includes(s.status))
+
+  // Only non-mirror regs are members in their own right. Uses the shared
+  // structural rule — a forward-link-only check would miss reverse-linked
+  // mirrors and double-count those players against the team's size.
+  const mirrorRegIds = buildMirrorRegIds(regs, slots)
+  const activeRegs = regs.filter(
+    (r) => !mirrorRegIds.has(r.id) && (r.status === 'paid' || r.status === 'pending'),
+  )
+
+  const total = activeSlots.length + activeRegs.length
+  if (total === 0) {
+    await db.from('teams').update({ team_status: 'cancelled' }).eq('id', teamId)
+    return
+  }
+
+  const paid =
+    activeSlots.filter((s) => PAID_SLOT_STATUSES.includes(s.status)).length +
+    activeRegs.filter((r) => r.status === 'paid').length
+
+  const status = paid === total ? 'complete' : paid > 0 ? 'partially_paid' : 'pending'
+  await db.from('teams').update({ team_status: status }).eq('id', teamId)
+}
+
+// ─── Roster lookup helpers ──────────────────────────────────────────────────
+
+/**
+ * Finds a member in the roster by its source table + id.
+ *
+ * NOT exported: this file carries the `'use server'` directive, and Next.js
+ * requires every export from such a file to be an async function. A synchronous
+ * export here is a build error. Type-only exports are erased and are fine.
+ */
+function findMember(
+  roster: RosterEntry[],
+  ref: MemberRef,
+): { entry: RosterEntry; member: RosterMember } | null {
+  for (const entry of roster) {
+    for (const member of entry.members) {
+      if (member.sourceTable === ref.sourceTable && member.sourceId === ref.sourceId) {
+        return { entry, member }
+      }
+    }
+  }
+  return null
+}
+
+// ─── Per-member writes ──────────────────────────────────────────────────────
+
+interface DestTeamContext {
+  teamId: string
+  teamName: string
+  registrationType: string
+  inviteCode: string | null
+  /** auth user id of the destination team's captain, or null. */
+  captainUserId: string | null
+}
+
+/**
+ * Moves one member onto a destination team (or to solo when `dest` is null).
+ *
+ * Writes ONLY team membership, ownership and captaincy. Member status,
+ * amounts, and every stripe_* column are left exactly as they were.
+ */
+async function applyMemberMove(
+  db: AdminDb,
+  member: RosterMember,
+  dest: DestTeamContext | null,
+  isCaptain: boolean,
+  adminEmail: string,
+  fromTeamName: string | null,
+): Promise<string | null> {
+  const historyEntry = {
+    at: new Date().toISOString(),
+    action: dest ? 'moved_to_team' : 'detached_to_solo',
+    from: fromTeamName,
+    to: dest?.teamName ?? null,
+    by: adminEmail,
+  }
+
+  const mergeHistory = (metadata: unknown) => {
+    const base =
+      metadata && typeof metadata === 'object' ? (metadata as Record<string, unknown>) : {}
+    const prior = Array.isArray(base.adminHistory) ? base.adminHistory : []
+    return { ...base, adminHistory: [...prior, historyEntry] }
+  }
+
+  if (member.sourceTable === 'registration_slots') {
+    if (!dest) {
+      // Detach to solo: the mirrored ledger row becomes the player's standalone
+      // registration, and the slot is retired.
+      //
+      // ORDER MATTERS. The reg row is promoted FIRST so that a failure between
+      // the two writes double-counts the player briefly rather than making them
+      // disappear. Re-running the move repairs it.
+      //
+      // This is the ONE place in this feature that writes a member-level status,
+      // and it is load-bearing: without retiring the slot the player would hold
+      // two seats.
+      if (!member.linkedRegistrationId) return 'No standalone registration record to keep'
+
+      const { data: mirror } = await db
+        .from('event_registrations')
+        .select('metadata')
+        .eq('id', member.linkedRegistrationId)
+        .maybeSingle()
+
+      const soloMeta = mergeHistory(mirror?.metadata) as Record<string, unknown>
+      soloMeta.teamId = null
+      soloMeta.inviteCode = null
+
+      const { error: regErr } = await db
+        .from('event_registrations')
+        .update({
+          team_id: null,
+          team_name: null,
+          registration_type: 'individual',
+          is_captain: false,
+          registration_slot_id: null,
+          metadata: soloMeta,
+        })
+        .eq('id', member.linkedRegistrationId)
+      if (regErr) return regErr.message
+
+      const { error: slotErr } = await db
+        .from('registration_slots')
+        .update({ status: 'cancelled', event_registration_id: null })
+        .eq('id', member.sourceId)
+      if (slotErr) return slotErr.message
+
+      return null
+    }
+
+    const { data: existing } = await db
+      .from('registration_slots')
+      .select('metadata')
+      .eq('id', member.sourceId)
+      .maybeSingle()
+
+    const { error } = await db
+      .from('registration_slots')
+      .update({
+        team_id: dest.teamId,
+        invited_by_user_id: dest.captainUserId,
+        is_captain: isCaptain,
+        metadata: mergeHistory(existing?.metadata),
+      })
+      .eq('id', member.sourceId)
+    if (error) return error.message
+
+    // Keep the mirrored ledger row in sync.
+    if (member.linkedRegistrationId) {
+      const { data: mirror } = await db
+        .from('event_registrations')
+        .select('metadata')
+        .eq('id', member.linkedRegistrationId)
+        .maybeSingle()
+
+      const meta = mergeHistory(mirror?.metadata) as Record<string, unknown>
+      meta.teamId = dest.teamId
+      meta.inviteCode = dest.inviteCode
+
+      await db
+        .from('event_registrations')
+        .update({
+          team_id: dest.teamId,
+          team_name: dest.teamName,
+          registration_type: dest.registrationType,
+          is_captain: isCaptain,
+          metadata: meta,
+        })
+        .eq('id', member.linkedRegistrationId)
+    }
+    return null
+  }
+
+  // Registration-canonical member (solo, or a captain_pays_all captain).
+  const { data: existing } = await db
+    .from('event_registrations')
+    .select('metadata')
+    .eq('id', member.sourceId)
+    .maybeSingle()
+
+  const meta = mergeHistory(existing?.metadata) as Record<string, unknown>
+  meta.teamId = dest?.teamId ?? null
+  meta.inviteCode = dest?.inviteCode ?? null
+
+  const { error } = await db
+    .from('event_registrations')
+    .update({
+      team_id: dest?.teamId ?? null,
+      team_name: dest?.teamName ?? null,
+      registration_type: dest ? dest.registrationType : 'individual',
+      is_captain: dest ? isCaptain : false,
+      metadata: meta,
+    })
+    .eq('id', member.sourceId)
+
+  return error ? error.message : null
+}
+
+/**
+ * 6-character invite code. Alphabet matches `generateInviteCode` in
+ * app/api/stripe/checkout/route.ts exactly (no I, L, O, 0 or 1).
+ */
+function generateInviteCode(): string {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+}
+
+/**
+ * auth user id of a team's current ACTIVE captain, for slot ownership rewrites.
+ *
+ * The status filters are load-bearing. `cancelMember` sets a slot's status to
+ * 'cancelled' but leaves `is_captain` untouched, so teams can hold dead rows
+ * still flagged as captain (3 exist in production). Without filtering, this
+ * would either hand a live team's ownership to a cancelled member or — once a
+ * replacement is promoted and two flagged rows exist — make `.maybeSingle()`
+ * error, return null, and blank `invited_by_user_id` across the whole team.
+ */
+async function resolveCaptainUserId(db: AdminDb, teamId: string): Promise<string | null> {
+  const { data: captainSlot } = await db
+    .from('registration_slots')
+    .select('app_user_id')
+    .eq('team_id', teamId)
+    .eq('is_captain', true)
+    .not('status', 'in', '("cancelled","expired")')
+    .maybeSingle()
+  if (captainSlot?.app_user_id) return captainSlot.app_user_id
+
+  const { data: captainReg } = await db
+    .from('event_registrations')
+    .select('user_id')
+    .eq('team_id', teamId)
+    .eq('is_captain', true)
+    .not('status', 'in', '("cancelled","refunded")')
+    .maybeSingle()
+  return captainReg?.user_id ?? null
+}
+
+/** Sets exactly one captain on a team and repoints slot ownership to them. */
+async function promoteCaptain(db: AdminDb, teamId: string, ref: MemberRef): Promise<void> {
+  // Scoped to active rows so cancelled/expired members are left untouched.
+  // resolveCaptainUserId filters the same way, so stale flags on dead rows
+  // cannot influence ownership.
+  await db
+    .from('registration_slots')
+    .update({ is_captain: false })
+    .eq('team_id', teamId)
+    .not('status', 'in', '("cancelled","expired")')
+  await db
+    .from('event_registrations')
+    .update({ is_captain: false })
+    .eq('team_id', teamId)
+    .not('status', 'in', '("cancelled","refunded")')
+
+  if (ref.sourceTable === 'registration_slots') {
+    await db.from('registration_slots').update({ is_captain: true }).eq('id', ref.sourceId)
+    if (ref.linkedRegistrationId) {
+      await db
+        .from('event_registrations')
+        .update({ is_captain: true })
+        .eq('id', ref.linkedRegistrationId)
+    }
+  } else {
+    await db.from('event_registrations').update({ is_captain: true }).eq('id', ref.sourceId)
+  }
+
+  const captainUserId = await resolveCaptainUserId(db, teamId)
+  await db
+    .from('registration_slots')
+    .update({ invited_by_user_id: captainUserId })
+    .eq('team_id', teamId)
+    .not('status', 'in', '("cancelled","expired")')
+}
+
+// ─── movePlayers ────────────────────────────────────────────────────────────
+
+export async function runMovePlayers(
+  db: AdminDb,
+  adminEmail: string,
+  eventSanityId: string,
+  members: MemberRef[],
+  destination: MoveDestination,
+  options: MoveOptions,
+): Promise<MoveResult> {
+  if (members.length === 0) {
+    return { error: 'No players selected', moved: 0, failed: [], notes: [] }
+  }
+
+  const roster = await getTournamentRoster(eventSanityId)
+
+  // Resolve every selected member against the live roster.
+  const resolved: { ref: MemberRef; member: RosterMember; entry: RosterEntry }[] = []
+  for (const ref of members) {
+    const hit = findMember(roster, ref)
+    if (!hit) {
+      return {
+        error: 'A selected player is no longer on this roster. Reload and try again.',
+        moved: 0,
+        failed: [],
+        notes: [],
+      }
+    }
+    resolved.push({ ref, member: hit.member, entry: hit.entry })
+  }
+
+  // Volunteers must never be moved — a move rewrites registration_type, which
+  // would convert them into a counted player and change spots-filled.
+  const regSourceIds = resolved
+    .map((r) => (r.member.sourceTable === 'event_registrations' ? r.member.sourceId : null))
+    .filter((id): id is string => !!id)
+  if (regSourceIds.length > 0) {
+    const { data: volunteerCheck } = await db
+      .from('event_registrations')
+      .select('id')
+      .in('id', regSourceIds)
+      .eq('registration_type', 'volunteer')
+    if ((volunteerCheck ?? []).length > 0) {
+      return { error: 'Volunteers cannot be moved between teams', moved: 0, failed: [], notes: [] }
+    }
+  }
+
+  const notes: string[] = []
+  let dest: DestTeamContext | null = null
+
+  if (destination.kind === 'existingTeam') {
+    const { data: team } = await db
+      .from('teams')
+      .select(
+        'id, event_sanity_id, team_name, registration_type, invite_code, max_members, team_status',
+      )
+      .eq('id', destination.teamId)
+      .maybeSingle()
+
+    if (!team) return { error: 'Destination team not found', moved: 0, failed: [], notes: [] }
+    if (team.event_sanity_id !== eventSanityId) {
+      return {
+        error: 'Destination team belongs to a different tournament',
+        moved: 0,
+        failed: [],
+        notes: [],
+      }
+    }
+    if (team.team_status === 'cancelled' || team.team_status === 'expired') {
+      return { error: 'Destination team is cancelled or expired', moved: 0, failed: [], notes: [] }
+    }
+
+    // Capacity check against the live roster.
+    const destEntry = roster.find((e) => e.teamId === team.id)
+    const incoming = resolved.filter((r) => r.entry.teamId !== team.id).length
+    const projected = (destEntry?.members.length ?? 0) + incoming
+    if (projected > team.max_members) {
+      if (!options.confirmOverflow) {
+        return {
+          error: `This would put ${projected} players on a team sized for ${team.max_members}. Confirm to raise the team size.`,
+          moved: 0,
+          failed: [],
+          notes: [],
+        }
+      }
+      await db.from('teams').update({ max_members: projected }).eq('id', team.id)
+      notes.push(`Raised ${team.team_name} size to ${projected}.`)
+    }
+
+    dest = {
+      teamId: team.id,
+      teamName: team.team_name,
+      registrationType: team.registration_type,
+      inviteCode: team.invite_code,
+      captainUserId: await resolveCaptainUserId(db, team.id),
+    }
+  }
+
+  if (destination.kind === 'newTeam') {
+    const name = destination.name.trim()
+    if (!name) return { error: 'Team name is required', moved: 0, failed: [], notes: [] }
+    if (!options.newTeamCaptain) {
+      return {
+        error: 'Choose which player captains the new team',
+        moved: 0,
+        failed: [],
+        notes: [],
+      }
+    }
+    const captainRef = options.newTeamCaptain
+    if (!resolved.some((r) => r.member.sourceId === captainRef.sourceId)) {
+      return {
+        error: 'The chosen captain is not among the selected players',
+        moved: 0,
+        failed: [],
+        notes: [],
+      }
+    }
+
+    const size = Math.max(destination.teamSize, resolved.length)
+
+    // event_slug is a historical snapshot column. Copy it from an existing team
+    // on this event so the new team carries the same value as its members.
+    const { data: slugRow } = await db
+      .from('teams')
+      .select('event_slug')
+      .eq('event_sanity_id', eventSanityId)
+      .limit(1)
+      .maybeSingle()
+
+    let created: {
+      id: string
+      invite_code: string
+      team_name: string
+      registration_type: string
+    } | null = null
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data, error } = await db
+        .from('teams')
+        .insert({
+          event_sanity_id: eventSanityId,
+          event_slug: slugRow?.event_slug ?? eventSanityId,
+          team_name: name,
+          invite_code: generateInviteCode(),
+          created_by: null,
+          registration_type: size === 2 ? 'duo' : 'team',
+          max_members: size,
+          payment_mode: 'individual',
+          team_status: 'pending',
+          expires_at: null,
+        })
+        .select('id, invite_code, team_name, registration_type')
+        .single()
+
+      if (!error && data) {
+        created = data
+        break
+      }
+      if (error && error.code !== '23505') {
+        return { error: 'Failed to create the new team', moved: 0, failed: [], notes: [] }
+      }
+    }
+
+    if (!created) {
+      return { error: 'Could not generate a unique invite code', moved: 0, failed: [], notes: [] }
+    }
+
+    notes.push(`Created team ${created.team_name} (code ${created.invite_code}).`)
+    dest = {
+      teamId: created.id,
+      teamName: created.team_name,
+      registrationType: created.registration_type,
+      inviteCode: created.invite_code,
+      // A new team has no captain until its members arrive; executeMoves
+      // resolves ownership after the moves are applied.
+      captainUserId: null,
+    }
+  }
+
+  if (destination.kind === 'solo') {
+    if (resolved.length !== 1) {
+      return { error: 'Detach to solo one player at a time', moved: 0, failed: [], notes: [] }
+    }
+    const only = resolved[0].member
+    if (only.sourceTable === 'registration_slots' && !only.linkedRegistrationId) {
+      return {
+        error:
+          'This player has no standalone registration record to keep, so they cannot become a solo entry. Create a one-person team for them instead.',
+        moved: 0,
+        failed: [],
+        notes: [],
+      }
+    }
+    dest = null
+  }
+
+  return await executeMoves(
+    db,
+    eventSanityId,
+    roster,
+    resolved,
+    dest,
+    destination,
+    options,
+    adminEmail,
+    notes,
+  )
+}
+
+/**
+ * Applies the resolved moves, then repairs every affected team: captain
+ * reassignment, status recalculation, and soft-cancelling emptied teams.
+ *
+ * Not transactional. Because dedup is structural, `team_id` does not affect
+ * whether a player is counted, so a partially applied move is cosmetic and
+ * re-running repairs it.
+ */
+async function executeMoves(
+  db: AdminDb,
+  eventSanityId: string,
+  roster: RosterEntry[],
+  resolved: { ref: MemberRef; member: RosterMember; entry: RosterEntry }[],
+  dest: DestTeamContext | null,
+  destination: MoveDestination,
+  options: MoveOptions,
+  adminEmail: string,
+  notes: string[],
+): Promise<MoveResult> {
+  const sourceTeamIds = new Set(
+    resolved.map((r) => r.entry.teamId).filter((id): id is string => !!id),
+  )
+
+  // Captain vacancy / emptied-team checks on every source team.
+  for (const teamId of sourceTeamIds) {
+    if (dest && teamId === dest.teamId) continue
+    const entry = roster.find((e) => e.teamId === teamId)
+    if (!entry) continue
+    const leaving = new Set(
+      resolved.filter((r) => r.entry.teamId === teamId).map((r) => r.member.sourceId),
+    )
+    const remaining = entry.members.filter((m) => !leaving.has(m.sourceId))
+    const losingCaptain = entry.members.some((m) => leaving.has(m.sourceId) && m.isCaptain)
+
+    if (losingCaptain && remaining.length > 0 && !options.newCaptainByTeamId[teamId]) {
+      return {
+        error: `${entry.teamName ?? 'A team'} would be left without a captain. Choose a replacement.`,
+        moved: 0,
+        failed: [],
+        notes: [],
+      }
+    }
+    if (remaining.length === 0 && !options.confirmEmptyTeams.includes(teamId)) {
+      return {
+        error: `${entry.teamName ?? 'A team'} would be left with no players. Confirm to cancel it.`,
+        moved: 0,
+        failed: [],
+        notes: [],
+      }
+    }
+  }
+
+  // Apply the moves.
+  const failed: { sourceId: string; reason: string }[] = []
+  let moved = 0
+  for (const r of resolved) {
+    // Already on the destination team — skip entirely. Re-applying the move
+    // would write is_captain: false and could strip the destination team of
+    // its own captain (the vacancy guard above deliberately skips the
+    // destination team, so nothing would restore one).
+    if (dest && r.entry.teamId === dest.teamId) continue
+
+    const isNewTeamCaptain =
+      destination.kind === 'newTeam' && options.newTeamCaptain?.sourceId === r.member.sourceId
+    const err = await applyMemberMove(
+      db,
+      r.member,
+      dest,
+      isNewTeamCaptain,
+      adminEmail,
+      r.entry.teamName,
+    )
+    if (err) failed.push({ sourceId: r.member.sourceId, reason: err })
+    else moved++
+  }
+
+  // A brand-new team has no captain until its members arrive, so ownership is
+  // resolved after the moves rather than before.
+  if (destination.kind === 'newTeam' && dest && options.newTeamCaptain) {
+    await promoteCaptain(db, dest.teamId, options.newTeamCaptain)
+    let captainUserId: string | null = null
+    if (options.newTeamCaptain.sourceTable === 'event_registrations') {
+      const { data } = await db
+        .from('event_registrations')
+        .select('user_id')
+        .eq('id', options.newTeamCaptain.sourceId)
+        .maybeSingle()
+      captainUserId = data?.user_id ?? null
+    } else {
+      const { data } = await db
+        .from('registration_slots')
+        .select('app_user_id')
+        .eq('id', options.newTeamCaptain.sourceId)
+        .maybeSingle()
+      captainUserId = data?.app_user_id ?? null
+    }
+    await db.from('teams').update({ created_by: captainUserId }).eq('id', dest.teamId)
+  }
+
+  // Promote replacement captains on source teams.
+  for (const [teamId, ref] of Object.entries(options.newCaptainByTeamId)) {
+    await promoteCaptain(db, teamId, ref)
+  }
+
+  // Recalculate status for every touched team.
+  const touched = new Set<string>([...sourceTeamIds])
+  if (dest) touched.add(dest.teamId)
+  for (const teamId of touched) await recalcTeamStatus(db, teamId)
+
+  for (const teamId of options.confirmEmptyTeams) {
+    const entry = roster.find((e) => e.teamId === teamId)
+    if (entry) notes.push(`${entry.teamName ?? 'Team'} was left empty and marked cancelled.`)
+  }
+
+  return { moved, failed, notes }
+}
+
+// ─── setTeamCaptain ─────────────────────────────────────────────────────────
+
+/**
+ * Reassigns a team's captain without moving anyone. Sets exactly one captain
+ * and repoints every slot's `invited_by_user_id` to them, so team management
+ * (My Teams, invite resend, shirt-size edits, expiry emails) follows.
+ */
+export async function runSetTeamCaptain(
+  db: AdminDb,
+  eventSanityId: string,
+  teamId: string,
+  member: MemberRef,
+): Promise<{ error?: string }> {
+  const roster = await getTournamentRoster(eventSanityId)
+  const entry = roster.find((e) => e.kind === 'team' && e.teamId === teamId)
+  if (!entry) return { error: 'Team not found' }
+
+  const hit = findMember(roster, member)
+  if (!hit || hit.entry.teamId !== teamId) {
+    return { error: 'That player is not on this team' }
+  }
+
+  await promoteCaptain(db, teamId, member)
+  return {}
+}
