@@ -13,7 +13,10 @@ import {
   IconDownload,
   IconMail,
   IconClock,
+  IconArrow,
 } from '@/app/components/icons'
+import MovePlayersModal from '@/app/components/admin/roster/MovePlayersModal'
+import ChangeCaptainModal from '@/app/components/admin/roster/ChangeCaptainModal'
 import { isUnpaidSlotMember, type RosterEntry, type RosterMember } from '@/lib/tournamentRoster'
 import {
   updateMember,
@@ -518,17 +521,32 @@ function ReminderModal({
 
 function MemberRow({
   member,
+  selected,
+  onToggle,
+  onMove,
   onEdit,
   onRemove,
   onRemind,
 }: {
   member: RosterMember
+  selected: boolean
+  onToggle: () => void
+  onMove: () => void
   onEdit: () => void
   onRemove: () => void
   onRemind?: () => void
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-3">
+    <div
+      className={`flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-3 transition-colors ${selected ? 'bg-surface/70' : ''}`}
+    >
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={onToggle}
+        aria-label={`Select ${member.firstName} ${member.lastName}`.trim()}
+        className="w-4 h-4 shrink-0 accent-fg cursor-pointer"
+      />
       <div className="flex-1 min-w-[140px]">
         <p className="text-sm font-medium text-fg flex items-center gap-1.5">
           {`${member.firstName} ${member.lastName}`.trim() || <span className="text-muted italic">No name</span>}
@@ -555,6 +573,13 @@ function MemberRow({
             <IconMail className="w-3.5 h-3.5" />
           </button>
         )}
+        <button
+          onClick={onMove}
+          className="w-8 h-8 flex items-center justify-center rounded-lg text-muted hover:text-fg hover:bg-surface transition-colors"
+          title="Move to another team"
+        >
+          <IconArrow className="w-3.5 h-3.5" />
+        </button>
         <button
           onClick={onEdit}
           className="w-8 h-8 flex items-center justify-center rounded-lg text-muted hover:text-fg hover:bg-surface transition-colors"
@@ -588,14 +613,40 @@ export default function TournamentRosterTable({
   const [editTeam, setEditTeam] = useState<RosterEntry | null>(null)
   const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null)
   const [reminderTarget, setReminderTarget] = useState<ReminderTarget | null>(null)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [moveOpen, setMoveOpen] = useState(false)
+  const [captainTeamId, setCaptainTeamId] = useState<string | null>(null)
 
   const teams = entries.filter((e) => e.kind === 'team')
   const solos = entries.filter((e) => e.kind === 'solo')
+
+  const keyOf = (m: RosterMember) => `${m.sourceTable}:${m.sourceId}`
+
+  const toggle = (m: RosterMember) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      const k = keyOf(m)
+      if (next.has(k)) next.delete(k)
+      else next.add(k)
+      return next
+    })
+
+  const selectedMembers = entries.flatMap((e) =>
+    e.members.filter((m) => selectedIds.has(keyOf(m))),
+  )
+
+  const openMoveFor = (m: RosterMember) => {
+    setSelectedIds(new Set([keyOf(m)]))
+    setMoveOpen(true)
+  }
 
   const refresh = () => {
     setEditMember(null)
     setEditTeam(null)
     setCancelTarget(null)
+    setMoveOpen(false)
+    setCaptainTeamId(null)
+    setSelectedIds(new Set())
     router.refresh()
   }
 
@@ -662,6 +713,13 @@ export default function TournamentRosterTable({
                       Name
                     </button>
                     <button
+                      onClick={() => setCaptainTeamId(entry.teamId)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted border border-border hover:text-fg hover:bg-bg transition-all"
+                    >
+                      <IconUser className="w-3 h-3" />
+                      Captain
+                    </button>
+                    <button
                       onClick={() => setCancelTarget({ kind: 'team', entry })}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-all"
                     >
@@ -675,6 +733,9 @@ export default function TournamentRosterTable({
                     <MemberRow
                       key={`${m.sourceTable}-${m.sourceId}`}
                       member={m}
+                      selected={selectedIds.has(keyOf(m))}
+                      onToggle={() => toggle(m)}
+                      onMove={() => openMoveFor(m)}
                       onEdit={() => setEditMember(m)}
                       onRemove={() => setCancelTarget({ kind: 'member', entry, member: m })}
                     />
@@ -698,6 +759,9 @@ export default function TournamentRosterTable({
               <MemberRow
                 key={`${entry.members[0].sourceTable}-${entry.members[0].sourceId}`}
                 member={entry.members[0]}
+                selected={selectedIds.has(keyOf(entry.members[0]))}
+                onToggle={() => toggle(entry.members[0])}
+                onMove={() => openMoveFor(entry.members[0])}
                 onEdit={() => setEditMember(entry.members[0])}
                 onRemove={() => setCancelTarget({ kind: 'member', entry, member: entry.members[0] })}
                 onRemind={() => setReminderTarget({ mode: 'tournament', entry })}
@@ -738,6 +802,45 @@ export default function TournamentRosterTable({
           target={reminderTarget}
           onClose={() => setReminderTarget(null)}
         />
+      )}
+      {moveOpen && selectedMembers.length > 0 && (
+        <MovePlayersModal
+          eventSanityId={eventSanityId}
+          entries={entries}
+          selected={selectedMembers}
+          onClose={() => setMoveOpen(false)}
+          onDone={refresh}
+        />
+      )}
+      {captainTeamId && (
+        <ChangeCaptainModal
+          eventSanityId={eventSanityId}
+          entry={entries.find((e) => e.teamId === captainTeamId)!}
+          onClose={() => setCaptainTeamId(null)}
+          onDone={refresh}
+        />
+      )}
+
+      {/* Selection action bar */}
+      {selectedMembers.length > 0 && (
+        <div className="sticky bottom-4 z-40 mx-auto w-fit flex items-center gap-3 rounded-xl border border-border bg-bg px-4 py-2.5 shadow-2xl">
+          <span className="text-sm text-muted">
+            {selectedMembers.length} player{selectedMembers.length === 1 ? '' : 's'} selected
+          </span>
+          <button
+            onClick={() => setMoveOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-fg text-bg text-xs font-medium active:scale-[0.98] transition-transform"
+          >
+            <IconArrow className="w-3 h-3" />
+            Move…
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-xs text-muted hover:text-fg transition-colors"
+          >
+            Clear
+          </button>
+        </div>
       )}
     </div>
   )

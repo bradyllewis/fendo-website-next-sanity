@@ -138,6 +138,7 @@ export type EventRegistration = {
   player_email: string | null
   player_phone: string | null
   registration_slot_id: string | null
+  is_captain: boolean
   created_at: string
   updated_at: string
 }

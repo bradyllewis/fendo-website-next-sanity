@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { buildMirrorRegIds } from '@/lib/registrationDedup'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,8 @@ export interface RosterEntry {
   teamName: string | null
   inviteCode: string | null
   registrationType: 'individual' | 'duo' | 'team'
+  /** Team size cap. 1 for solo entries (no team row). */
+  maxMembers: number
   paymentMode: 'captain_pays_all' | 'individual' | null
   teamStatus: string | null
   members: RosterMember[]
@@ -92,9 +95,11 @@ function splitName(full: string | null): { first: string; last: string } {
  *     expired/cancelled) — covers individual-pay members and captain_pays_all
  *     invitees.
  *   - Registration members: `event_registrations` with status paid|pending,
- *     excluding volunteers and excluding individual-pay mirror rows
- *     (team_id IS NULL OR team.payment_mode = 'captain_pays_all') — covers
- *     solos and captain_pays_all captains.
+ *     excluding volunteers and excluding slot mirror rows (identified by the
+ *     slot↔reg link, not by team.payment_mode) — covers solos and
+ *     captain_pays_all captains. Keying on the link rather than the payment
+ *     mode is what lets an admin move a player between teams of different
+ *     modes without the player vanishing or being counted twice.
  *
  * Solo/captain registration rows store the player's name in `metadata.name`
  * and have no email column, so we join `profiles` (by user_id) for email and
@@ -106,12 +111,12 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
   const [teamsRes, regsRes, slotsRes] = await Promise.all([
     db
       .from('teams')
-      .select('id, team_name, invite_code, registration_type, payment_mode, team_status, created_at')
+      .select('id, team_name, invite_code, registration_type, max_members, payment_mode, team_status, created_at')
       .eq('event_sanity_id', eventSanityId),
     db
       .from('event_registrations')
       .select(
-        'id, user_id, team_id, registration_type, team_name, player_first_name, player_last_name, player_email, player_phone, metadata, status, amount_paid, registration_slot_id, stripe_payment_intent_id',
+        'id, user_id, team_id, registration_type, team_name, player_first_name, player_last_name, player_email, player_phone, metadata, status, amount_paid, is_captain, registration_slot_id, stripe_payment_intent_id',
       )
       .eq('event_sanity_id', eventSanityId),
     db
@@ -126,7 +131,9 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
   const regs = regsRes.data ?? []
   const slots = slotsRes.data ?? []
 
-  const modeByTeamId = new Map<string, string>(teams.map((t) => [t.id, t.payment_mode]))
+  // Mirror set is built from ALL slots (not just active ones) — a cancelled
+  // slot still marks its ledger row as a mirror. See lib/registrationDedup.ts.
+  const mirrorRegIds = buildMirrorRegIds(regs, slots)
 
   // Reliable slot → mirror lookup (both live webhook and backfill set registration_slot_id)
   const mirrorBySlotId = new Map<string, (typeof regs)[number]>()
@@ -187,8 +194,8 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
   for (const r of regs) {
     if (r.status !== 'paid' && r.status !== 'pending') continue
     if (r.registration_type === 'volunteer') continue
-    // Skip individual-pay mirror rows — the slot already represents this member.
-    if (r.team_id && modeByTeamId.get(r.team_id) !== 'captain_pays_all') continue
+    // Skip mirror rows — the slot already represents this member.
+    if (mirrorRegIds.has(r.id)) continue
 
     const profile = r.user_id ? profileById.get(r.user_id) : undefined
     const metaName = readMetaString(r.metadata, 'name')
@@ -205,8 +212,7 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
       shirtSize: readShirtSize(r.metadata),
       status: r.status,
       amountPaidCents: r.amount_paid ?? null,
-      // A reg row with a team_id here is a captain_pays_all captain.
-      isCaptain: !!r.team_id,
+      isCaptain: r.is_captain,
       paymentIntentId: r.stripe_payment_intent_id ?? null,
     }
 
@@ -219,6 +225,7 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
         teamName: null,
         inviteCode: null,
         registrationType: (r.registration_type as RosterEntry['registrationType']) ?? 'individual',
+        maxMembers: 1,
         paymentMode: null,
         teamStatus: null,
         members: [member],
@@ -238,6 +245,7 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
       teamName: t.team_name,
       inviteCode: t.invite_code,
       registrationType: t.registration_type as RosterEntry['registrationType'],
+      maxMembers: t.max_members,
       paymentMode: t.payment_mode as RosterEntry['paymentMode'],
       teamStatus: t.team_status,
       members,
