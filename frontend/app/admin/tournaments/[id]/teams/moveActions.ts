@@ -173,7 +173,50 @@ async function applyMemberMove(
   }
 
   if (member.sourceTable === 'registration_slots') {
-    if (!dest) return 'Slot members cannot be detached to solo directly'
+    if (!dest) {
+      // Detach to solo: the mirrored ledger row becomes the player's standalone
+      // registration, and the slot is retired.
+      //
+      // ORDER MATTERS. The reg row is promoted FIRST so that a failure between
+      // the two writes double-counts the player briefly rather than making them
+      // disappear. Re-running the move repairs it.
+      //
+      // This is the ONE place in this feature that writes a member-level status,
+      // and it is load-bearing: without retiring the slot the player would hold
+      // two seats.
+      if (!member.linkedRegistrationId) return 'No standalone registration record to keep'
+
+      const { data: mirror } = await db
+        .from('event_registrations')
+        .select('metadata')
+        .eq('id', member.linkedRegistrationId)
+        .maybeSingle()
+
+      const soloMeta = mergeHistory(mirror?.metadata) as Record<string, unknown>
+      soloMeta.teamId = null
+      soloMeta.inviteCode = null
+
+      const { error: regErr } = await db
+        .from('event_registrations')
+        .update({
+          team_id: null,
+          team_name: null,
+          registration_type: 'individual',
+          is_captain: false,
+          registration_slot_id: null,
+          metadata: soloMeta,
+        })
+        .eq('id', member.linkedRegistrationId)
+      if (regErr) return regErr.message
+
+      const { error: slotErr } = await db
+        .from('registration_slots')
+        .update({ status: 'cancelled', event_registration_id: null })
+        .eq('id', member.sourceId)
+      if (slotErr) return slotErr.message
+
+      return null
+    }
 
     const { data: existing } = await db
       .from('registration_slots')
@@ -475,6 +518,23 @@ export async function movePlayers(
       // resolves ownership after the moves are applied.
       captainUserId: null,
     }
+  }
+
+  if (destination.kind === 'solo') {
+    if (resolved.length !== 1) {
+      return { error: 'Detach to solo one player at a time', moved: 0, failed: [], notes: [] }
+    }
+    const only = resolved[0].member
+    if (only.sourceTable === 'registration_slots' && !only.linkedRegistrationId) {
+      return {
+        error:
+          'This player has no standalone registration record to keep, so they cannot become a solo entry. Create a one-person team for them instead.',
+        moved: 0,
+        failed: [],
+        notes: [],
+      }
+    }
+    dest = null
   }
 
   return await executeMoves(
