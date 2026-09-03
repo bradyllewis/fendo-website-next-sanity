@@ -1981,6 +1981,24 @@ git commit -m "fix: corrections from roster move manual verification"
 
 ---
 
+---
+
+## Verification record — 2026-09-03 (ALL PASSED)
+
+**Phase 1 gate.** The parity check ran read-only before any code changed: 0 of 10 events differed, over non-trivial coverage (23 mirror rows, 19 cpa teams, 11 individual-pay teams, 21 solos). After the refactor, the **real** `getEventSeatCounts` and `getTournamentRoster` modules were executed against production via `tsx` and reproduced the baseline exactly, with `roster total == seats` on every event.
+
+**Migration.** The pre-flight caught that `supabase db push` would have applied **three** migrations, not one: `20260627000000` and `20260627010000` were already applied to the database but unrecorded in the migration history (schema drift from an out-of-band apply). Resolved with `supabase migration repair --status applied`, which writes only to the bookkeeping table, then pushed only `20260903000000`. The `is_captain` backfill was verified read-only: 19 captains, 23 mirrors inheriting their slot's flag, 21 solos false.
+
+**Task 13 matrix.** Run against a **synthetic event** (`zz-test-roster-moves-<uuid>`, present in neither Sanity nor the baseline) seeded with an individual-pay team, a captain-pays-all team, and a solo — then deleted by that single key. No existing registration was read or written. All 12 cases passed, including the three invariants asserted after every case (seats constant at 5, roster total == seats, exactly one captain per team) and a payment-field diff proving no amount, status, or `stripe_*` value moved except the deliberate slot retirement in the detach-to-solo case.
+
+Post-run: all 10 real events still match the baseline, and zero synthetic rows remain in any table.
+
+**Three defects were found by review and fixed before the matrix ran** (commit `2f6a03c`): a no-op move that silently demoted the destination team's captain; `resolveCaptainUserId` ignoring slot status (3 cancelled slots in production still carry `is_captain=true`, which would have handed a live team's ownership to a cancelled member); and `recalcTeamStatus` using forward-link-only mirror detection, reintroducing the exact bug Phase 1 removed. Case C12 is the regression test for the first.
+
+**Structural change made during execution.** `movePlayers`/`setTeamCaptain` could not be exercised outside a Next request (they need cookies and `revalidatePath`). The engine was split into `frontend/lib/rosterMoves.ts` (logic + DB writes, no request context) with `moveActions.ts` reduced to auth and revalidation. This separates transport from logic and is what made the matrix possible.
+
+**Not covered:** the browser UI itself was never clicked through — the modals and selection bar are verified only by typecheck, lint and a successful production build. An admin should exercise the real page once.
+
 ## Rollback
 
 - **Phase 3 / Phase 2:** revert the commits. No schema or data change is involved.
