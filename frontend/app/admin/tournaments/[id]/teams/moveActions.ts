@@ -9,6 +9,7 @@ import {
   type RosterMember,
   type RosterMemberSource,
 } from '@/lib/tournamentRoster'
+import { buildMirrorRegIds } from '@/lib/registrationDedup'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -83,16 +84,27 @@ function revalidateRoster(eventSanityId: string) {
  */
 async function recalcTeamStatus(db: AdminDb, teamId: string): Promise<void> {
   const [slotsRes, regsRes] = await Promise.all([
-    db.from('registration_slots').select('status').eq('team_id', teamId),
-    db.from('event_registrations').select('status, registration_slot_id').eq('team_id', teamId),
+    db
+      .from('registration_slots')
+      .select('status, event_registration_id')
+      .eq('team_id', teamId),
+    db
+      .from('event_registrations')
+      .select('id, status, registration_slot_id')
+      .eq('team_id', teamId),
   ])
 
-  const activeSlots = (slotsRes.data ?? []).filter(
-    (s) => !INACTIVE_SLOT_STATUSES.includes(s.status),
-  )
-  // Only non-mirror regs are members in their own right.
-  const activeRegs = (regsRes.data ?? []).filter(
-    (r) => !r.registration_slot_id && (r.status === 'paid' || r.status === 'pending'),
+  const slots = slotsRes.data ?? []
+  const regs = regsRes.data ?? []
+
+  const activeSlots = slots.filter((s) => !INACTIVE_SLOT_STATUSES.includes(s.status))
+
+  // Only non-mirror regs are members in their own right. Uses the shared
+  // structural rule — a forward-link-only check would miss reverse-linked
+  // mirrors and double-count those players against the team's size.
+  const mirrorRegIds = buildMirrorRegIds(regs, slots)
+  const activeRegs = regs.filter(
+    (r) => !mirrorRegIds.has(r.id) && (r.status === 'paid' || r.status === 'pending'),
   )
 
   const total = activeSlots.length + activeRegs.length
@@ -295,13 +307,23 @@ function generateInviteCode(): string {
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
-/** auth user id of a team's current captain, for slot ownership rewrites. */
+/**
+ * auth user id of a team's current ACTIVE captain, for slot ownership rewrites.
+ *
+ * The status filters are load-bearing. `cancelMember` sets a slot's status to
+ * 'cancelled' but leaves `is_captain` untouched, so teams can hold dead rows
+ * still flagged as captain (3 exist in production). Without filtering, this
+ * would either hand a live team's ownership to a cancelled member or — once a
+ * replacement is promoted and two flagged rows exist — make `.maybeSingle()`
+ * error, return null, and blank `invited_by_user_id` across the whole team.
+ */
 async function resolveCaptainUserId(db: AdminDb, teamId: string): Promise<string | null> {
   const { data: captainSlot } = await db
     .from('registration_slots')
     .select('app_user_id')
     .eq('team_id', teamId)
     .eq('is_captain', true)
+    .not('status', 'in', '("cancelled","expired")')
     .maybeSingle()
   if (captainSlot?.app_user_id) return captainSlot.app_user_id
 
@@ -310,14 +332,26 @@ async function resolveCaptainUserId(db: AdminDb, teamId: string): Promise<string
     .select('user_id')
     .eq('team_id', teamId)
     .eq('is_captain', true)
+    .not('status', 'in', '("cancelled","refunded")')
     .maybeSingle()
   return captainReg?.user_id ?? null
 }
 
 /** Sets exactly one captain on a team and repoints slot ownership to them. */
 async function promoteCaptain(db: AdminDb, teamId: string, ref: MemberRef): Promise<void> {
-  await db.from('registration_slots').update({ is_captain: false }).eq('team_id', teamId)
-  await db.from('event_registrations').update({ is_captain: false }).eq('team_id', teamId)
+  // Scoped to active rows so cancelled/expired members are left untouched.
+  // resolveCaptainUserId filters the same way, so stale flags on dead rows
+  // cannot influence ownership.
+  await db
+    .from('registration_slots')
+    .update({ is_captain: false })
+    .eq('team_id', teamId)
+    .not('status', 'in', '("cancelled","expired")')
+  await db
+    .from('event_registrations')
+    .update({ is_captain: false })
+    .eq('team_id', teamId)
+    .not('status', 'in', '("cancelled","refunded")')
 
   if (ref.sourceTable === 'registration_slots') {
     await db.from('registration_slots').update({ is_captain: true }).eq('id', ref.sourceId)
@@ -336,6 +370,7 @@ async function promoteCaptain(db: AdminDb, teamId: string, ref: MemberRef): Prom
     .from('registration_slots')
     .update({ invited_by_user_id: captainUserId })
     .eq('team_id', teamId)
+    .not('status', 'in', '("cancelled","expired")')
 }
 
 // ─── movePlayers ────────────────────────────────────────────────────────────
@@ -606,6 +641,12 @@ async function executeMoves(
   const failed: { sourceId: string; reason: string }[] = []
   let moved = 0
   for (const r of resolved) {
+    // Already on the destination team — skip entirely. Re-applying the move
+    // would write is_captain: false and could strip the destination team of
+    // its own captain (the vacancy guard above deliberately skips the
+    // destination team, so nothing would restore one).
+    if (dest && r.entry.teamId === dest.teamId) continue
+
     const isNewTeamCaptain =
       destination.kind === 'newTeam' && options.newTeamCaptain?.sourceId === r.member.sourceId
     const err = await applyMemberMove(
