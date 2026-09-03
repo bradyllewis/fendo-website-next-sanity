@@ -661,3 +661,34 @@ async function executeMoves(
   revalidateRoster(eventSanityId)
   return { moved, failed, notes }
 }
+
+// ─── setTeamCaptain ─────────────────────────────────────────────────────────
+
+/**
+ * Reassigns a team's captain without moving anyone. Sets exactly one captain
+ * and repoints every slot's `invited_by_user_id` to them, so team management
+ * (My Teams, invite resend, shirt-size edits, expiry emails) follows.
+ */
+export async function setTeamCaptain(
+  eventSanityId: string,
+  teamId: string,
+  member: MemberRef,
+): Promise<{ error?: string }> {
+  const check = await requireAdmin()
+  if ('error' in check) return { error: check.error }
+
+  const roster = await getTournamentRoster(eventSanityId)
+  const entry = roster.find((e) => e.kind === 'team' && e.teamId === teamId)
+  if (!entry) return { error: 'Team not found' }
+
+  const hit = findMember(roster, member)
+  if (!hit || hit.entry.teamId !== teamId) {
+    return { error: 'That player is not on this team' }
+  }
+
+  const db = createAdminClient()
+  await promoteCaptain(db, teamId, member)
+
+  revalidateRoster(eventSanityId)
+  return {}
+}
