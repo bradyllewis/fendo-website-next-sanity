@@ -123,7 +123,8 @@ type MoveDestination =
 - **`is_captain` on arrival is always `false`**, for every source kind, with one exception: the player designated captain of a newly created team. Moving players into an existing team never disturbs that team's existing captain.
 - Mirror reg (when present): `team_id`, `team_name`, `registration_type`, `is_captain`, and `metadata.teamId` / `metadata.inviteCode`.
 - Reg-canonical member: `team_id`, `team_name`, `registration_type`, `is_captain`, `metadata`.
-- Never written: any `status`, `amount_paid`, `amount_due`, `stripe_*`, `paid_at`, `invite_token`, `expires_at`.
+- Never written: **member-level** status (`registration_slots.status`, `event_registrations.status`), `amount_paid`, `amount_due`, `stripe_*`, `paid_at`, `invite_token`, `expires_at`. The **team-level** `teams.team_status` *is* recomputed — see the recalculation rule below. These are different columns on different tables; no member's own status is ever changed by a move.
+- **Volunteers cannot be moved.** `getTournamentRoster` skips `registration_type = 'volunteer'`, so volunteers never appear on the roster page and cannot be selected. `movePlayers` rejects a volunteer `MemberRef` defensively anyway: a move writes `registration_type` from the destination team, which would convert a volunteer into a counted player and break the §5 invariant.
 - `event_slug` on the moved row is left alone. It is a historical snapshot; live titles already come from Sanity via `getCurrentEventInfo`.
 
 **Ownership rewrite (the non-obvious requirement).** Every moved slot must have `invited_by_user_id` set to the destination team's captain (that captain's `app_user_id` for a slot captain, `user_id` for a reg captain, else `null`). Five separate consumers authorize on this column, and leaving it stale hands the *old* captain control of a player who is no longer on their team:
@@ -154,7 +155,18 @@ type MoveDestination =
 - `invite_code`: generated with the same 3-attempt uniqueness retry loop used by `app/api/stripe/checkout/route.ts`.
 - `event_sanity_id` / `event_slug`: copied from the source players' event.
 
-**`team_status` recalculation.** After any move, each affected team's status is recomputed from its remaining active members: `complete` when every member is paid/claimed/captain_registered, `partially_paid` when some are, `pending` when none are, `cancelled` when none remain. This keeps the badge in `MyTeams.tsx` and the `slot-checkout` gate honest.
+**`team_status` recalculation.** After any move, each affected team's status is recomputed. It is defined over **active members only**, using exactly the roster's definition of active — slots whose status is not `expired`/`cancelled`, plus regs with status `paid`/`pending`. Expired and cancelled rows are simply absent from the calculation; they never drag a team's status down.
+
+A member counts as *paid* when their slot status is `paid`, `claimed`, or `captain_registered`, or their reg status is `paid`.
+
+| Active members | Result |
+|---|---|
+| none | `cancelled` |
+| all paid | `complete` |
+| some paid | `partially_paid` |
+| none paid (all active-but-unpaid) | `pending` |
+
+A move never writes `expired` as a team status — that value belongs to the expiry cron. This keeps the badge in `MyTeams.tsx` and the `slot-checkout` gate honest: a team left holding only unpaid-but-active members reads `pending` and its members' pay links keep working, which is the correct outcome.
 
 ### 3. UI
 
@@ -202,7 +214,9 @@ Warnings are computed client-side from the roster already passed to the table (n
 
 ### 5. Verification
 
-**Parity check (gate for §1a).** A throwaway script diffs the old `payment_mode` rule against the new structural rule across every event in the live dataset, comparing per-event seat counts. It must produce zero diff, or a diff wholly explained by the claimed-cpa-invitee case documented in §1a. If anything else differs, stop and investigate before proceeding.
+**Parity check (gate for §1a).** `scripts/verify-dedup-parity.ts`, run locally with `tsx` against `.env.local` — it needs `SUPABASE_SERVICE_ROLE_KEY` via `createAdminClient`, so it cannot run in CI. It computes per-event seat counts under both the old `payment_mode` rule and the new structural rule and prints any event where they differ. It must produce zero diff, or a diff wholly explained by the claimed-cpa-invitee case documented in §1a. If anything else differs, stop and investigate before proceeding. The script is a one-off verification tool and is not committed.
+
+**This check must run before any move code exists.** Once a move has been performed, old and new rules legitimately disagree and the check loses all meaning. §1a and §1b therefore form a hard phase boundary: ship them, verify parity, and only then build §2–§4.
 
 **Feature invariant (success criterion).**
 
