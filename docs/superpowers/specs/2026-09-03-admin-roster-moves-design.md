@@ -216,7 +216,35 @@ Warnings are computed client-side from the roster already passed to the table (n
 
 **Parity check (gate for §1a).** `scripts/verify-dedup-parity.ts`, run locally with `tsx` against `.env.local` — it needs `SUPABASE_SERVICE_ROLE_KEY` via `createAdminClient`, so it cannot run in CI. It computes per-event seat counts under both the old `payment_mode` rule and the new structural rule and prints any event where they differ. It must produce zero diff, or a diff wholly explained by the claimed-cpa-invitee case documented in §1a. If anything else differs, stop and investigate before proceeding. The script is a one-off verification tool and is not committed.
 
+**Coverage reporting is part of the check.** A zero diff only proves the two rules agreed on the data that exists. If production held no mirror rows, the check would pass while never exercising the case the rules disagree about — false confidence. The script therefore also reports how many of each shape it saw: events, teams by `payment_mode`, solo regs, active slots, and above all **mirror rows broken down by link direction** plus the count of mirrors sitting on a cpa team. A result is only meaningful when those counts are non-trivial.
+
 **This check must run before any move code exists.** Once a move has been performed, old and new rules legitimately disagree and the check loses all meaning. §1a and §1b therefore form a hard phase boundary: ship them, verify parity, and only then build §2–§4.
+
+#### Parity gate result — run 2026-09-03 (PASSED)
+
+Executed read-only against production before any code changes. **0 of 10 events differed.**
+
+Coverage confirming the check had teeth:
+
+| Shape | Count |
+|---|---|
+| Events with registration data | 10 |
+| Teams (`captain_pays_all` / `individual`) | 30 (19 / 11) |
+| `event_registrations` rows (solo / volunteer) | 63 (21 / 6) |
+| `registration_slots` rows (active) | 67 (63) |
+| **Mirror rows total** | **23** |
+| — via `reg.registration_slot_id` (forward) | 17 |
+| — via `slot.event_registration_id` (reverse) | 23 |
+| — **reverse-link ONLY** | **6** |
+| Mirrors on a cpa team (the double-count case) | **0** |
+
+Three findings that change how much confidence to place in §1a:
+
+1. **The reverse-link fallback is load-bearing, not defensive.** Six mirrors resolve only via `slot.event_registration_id`, and three of them are real paid/claimed players on team "Shankaholics Anonymous" ($175 each, `status='paid'`, no forward link). A forward-link-only implementation would have double-counted three paying customers. Verified individually: all three resolve to an existing `paid` reg row.
+2. **The known cpa-invitee double-count does not exist in production.** Zero mirrors sit on a cpa team, so the "diff explained by the claimed-invitee case" allowance was never needed — the result is a true zero. No event's spots-filled figure will change when §1a ships.
+3. **Every paid or claimed slot has a ledger row.** The only slots without a mirror are 2 `captain_pending` and 6 `invited` — all unpaid, exactly the population the §2 blocked case refuses to detach to solo. No paid player is missing a ledger row.
+
+Integrity probes were all clean: no regs on a team from a different event, no orphaned team references, no slots linking to a missing reg row.
 
 **Feature invariant (success criterion).**
 
