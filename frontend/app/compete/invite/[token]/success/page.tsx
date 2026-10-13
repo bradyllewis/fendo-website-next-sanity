@@ -86,12 +86,12 @@ export default async function InviteSuccessPage({ params, searchParams }: Props)
               player_phone: slot.player_phone,
               registration_slot_id: slot.id,
               metadata: {
+                ...((slot.metadata as Record<string, unknown> | null) ?? {}),
                 isTeamCaptain: slot.is_captain,
                 paymentMode: 'individual',
                 inviteCode: slotTeam?.invite_code ?? meta.inviteCode ?? null,
                 registrationSlotId: slot.id,
                 teamId: slot.team_id,
-                shirtSize: (slot.metadata as Record<string, unknown> | null)?.shirtSize ?? null,
               },
             })
             .select('id')

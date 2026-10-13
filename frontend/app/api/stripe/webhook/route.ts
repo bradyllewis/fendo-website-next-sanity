@@ -240,13 +240,15 @@ export async function POST(request: NextRequest) {
                 player_email: slotPii?.player_email ?? null,
                 player_phone: slotPii?.player_phone ?? null,
                 registration_slot_id: registrationSlotId,
+                // Carry all slot details (shirt size, captain form fields) so the
+                // ledger row is complete if the player is later detached to solo.
                 metadata: {
+                  ...((slotPii?.metadata as Record<string, unknown> | null) ?? {}),
                   isTeamCaptain: slotCheck.is_captain,
                   paymentMode: 'individual',
                   inviteCode: inviteCode ?? null,
                   registrationSlotId,
                   teamId: slotCheck.team_id,
-                  shirtSize: (slotPii?.metadata as Record<string, unknown> | null)?.shirtSize ?? null,
                 },
               })
               .select('id')

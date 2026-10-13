@@ -212,7 +212,15 @@ export async function POST(request: NextRequest) {
           amount_due: entryFeeInCents,
           currency: 'usd',
           expires_at: expiresAt,
-          metadata: { shirtSize: (registrationData?.shirtSize as string | undefined) || null },
+          // The captain's slot is their canonical roster record, so keep their form details here.
+          metadata: {
+            shirtSize: (registrationData?.shirtSize as string | undefined) || null,
+            city: (registrationData?.city as string | undefined) || null,
+            state: (registrationData?.state as string | undefined) || null,
+            handicap: (registrationData?.handicap as string | undefined) || null,
+            referral: (registrationData?.referral as string | undefined) || null,
+            ageConfirmed: registrationData?.ageConfirmed === true,
+          },
         },
         ...invitees.map((inv) => ({
           team_id: teamData!.id,
