@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { sendEmail, getBaseUrl } from '@/lib/email/resend'
 import { buildSlotExpiredEmail } from '@/lib/email/templates/slot-expired'
+import { recalcTeamStatus } from '@/lib/rosterMoves'
+import { getCurrentEventInfo } from '@/sanity/lib/events'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -28,7 +30,8 @@ export async function GET(request: NextRequest) {
       player_last_name,
       player_email,
       invited_by_user_id,
-      event_slug
+      event_slug,
+      event_sanity_id
     `)
     .lt('expires_at', new Date().toISOString())
     .in('status', ['captain_pending', 'invited', 'payment_started'])
@@ -78,34 +81,17 @@ export async function GET(request: NextRequest) {
   // Update team statuses for affected teams
   const affectedTeamIds = [...new Set(expiredSlots.map((s) => s.team_id))]
 
+  // Same definition of active/paid as the admin roster actions: expired members
+  // drop out, so a team whose remaining members all paid becomes 'complete'.
   for (const teamId of affectedTeamIds) {
-    const { data: allSlots } = await admin
-      .from('registration_slots')
-      .select('status')
-      .eq('team_id', teamId)
-
-    if (!allSlots) continue
-
-    const paidCount = allSlots.filter((s) => s.status === 'paid' || s.status === 'claimed').length
-    const activeCount = allSlots.filter((s) => !['paid', 'claimed', 'expired', 'cancelled'].includes(s.status)).length
-    const total = allSlots.length
-
-    let newStatus: string
-    if (paidCount === total) {
-      newStatus = 'complete'
-    } else if (paidCount > 0 && activeCount === 0) {
-      newStatus = 'partially_paid'
-    } else if (paidCount === 0 && activeCount === 0) {
-      newStatus = 'expired'
-    } else {
-      newStatus = 'partially_paid'
-    }
-
-    await admin
-      .from('teams')
-      .update({ team_status: newStatus })
-      .eq('id', teamId)
+    await recalcTeamStatus(admin, teamId, 'expired')
   }
+
+  // Current titles from Sanity (one query); slots only carry the event slug.
+  const eventInfo = await getCurrentEventInfo(expiredSlots.map((s) => s.event_sanity_id))
+  const eventTitleByTeamId = new Map(
+    expiredSlots.map((s) => [s.team_id, eventInfo.get(s.event_sanity_id)?.title ?? 'your tournament']),
+  )
 
   // Send expiry notification emails to captains
   for (const [, group] of byTeamCaptain) {
@@ -117,7 +103,7 @@ export async function GET(request: NextRequest) {
 
     const { data: team } = await admin
       .from('teams')
-      .select('team_name, event_slug')
+      .select('team_name')
       .eq('id', group.teamId)
       .maybeSingle()
 
@@ -133,7 +119,7 @@ export async function GET(request: NextRequest) {
           captainFirstName,
           expiredSlots: group.slots,
           teamName: team.team_name,
-          eventTitle: team.event_slug,
+          eventTitle: eventTitleByTeamId.get(group.teamId) ?? 'your tournament',
           siteUrl,
         }),
       })

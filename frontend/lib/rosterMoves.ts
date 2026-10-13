@@ -60,9 +60,14 @@ type AdminDb = ReturnType<typeof createAdminClient>
  * the same definition of "active" as getTournamentRoster. Expired and
  * cancelled rows are absent from the calculation and never drag a team down.
  *
- * Never writes 'expired' — that value belongs to the expiry cron.
+ * A team left with no active members gets `emptyStatus`: 'cancelled' for admin
+ * removals and moves, 'expired' only when the expiry cron emptied it.
  */
-export async function recalcTeamStatus(db: AdminDb, teamId: string): Promise<void> {
+export async function recalcTeamStatus(
+  db: AdminDb,
+  teamId: string,
+  emptyStatus: 'cancelled' | 'expired' = 'cancelled',
+): Promise<void> {
   const [slotsRes, regsRes] = await Promise.all([
     db
       .from('registration_slots')
@@ -89,7 +94,7 @@ export async function recalcTeamStatus(db: AdminDb, teamId: string): Promise<voi
 
   const total = activeSlots.length + activeRegs.length
   if (total === 0) {
-    await db.from('teams').update({ team_status: 'cancelled' }).eq('id', teamId)
+    await db.from('teams').update({ team_status: emptyStatus }).eq('id', teamId)
     return
   }
 
