@@ -1360,6 +1360,14 @@ export type EventInfoByIdsQueryResult = Array<{
 }>;
 
 // Source: sanity/lib/queries.ts
+// Variable: eventAddOnNamesQuery
+// Query: *[_type == "event" && _id == $id][0].addOns[]->{ _id, name }
+export type EventAddOnNamesQueryResult = Array<{
+  _id: string;
+  name: string;
+}> | null;
+
+// Source: sanity/lib/queries.ts
 // Variable: allGearQuery
 // Query: *[_type == "gear"] | order(displayOrder asc, name asc) {      _id,  name,  "slug": slug.current,  tagline,  category,  badge,  shortDescription,  features,  price,  shopUrl,  image,  isFeatured,  displayOrder,  }
 export type AllGearQueryResult = Array<{
@@ -1635,6 +1643,7 @@ declare module "@sanity/client" {
     "\n  *[_type == \"event\" && _id == $id] [0] {\n    \"slug\": slug.current\n  }\n": EventSlugByIdQueryResult;
     "\n  *[_type == \"event\" && slug.current == $slug] [0] {\n    _id,\n    title\n  }\n": EventRefBySlugQueryResult;
     "\n  *[_type == \"event\" && _id in $ids] {\n    _id,\n    title,\n    startDate,\n    timezone\n  }\n": EventInfoByIdsQueryResult;
+    "\n  *[_type == \"event\" && _id == $id][0].addOns[]->{ _id, name }\n": EventAddOnNamesQueryResult;
     "\n  *[_type == \"gear\"] | order(displayOrder asc, name asc) {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": AllGearQueryResult;
     "\n  *[_type == \"gear\" && isFeatured == true] | order(displayOrder asc) [0] {\n    \n  _id,\n  name,\n  \"slug\": slug.current,\n  tagline,\n  category,\n  badge,\n  shortDescription,\n  features,\n  price,\n  shopUrl,\n  image,\n  isFeatured,\n  displayOrder,\n\n  }\n": FeaturedGearQueryResult;
     "\n  *[_type == \"playbook\"] | order(publishedAt desc) {\n    \n  _id,\n  title,\n  \"slug\": slug.current,\n  contentType,\n  category,\n  difficulty,\n  tags,\n  coverImage,\n  excerpt,\n  publishedAt,\n  \"author\": author->{firstName, lastName, picture},\n  isFeatured,\n  isPremium,\n  displayOrder,\n\n  }\n": AllPlaybooksQueryResult;

@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { getTournamentRoster } from '@/lib/tournamentRoster'
-import { getCurrentEventInfo } from '@/sanity/lib/events'
+import { getCurrentEventInfo, getEventAddOnNames } from '@/sanity/lib/events'
 import TournamentRosterTable, { ExportButtons } from '@/app/components/admin/TournamentRosterTable'
 import StatCard from '@/app/components/admin/StatCard'
 import { IconArrow, IconUsers } from '@/app/components/icons'
@@ -15,7 +15,11 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function TournamentTeamsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  const [roster, infoMap] = await Promise.all([getTournamentRoster(id), getCurrentEventInfo([id])])
+  const [roster, infoMap, addOnNames] = await Promise.all([
+    getTournamentRoster(id),
+    getCurrentEventInfo([id]),
+    getEventAddOnNames(id),
+  ])
   const info = infoMap.get(id)
 
   const teams = roster.filter((e) => e.kind === 'team')
@@ -60,7 +64,7 @@ export default async function TournamentTeamsPage({ params }: { params: Promise<
       </div>
 
       {/* Roster */}
-      <TournamentRosterTable eventSanityId={id} entries={roster} />
+      <TournamentRosterTable eventSanityId={id} entries={roster} addOnNames={addOnNames} />
     </div>
   )
 }

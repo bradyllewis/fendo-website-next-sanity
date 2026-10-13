@@ -71,6 +71,23 @@ export function isUnpaidSlotMember(m: RosterMember): boolean {
   )
 }
 
+/**
+ * Human-readable add-on list: "Name" for checkbox add-ons, "Name: value" for
+ * text add-ons. Ids missing from `addOnNames` fall back to the raw key.
+ */
+export function formatAddOns(
+  addOns: Record<string, string | boolean> | null,
+  addOnNames: Record<string, string>,
+): string {
+  if (!addOns) return ''
+  return Object.entries(addOns)
+    .map(([id, v]) => {
+      const name = addOnNames[id] ?? id
+      return typeof v === 'string' ? `${name}: ${v}` : name
+    })
+    .join('; ')
+}
+
 function readShirtSize(metadata: unknown): string | null {
   if (metadata && typeof metadata === 'object' && 'shirtSize' in metadata) {
     const v = (metadata as { shirtSize?: unknown }).shirtSize

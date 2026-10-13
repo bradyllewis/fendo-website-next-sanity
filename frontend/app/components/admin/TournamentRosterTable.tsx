@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 import { SHIRT_SIZES } from '@/lib/shirt-sizes'
 import {
@@ -17,7 +17,12 @@ import {
 } from '@/app/components/icons'
 import MovePlayersModal from '@/app/components/admin/roster/MovePlayersModal'
 import ChangeCaptainModal from '@/app/components/admin/roster/ChangeCaptainModal'
-import { isUnpaidSlotMember, type RosterEntry, type RosterMember } from '@/lib/tournamentRoster'
+import {
+  formatAddOns,
+  isUnpaidSlotMember,
+  type RosterEntry,
+  type RosterMember,
+} from '@/lib/tournamentRoster'
 import {
   updateMember,
   updateTeamName,
@@ -551,8 +556,59 @@ function ReminderModal({
 
 // ─── Member row ───────────────────────────────────────────────────────────────
 
+const DETAIL_LABEL = 'font-mono text-[0.6rem] uppercase tracking-wide text-muted-2 shrink-0'
+
+/**
+ * Registration details (contact, location, handicap, purchases). Full-width so
+ * it never squeezes the name column: on mobile it sits between the name and the
+ * controls; from `sm` up it drops below the single control row.
+ */
+function MemberDetails({
+  member,
+  addOnNames,
+}: {
+  member: RosterMember
+  addOnNames: Record<string, string>
+}) {
+  const location = [member.city, member.state].filter(Boolean).join(', ')
+  const addOns = formatAddOns(member.addOns, addOnNames)
+  const items: { label: string; value: ReactNode }[] = []
+
+  if (member.phone) {
+    items.push({
+      label: 'Phone',
+      value: (
+        <a href={`tel:${member.phone.replace(/[^\d+]/g, '')}`} className="hover:text-accent transition-colors">
+          {member.phone}
+        </a>
+      ),
+    })
+  }
+  if (location) items.push({ label: 'Location', value: location })
+  if (member.handicap) items.push({ label: 'HCP', value: member.handicap })
+  if (addOns) items.push({ label: 'Add-ons', value: addOns })
+  if (member.donation != null) {
+    items.push({ label: 'Donation', value: formatCents(Math.round(member.donation * 100)) })
+  }
+  if (member.referral) items.push({ label: 'Referral', value: member.referral })
+
+  if (items.length === 0) return null
+
+  return (
+    <dl className="basis-full min-w-0 sm:order-last pl-8 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+      {items.map(({ label, value }) => (
+        <div key={label} className="flex items-baseline gap-1.5 min-w-0">
+          <dt className={DETAIL_LABEL}>{label}</dt>
+          <dd className="text-fg/80 wrap-anywhere min-w-0">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
 function MemberRow({
   member,
+  addOnNames,
   selected,
   onToggle,
   onMove,
@@ -561,6 +617,7 @@ function MemberRow({
   onRemind,
 }: {
   member: RosterMember
+  addOnNames: Record<string, string>
   selected: boolean
   onToggle: () => void
   onMove: () => void
@@ -590,6 +647,7 @@ function MemberRow({
         </p>
         <p className="text-xs font-mono text-muted truncate">{member.email || '—'}</p>
       </div>
+      <MemberDetails member={member} addOnNames={addOnNames} />
       <span className="text-xs font-mono text-muted w-10 text-center" title="Shirt size">
         {member.shirtSize ?? '—'}
       </span>
@@ -636,9 +694,11 @@ function MemberRow({
 export default function TournamentRosterTable({
   eventSanityId,
   entries,
+  addOnNames,
 }: {
   eventSanityId: string
   entries: RosterEntry[]
+  addOnNames: Record<string, string>
 }) {
   const router = useRouter()
   const [editMember, setEditMember] = useState<RosterMember | null>(null)
@@ -719,6 +779,12 @@ export default function TournamentRosterTable({
                         : ''}
                       {entry.inviteCode ? ` · code ${entry.inviteCode}` : ''}
                     </p>
+                    {entry.walkUpSong && (
+                      <p className="flex items-baseline gap-1.5 mt-1 text-xs text-fg/80 min-w-0">
+                        <span className={DETAIL_LABEL}>Walk-up song</span>
+                        <span className="wrap-anywhere min-w-0">{entry.walkUpSong}</span>
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                     <button
@@ -765,6 +831,7 @@ export default function TournamentRosterTable({
                     <MemberRow
                       key={`${m.sourceTable}-${m.sourceId}`}
                       member={m}
+                      addOnNames={addOnNames}
                       selected={selectedIds.has(keyOf(m))}
                       onToggle={() => toggle(m)}
                       onMove={() => openMoveFor(m)}
@@ -791,6 +858,7 @@ export default function TournamentRosterTable({
               <MemberRow
                 key={`${entry.members[0].sourceTable}-${entry.members[0].sourceId}`}
                 member={entry.members[0]}
+                addOnNames={addOnNames}
                 selected={selectedIds.has(keyOf(entry.members[0]))}
                 onToggle={() => toggle(entry.members[0])}
                 onMove={() => openMoveFor(entry.members[0])}

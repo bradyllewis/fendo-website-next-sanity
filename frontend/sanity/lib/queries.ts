@@ -231,6 +231,10 @@ export const eventInfoByIdsQuery = defineQuery(`
   }
 `)
 
+export const eventAddOnNamesQuery = defineQuery(`
+  *[_type == "event" && _id == $id][0].addOns[]->{ _id, name }
+`)
+
 // ─── Gear ─────────────────────────────────────────────────────────────────────
 
 const gearFields = /* groq */ `

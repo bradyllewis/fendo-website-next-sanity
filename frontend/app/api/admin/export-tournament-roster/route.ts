@@ -3,7 +3,8 @@ import ExcelJS from 'exceljs'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { client } from '@/sanity/lib/client'
-import { getTournamentRoster, type RosterEntry } from '@/lib/tournamentRoster'
+import { getEventAddOnNames } from '@/sanity/lib/events'
+import { formatAddOns, getTournamentRoster, type RosterEntry } from '@/lib/tournamentRoster'
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -63,23 +64,9 @@ const PAYMENT_LABELS: Record<string, string> = {
   individual: 'Individual pay',
 }
 
-/** "Name" for checkbox add-ons, "Name: value" for text add-ons; unknown ids fall back to the raw key. */
-function formatAddOns(
-  addOns: Record<string, string | boolean> | null,
-  addOnNames: Map<string, string>,
-): string {
-  if (!addOns) return ''
-  return Object.entries(addOns)
-    .map(([id, v]) => {
-      const name = addOnNames.get(id) ?? id
-      return typeof v === 'string' ? `${name}: ${v}` : name
-    })
-    .join('; ')
-}
-
 function flattenRoster(
   roster: RosterEntry[],
-  addOnNames: Map<string, string>,
+  addOnNames: Record<string, string>,
 ): (string | number)[][] {
   const rows: (string | number)[][] = []
   for (const entry of roster) {
@@ -181,21 +168,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'format must be csv or xlsx' }, { status: 400 })
   }
 
-  const [roster, event] = await Promise.all([
+  const [roster, event, addOnNames] = await Promise.all([
     getTournamentRoster(eventId),
-    client.fetch<{
-      title?: string
-      slug?: string
-      addOns?: { _id: string; name?: string }[] | null
-    } | null>(
-      `*[_id == $id][0]{title, "slug": slug.current, "addOns": addOns[]->{_id, name}}`,
+    client.fetch<{ title?: string; slug?: string } | null>(
+      `*[_id == $id][0]{title, "slug": slug.current}`,
       { id: eventId },
     ),
+    getEventAddOnNames(eventId),
   ])
 
-  const addOnNames = new Map(
-    (event?.addOns ?? []).filter((a) => a?.name).map((a) => [a._id, a.name as string]),
-  )
   const rows = flattenRoster(roster, addOnNames)
   const baseName = (event?.slug || event?.title || 'tournament')
     .toLowerCase()

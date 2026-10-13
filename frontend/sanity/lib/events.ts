@@ -1,5 +1,5 @@
 import { client } from './client'
-import { eventInfoByIdsQuery } from './queries'
+import { eventAddOnNamesQuery, eventInfoByIdsQuery } from './queries'
 
 export interface CurrentEventInfo {
   title: string
@@ -27,4 +27,15 @@ export async function getCurrentEventInfo(
       .filter((r) => !!r.title)
       .map((r) => [r._id, { title: r.title, startDate: r.startDate ?? null, timezone: r.timezone ?? null }]),
   )
+}
+
+/**
+ * Resolves an event's add-on _id → display name, for rendering the raw
+ * `selectedAddOns` selections stored on registrations.
+ */
+export async function getEventAddOnNames(eventId: string): Promise<Record<string, string>> {
+  const rows = await client.fetch(eventAddOnNamesQuery, { id: eventId })
+  const names: Record<string, string> = {}
+  for (const r of rows ?? []) if (r?._id && r.name) names[r._id] = r.name
+  return names
 }
