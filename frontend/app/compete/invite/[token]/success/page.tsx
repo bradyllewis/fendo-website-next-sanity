@@ -255,7 +255,7 @@ export default async function InviteSuccessPage({ params, searchParams }: Props)
           <p className="text-bg/60 text-base leading-relaxed mb-10">
             Explore upcoming events and improve your game with the Fendo Playbook.
           </p>
-          <a href="/compete" className="btn-accent">Browse All Events</a>
+          <Link href="/compete" className="btn-accent">Browse All Events</Link>
         </div>
       </section>
     </>
