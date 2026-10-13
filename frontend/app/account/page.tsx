@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import ProfileForm from '@/app/components/auth/ProfileForm'
 import type { Profile } from '@/lib/supabase/types'
@@ -81,9 +82,9 @@ export default async function AccountPage() {
             Connect with golfers who share your mindset. Compete, learn, and grow together.
           </p>
           <div className="mt-8">
-            <a href="/collective" className="btn-accent">
+            <Link href="/collective" className="btn-accent">
               Enter The Collective
-            </a>
+            </Link>
           </div>
         </div>
       </section>

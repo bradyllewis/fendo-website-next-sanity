@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import AccountNav from '@/app/components/account/AccountNav'
 import RegistrationsList from '@/app/components/account/RegistrationsList'
@@ -93,9 +94,9 @@ export default async function AccountEventsPage() {
             Browse upcoming tournaments and competitions. Register, compete, and climb the leaderboard.
           </p>
           <div className="mt-8">
-            <a href="/compete" className="btn-accent">
+            <Link href="/compete" className="btn-accent">
               View All Events
-            </a>
+            </Link>
           </div>
         </div>
       </section>

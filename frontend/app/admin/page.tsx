@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createAdminClient } from '@/lib/supabase/admin'
 import StatCard from '@/app/components/admin/StatCard'
 import { getCurrentEventInfo } from '@/sanity/lib/events'
@@ -209,12 +210,12 @@ export default async function AdminDashboard() {
             </div>
           )}
           {totalRegistrations > 8 && (
-            <a
+            <Link
               href="/admin/registrations"
               className="mt-4 text-xs text-accent hover:underline block"
             >
               View all {totalRegistrations} registrations →
-            </a>
+            </Link>
           )}
         </div>
       </div>

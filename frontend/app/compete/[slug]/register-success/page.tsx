@@ -326,9 +326,9 @@ export default async function RegisterSuccessPage({ params, searchParams }: Prop
                   ? format(parseISO(invitedSlots[0].expiresAt), 'MMMM d, yyyy')
                   : '—'}
                 . Manage your team from your{' '}
-                <a href="/account/events" className="text-fg font-medium hover:text-accent transition-colors">
+                <Link href="/account/events" className="text-fg font-medium hover:text-accent transition-colors">
                   account
-                </a>.
+                </Link>.
               </p>
             </div>
           </div>

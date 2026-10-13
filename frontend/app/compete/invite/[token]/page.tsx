@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { format, parseISO, isPast } from 'date-fns'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { client } from '@/sanity/lib/client'
@@ -163,7 +164,7 @@ export default async function InvitePage({ params }: Props) {
           <p className="text-bg/60 text-base leading-relaxed mb-10">
             Fendo Golf brings together players who take their game seriously.
           </p>
-          <a href="/compete" className="btn-accent">Browse All Events</a>
+          <Link href="/compete" className="btn-accent">Browse All Events</Link>
         </div>
       </section>
     </>
