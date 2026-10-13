@@ -21,6 +21,15 @@ export interface RosterMember {
   email: string
   phone: string | null
   shirtSize: string | null
+  city: string | null
+  state: string | null
+  handicap: string | null
+  /** "How did you hear about us" answer from the registration form. */
+  referral: string | null
+  /** Raw add-on selections keyed by Sanity add-on _id (true or a text value). Payer rows only. */
+  addOns: Record<string, string | boolean> | null
+  /** Donation in dollars. Payer rows only. */
+  donation: number | null
   status: string
   amountPaidCents: number | null
   isCaptain: boolean
@@ -41,6 +50,7 @@ export interface RosterEntry {
   maxMembers: number
   paymentMode: 'captain_pays_all' | 'individual' | null
   teamStatus: string | null
+  walkUpSong: string | null
   members: RosterMember[]
 }
 
@@ -77,6 +87,53 @@ function readMetaString(metadata: unknown, key: string): string | null {
   return null
 }
 
+/** First non-empty string for `key` across metadata objects, canonical source first. */
+function readMetaFirst(key: string, ...metas: unknown[]): string | null {
+  for (const m of metas) {
+    const v = readMetaString(m, key)
+    if (v) return v
+  }
+  return null
+}
+
+/**
+ * Registration-form handicap. Falls back to the profile handicap (which is what
+ * the form pre-fills) only when no metadata recorded the field at all — e.g.
+ * individual-pay captains registered before their form details were persisted.
+ * An explicitly blank form answer is respected.
+ */
+function readHandicap(metas: unknown[], profileHandicap: number | null | undefined): string | null {
+  let recorded = false
+  for (const m of metas) {
+    if (!m || typeof m !== 'object' || !('handicap' in m)) continue
+    recorded = true
+    const v = (m as { handicap?: unknown }).handicap
+    if (typeof v === 'number') return String(v)
+    if (typeof v === 'string' && v.trim()) return v.trim()
+  }
+  return !recorded && profileHandicap != null ? String(profileHandicap) : null
+}
+
+/** Add-on selections; `selectedAddOns` is current, `addOns` is the legacy key. */
+function readAddOns(metadata: unknown): Record<string, string | boolean> | null {
+  if (!metadata || typeof metadata !== 'object') return null
+  const meta = metadata as Record<string, unknown>
+  const raw = meta.selectedAddOns ?? meta.addOns
+  if (!raw || typeof raw !== 'object') return null
+  const picked: Record<string, string | boolean> = {}
+  for (const [key, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (v === true) picked[key] = true
+    else if (typeof v === 'string' && v.trim()) picked[key] = v.trim()
+  }
+  return Object.keys(picked).length > 0 ? picked : null
+}
+
+function readDonation(metadata: unknown): number | null {
+  if (!metadata || typeof metadata !== 'object') return null
+  const n = Number((metadata as { donationAmount?: unknown }).donationAmount)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
 function splitName(full: string | null): { first: string; last: string } {
   if (!full) return { first: '', last: '' }
   const parts = full.trim().split(/\s+/)
@@ -111,7 +168,7 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
   const [teamsRes, regsRes, slotsRes] = await Promise.all([
     db
       .from('teams')
-      .select('id, team_name, invite_code, registration_type, max_members, payment_mode, team_status, created_at')
+      .select('id, team_name, invite_code, registration_type, max_members, payment_mode, team_status, walk_up_song, created_at')
       .eq('event_sanity_id', eventSanityId),
     db
       .from('event_registrations')
@@ -122,7 +179,7 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
     db
       .from('registration_slots')
       .select(
-        'id, team_id, is_captain, player_first_name, player_last_name, player_email, player_phone, metadata, status, amount_due, event_registration_id, stripe_payment_intent_id',
+        'id, team_id, is_captain, app_user_id, player_first_name, player_last_name, player_email, player_phone, metadata, status, amount_due, event_registration_id, stripe_payment_intent_id',
       )
       .eq('event_sanity_id', eventSanityId),
   ])
@@ -141,16 +198,26 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
     if (r.registration_slot_id) mirrorBySlotId.set(r.registration_slot_id, r)
   }
 
-  // Resolve emails/names for registration-sourced members that rely on profiles.
-  const userIds = [...new Set(regs.map((r) => r.user_id).filter((id): id is string => !!id))]
-  const profileById = new Map<string, { email: string | null; full_name: string | null }>()
+  // Resolve emails/names for registration-sourced members that rely on profiles,
+  // and handicap fallbacks for any member with an account.
+  const userIds = [
+    ...new Set(
+      [...regs.map((r) => r.user_id), ...slots.map((s) => s.app_user_id)].filter(
+        (id): id is string => !!id,
+      ),
+    ),
+  ]
+  const profileById = new Map<
+    string,
+    { email: string | null; full_name: string | null; handicap: number | null }
+  >()
   if (userIds.length > 0) {
     const { data: profiles } = await db
       .from('profiles')
-      .select('id, email, full_name')
+      .select('id, email, full_name, handicap')
       .in('id', userIds)
     for (const p of profiles ?? []) {
-      profileById.set(p.id, { email: p.email, full_name: p.full_name })
+      profileById.set(p.id, { email: p.email, full_name: p.full_name, handicap: p.handicap })
     }
   }
 
@@ -173,6 +240,8 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
     // (event_registration_id). The backfill's Phase 1 sets only the latter for
     // individual-pay captains whose ledger row came from their own checkout, so
     // without this fallback those captains' mutations wouldn't reach the reg row.
+    // Slot metadata is canonical; the mirror's is a fallback for older rows.
+    const metas = [s.metadata, mirror?.metadata]
     const member: RosterMember = {
       sourceTable: 'registration_slots',
       sourceId: s.id,
@@ -182,6 +251,16 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
       email: s.player_email ?? '',
       phone: s.player_phone ?? null,
       shirtSize: readShirtSize(s.metadata),
+      city: readMetaFirst('city', ...metas),
+      state: readMetaFirst('state', ...metas),
+      handicap: readHandicap(
+        metas,
+        s.app_user_id ? profileById.get(s.app_user_id)?.handicap : null,
+      ),
+      referral: readMetaFirst('referral', ...metas),
+      // Individual-pay checkout charges only the entry fee; no add-ons/donation.
+      addOns: null,
+      donation: null,
       status: s.status,
       amountPaidCents: mirror?.amount_paid ?? s.amount_due ?? null,
       isCaptain: !!s.is_captain,
@@ -208,8 +287,15 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
       firstName: r.player_first_name ?? fallback.first,
       lastName: r.player_last_name ?? fallback.last,
       email: r.player_email ?? profile?.email ?? readMetaString(r.metadata, 'email') ?? '',
-      phone: r.player_phone ?? null,
+      // Standard checkout stores the form's phone only in metadata.
+      phone: r.player_phone ?? readMetaString(r.metadata, 'phone'),
       shirtSize: readShirtSize(r.metadata),
+      city: readMetaString(r.metadata, 'city'),
+      state: readMetaString(r.metadata, 'state'),
+      handicap: readHandicap([r.metadata], profile?.handicap),
+      referral: readMetaString(r.metadata, 'referral'),
+      addOns: readAddOns(r.metadata),
+      donation: readDonation(r.metadata),
       status: r.status,
       amountPaidCents: r.amount_paid ?? null,
       isCaptain: r.is_captain,
@@ -228,6 +314,7 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
         maxMembers: 1,
         paymentMode: null,
         teamStatus: null,
+        walkUpSong: null,
         members: [member],
       })
     }
@@ -248,6 +335,7 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
       maxMembers: t.max_members,
       paymentMode: t.payment_mode as RosterEntry['paymentMode'],
       teamStatus: t.team_status,
+      walkUpSong: t.walk_up_song,
       members,
     })
   }

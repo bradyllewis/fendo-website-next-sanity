@@ -35,13 +35,21 @@ const COLUMNS = [
   'Registration Type',
   'Payment Mode',
   'Team Status',
+  'Walk-Up Song',
   'First Name',
   'Last Name',
   'Email',
+  'Phone',
+  'City',
+  'State',
   'Shirt Size',
+  'Handicap',
   'Role',
   'Status',
   'Amount Paid',
+  'Add-Ons',
+  'Donation',
+  'Referral Source',
 ] as const
 
 const TYPE_LABELS: Record<string, string> = {
@@ -55,7 +63,24 @@ const PAYMENT_LABELS: Record<string, string> = {
   individual: 'Individual pay',
 }
 
-function flattenRoster(roster: RosterEntry[]): (string | number)[][] {
+/** "Name" for checkbox add-ons, "Name: value" for text add-ons; unknown ids fall back to the raw key. */
+function formatAddOns(
+  addOns: Record<string, string | boolean> | null,
+  addOnNames: Map<string, string>,
+): string {
+  if (!addOns) return ''
+  return Object.entries(addOns)
+    .map(([id, v]) => {
+      const name = addOnNames.get(id) ?? id
+      return typeof v === 'string' ? `${name}: ${v}` : name
+    })
+    .join('; ')
+}
+
+function flattenRoster(
+  roster: RosterEntry[],
+  addOnNames: Map<string, string>,
+): (string | number)[][] {
   const rows: (string | number)[][] = []
   for (const entry of roster) {
     for (const m of entry.members) {
@@ -64,13 +89,22 @@ function flattenRoster(roster: RosterEntry[]): (string | number)[][] {
         TYPE_LABELS[entry.registrationType] ?? entry.registrationType,
         entry.paymentMode ? PAYMENT_LABELS[entry.paymentMode] ?? entry.paymentMode : '',
         entry.teamStatus ?? '',
+        entry.walkUpSong ?? '',
         m.firstName,
         m.lastName,
         m.email,
+        m.phone ?? '',
+        m.city ?? '',
+        m.state ?? '',
         m.shirtSize ?? '',
+        m.handicap ?? '',
         m.isCaptain ? 'Captain' : entry.kind === 'solo' ? 'Solo' : 'Member',
         m.status,
         m.amountPaidCents != null ? (m.amountPaidCents / 100).toFixed(2) : '',
+        // Add-ons and donation sit only on the paying member's row, so column sums stay correct.
+        formatAddOns(m.addOns, addOnNames),
+        m.donation ?? '',
+        m.referral ?? '',
       ])
     }
   }
@@ -80,7 +114,10 @@ function flattenRoster(roster: RosterEntry[]): (string | number)[][] {
 // ─── CSV ──────────────────────────────────────────────────────────────────────
 
 function csvCell(value: string | number): string {
-  const s = String(value)
+  let s = String(value)
+  // Excel evaluates cells starting with = + - @ as formulas (e.g. "+1 (555)…" phones,
+  // or user-entered team names/songs). Prefix with ' so they stay literal text.
+  if (/^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = `'${s}`
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
@@ -99,7 +136,14 @@ async function toXlsx(rows: (string | number)[][], eventTitle: string): Promise<
 
   sheet.columns = COLUMNS.map((header) => ({
     header,
-    width: header === 'Email' ? 32 : header === 'Team Name' ? 24 : 16,
+    width:
+      header === 'Email' || header === 'Walk-Up Song' || header === 'Add-Ons'
+        ? 32
+        : header === 'Team Name'
+          ? 24
+          : 16,
+    // Numeric so it sums in Excel.
+    ...(header === 'Donation' ? { style: { numFmt: '0.00' } } : {}),
   }))
 
   const headerRow = sheet.getRow(1)
@@ -139,13 +183,20 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const [roster, event] = await Promise.all([
     getTournamentRoster(eventId),
-    client.fetch<{ title?: string; slug?: string } | null>(
-      `*[_id == $id][0]{title, "slug": slug.current}`,
+    client.fetch<{
+      title?: string
+      slug?: string
+      addOns?: { _id: string; name?: string }[] | null
+    } | null>(
+      `*[_id == $id][0]{title, "slug": slug.current, "addOns": addOns[]->{_id, name}}`,
       { id: eventId },
     ),
   ])
 
-  const rows = flattenRoster(roster)
+  const addOnNames = new Map(
+    (event?.addOns ?? []).filter((a) => a?.name).map((a) => [a._id, a.name as string]),
+  )
+  const rows = flattenRoster(roster, addOnNames)
   const baseName = (event?.slug || event?.title || 'tournament')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
