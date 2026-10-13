@@ -2,11 +2,8 @@
 
 import { useState } from 'react'
 import type { RosterEntry, RosterMember } from '@/lib/tournamentRoster'
-import {
-  movePlayers,
-  type MemberRef,
-  type MoveDestination,
-} from '@/app/admin/tournaments/[id]/teams/moveActions'
+import type { MemberRef, MoveDestination, MoveResult } from '@/lib/rosterMoves'
+import { movePlayers } from '@/app/admin/tournaments/[id]/teams/moveActions'
 
 const OVERLAY = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
 const PANEL = 'bg-bg border border-border rounded-2xl w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto'
@@ -107,12 +104,20 @@ export default function MovePlayersModal({
 
     const captain = selected.find((m) => m.sourceId === newTeamCaptainId)
 
-    const result = await movePlayers(eventSanityId, selected.map(refOf), destination, {
-      newCaptainByTeamId,
-      confirmOverflow: true,
-      confirmEmptyTeams: emptied.map((e) => e.teamId!).filter(Boolean),
-      newTeamCaptain: kind === 'newTeam' && captain ? refOf(captain) : undefined,
-    })
+    let result: MoveResult
+    try {
+      result = await movePlayers(eventSanityId, selected.map(refOf), destination, {
+        newCaptainByTeamId,
+        confirmOverflow: true,
+        confirmEmptyTeams: emptied.map((e) => e.teamId!).filter(Boolean),
+        newTeamCaptain: kind === 'newTeam' && captain ? refOf(captain) : undefined,
+      })
+    } catch (err) {
+      console.error('movePlayers failed', err)
+      setBusy(false)
+      setError('Request failed. Reload the page to see what was applied, then retry.')
+      return
+    }
 
     setBusy(false)
     if (result.error) {

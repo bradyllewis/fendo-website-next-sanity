@@ -12,7 +12,10 @@ import {
   type MoveResult,
 } from '@/lib/rosterMoves'
 
-export type { MemberRef, MoveDestination, MoveOptions, MoveResult }
+// Never re-export types from this file (`export type { … }`): the 'use server'
+// transform emits every export-list name as a runtime reference, so a type-only
+// name becomes an undefined identifier and every action on the page throws a
+// ReferenceError. Import types from '@/lib/rosterMoves' instead.
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
 

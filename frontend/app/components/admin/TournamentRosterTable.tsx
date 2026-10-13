@@ -25,6 +25,8 @@ import {
   cancelTeam,
   sendTournamentReminder,
   sendPaymentReminders,
+  type AdminActionResult,
+  type ReminderResult,
 } from '@/app/admin/tournaments/[id]/teams/actions'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -60,6 +62,10 @@ const PANEL = 'bg-bg border border-border rounded-2xl w-full max-w-md shadow-2xl
 const FIELD =
   'w-full px-3 py-2.5 text-sm border border-border rounded-lg bg-bg text-fg placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-fg/20 focus:border-fg/40 transition-all'
 
+// Shown when a server action throws (network failure, server crash) instead of
+// returning `{ error }` — without this the modal would stay in its loading state.
+const REQUEST_FAILED = 'Request failed. Reload the page and try again.'
+
 // ─── Edit member modal ──────────────────────────────────────────────────────
 
 function EditMemberModal({
@@ -83,15 +89,21 @@ function EditMemberModal({
   async function handleSave() {
     setLoading(true)
     setError(null)
-    const res = await updateMember(
-      eventSanityId,
-      {
-        sourceTable: member.sourceTable,
-        sourceId: member.sourceId,
-        linkedRegistrationId: member.linkedRegistrationId,
-      },
-      { firstName, lastName, email, shirtSize: shirtSize || null },
-    )
+    let res: AdminActionResult
+    try {
+      res = await updateMember(
+        eventSanityId,
+        {
+          sourceTable: member.sourceTable,
+          sourceId: member.sourceId,
+          linkedRegistrationId: member.linkedRegistrationId,
+        },
+        { firstName, lastName, email, shirtSize: shirtSize || null },
+      )
+    } catch (err) {
+      console.error('updateMember failed', err)
+      res = { error: REQUEST_FAILED }
+    }
     if (res.error) {
       setError(res.error)
       setLoading(false)
@@ -179,7 +191,13 @@ function EditTeamNameModal({
     if (!entry.teamId) return
     setLoading(true)
     setError(null)
-    const res = await updateTeamName(eventSanityId, entry.teamId, name)
+    let res: AdminActionResult
+    try {
+      res = await updateTeamName(eventSanityId, entry.teamId, name)
+    } catch (err) {
+      console.error('updateTeamName failed', err)
+      res = { error: REQUEST_FAILED }
+    }
     if (res.error) {
       setError(res.error)
       setLoading(false)
@@ -259,18 +277,26 @@ function ConfirmCancelModal({
   async function handleConfirm() {
     setLoading(true)
     setError(null)
-    const res = isTeam
-      ? await cancelTeam(eventSanityId, target.entry.teamId!, refund && canRefund)
-      : await cancelMember(
-          eventSanityId,
-          {
-            sourceTable: target.member!.sourceTable,
-            sourceId: target.member!.sourceId,
-            linkedRegistrationId: target.member!.linkedRegistrationId,
-            paymentIntentId: target.member!.paymentIntentId,
-          },
-          refund && canRefund,
-        )
+    let res: AdminActionResult
+    try {
+      res = isTeam
+        ? await cancelTeam(eventSanityId, target.entry.teamId!, refund && canRefund)
+        : await cancelMember(
+            eventSanityId,
+            {
+              sourceTable: target.member!.sourceTable,
+              sourceId: target.member!.sourceId,
+              linkedRegistrationId: target.member!.linkedRegistrationId,
+              paymentIntentId: target.member!.paymentIntentId,
+            },
+            refund && canRefund,
+          )
+    } catch (err) {
+      // The cancel or refund may have partly applied before the failure, so
+      // prompt a reload rather than a blind retry.
+      console.error(isTeam ? 'cancelTeam failed' : 'cancelMember failed', err)
+      res = { error: REQUEST_FAILED }
+    }
     if (res.error) {
       setError(res.error)
       setLoading(false)
@@ -407,14 +433,20 @@ function ReminderModal({
   async function handleSend() {
     setLoading(true)
     setError(null)
-    const res = isPayment
-      ? await sendPaymentReminders(eventSanityId, entry.teamId!)
-      : await sendTournamentReminder(
-          eventSanityId,
-          entry.kind === 'team'
-            ? { teamId: entry.teamId! }
-            : { soloSourceId: entry.members[0].sourceId },
-        )
+    let res: ReminderResult
+    try {
+      res = isPayment
+        ? await sendPaymentReminders(eventSanityId, entry.teamId!)
+        : await sendTournamentReminder(
+            eventSanityId,
+            entry.kind === 'team'
+              ? { teamId: entry.teamId! }
+              : { soloSourceId: entry.members[0].sourceId },
+          )
+    } catch (err) {
+      console.error('reminder failed', err)
+      res = { error: REQUEST_FAILED }
+    }
     if (res.error) {
       setError(res.error)
       setLoading(false)

@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import type { RosterEntry } from '@/lib/tournamentRoster'
-import { setTeamCaptain, type MemberRef } from '@/app/admin/tournaments/[id]/teams/moveActions'
+import type { MemberRef } from '@/lib/rosterMoves'
+import { setTeamCaptain } from '@/app/admin/tournaments/[id]/teams/moveActions'
 
 const OVERLAY = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
 const PANEL = 'bg-bg border border-border rounded-2xl w-full max-w-md shadow-2xl'
@@ -36,7 +37,13 @@ export default function ChangeCaptainModal({
       sourceId: m.sourceId,
       linkedRegistrationId: m.linkedRegistrationId,
     }
-    const result = await setTeamCaptain(eventSanityId, entry.teamId, ref)
+    let result: { error?: string }
+    try {
+      result = await setTeamCaptain(eventSanityId, entry.teamId, ref)
+    } catch (err) {
+      console.error('setTeamCaptain failed', err)
+      result = { error: 'Request failed. Reload the page and try again.' }
+    }
 
     setBusy(false)
     if (result.error) {
