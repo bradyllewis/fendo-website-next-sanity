@@ -75,10 +75,17 @@ const DONATION_PRESETS = [10, 25, 50] as const
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getActiveSteps(type: RegistrationType | null, paymentMode: PaymentMode): Step[] {
+function getActiveSteps(
+  type: RegistrationType | null,
+  paymentMode: PaymentMode,
+  isFreeEvent: boolean,
+): Step[] {
   if (type === 'volunteer') return ['type', 'playerInfo', 'review']
   if (!type || type === 'individual') return ['type', 'playerInfo', 'addOns', 'review']
-  // duo/team — always collect all player info regardless of payment mode
+  // duo/team — always collect all player info regardless of payment mode.
+  // Free events have nothing to pay, so skip the payment choice: teammates are
+  // registered along with the captain (captain_pays_all, the form default).
+  if (isFreeEvent) return ['type', 'playerInfo', 'teamDetails', 'invitees', 'addOns', 'review']
   return ['type', 'playerInfo', 'teamDetails', 'paymentMode', 'invitees', 'addOns', 'review']
 }
 
@@ -169,7 +176,8 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
     invitees: [],
   })
 
-  const activeSteps = getActiveSteps(form.registrationType, form.paymentMode)
+  const isFreeEvent = !event.entryFee || event.entryFee === 0
+  const activeSteps = getActiveSteps(form.registrationType, form.paymentMode, isFreeEvent)
   const currentStep = activeSteps[stepIndex]
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -493,8 +501,8 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
     </div>
   )
 
+  // Only shown for paid events (see getActiveSteps).
   const renderPaymentModeStep = () => {
-    const isFreeEvent = !event.entryFee || event.entryFee === 0
     const teamSize = form.registrationType === 'duo' ? 2 : 4
     const entryFee = event.entryFee ?? 0
     const totalFee = `$${entryFee * teamSize}`
@@ -503,9 +511,7 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
       {
         mode: 'captain_pays_all' as const,
         label: "I'll pay for everyone",
-        sub: isFreeEvent
-          ? 'No entry fee — proceed directly'
-          : `Pay ${totalFee} upfront for the full team`,
+        sub: `Pay ${totalFee} upfront for the full team`,
       },
       {
         mode: 'individual' as const,
@@ -656,12 +662,14 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
           )
         })}
 
-        <div className="rounded-xl border border-border bg-surface/40 px-4 py-3">
-          <p className="text-xs text-muted leading-relaxed">
-            Each teammate will receive an email with a secure payment link valid for 7 days.
-            They can pay without creating an account.
-          </p>
-        </div>
+        {form.paymentMode === 'individual' && (
+          <div className="rounded-xl border border-border bg-surface/40 px-4 py-3">
+            <p className="text-xs text-muted leading-relaxed">
+              Each teammate will receive an email with a secure payment link valid for 7 days.
+              They can pay without creating an account.
+            </p>
+          </div>
+        )}
       </div>
     )
   }
@@ -843,10 +851,12 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
             <p className="label-mono text-[0.6rem] mb-2">Team Details</p>
             <ReviewRow label="Team Name" value={form.teamName} />
             {form.walkUpSong && <ReviewRow label="Walk-Up Song" value={form.walkUpSong} />}
-            <ReviewRow
-              label="Payment Mode"
-              value={isIndividualPay ? 'Each player pays their own way' : 'Captain pays for everyone'}
-            />
+            {!isFreeEvent && (
+              <ReviewRow
+                label="Payment Mode"
+                value={isIndividualPay ? 'Each player pays their own way' : 'Captain pays for everyone'}
+              />
+            )}
           </div>
         )}
 
@@ -864,7 +874,9 @@ export default function RegistrationForm({ event, addOns, userEmail, initialName
               <p className="text-xs text-accent">
                 {isIndividualPay
                   ? 'Invite links will be emailed immediately after you complete payment. Invites expire in 7 days.'
-                  : 'Your teammates will receive a confirmation email once payment is complete. No action needed from them.'}
+                  : isFreeEvent
+                    ? 'Your teammates will receive a confirmation email once you complete registration. No action needed from them.'
+                    : 'Your teammates will receive a confirmation email once payment is complete. No action needed from them.'}
               </p>
             </div>
           </div>

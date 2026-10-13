@@ -98,8 +98,16 @@ export async function POST(request: NextRequest) {
     }
 
     const formRegistrationType: string | undefined = registrationData?.registrationType
-    const paymentMode: string | undefined = registrationData?.paymentMode
+    let paymentMode: string | undefined = registrationData?.paymentMode
     const admin = createAdminClient()
+
+    // Free events have nothing to pay, so the whole team registers with the
+    // captain (the form hides the payment choice). Normalize any other request
+    // so no teammate is ever sent a $0 payment link.
+    if (paymentMode === 'individual' && (!event.entryFee || event.entryFee === 0)) {
+      paymentMode = 'captain_pays_all'
+      registrationData = { ...registrationData, paymentMode }
+    }
 
     // ── INDIVIDUAL PAYMENT MODE (self-pay team) ──────────────────────────────
     // When the captain chooses "each player pays for themselves", we create
@@ -315,39 +323,8 @@ export async function POST(request: NextRequest) {
         ),
       ).catch((err) => console.error('[stripe/checkout/individual] Email send error:', err))
 
-      // If entry fee is $0, mark captain's slot paid immediately and skip Stripe
-      if (entryFeeInCents === 0) {
-        await admin
-          .from('registration_slots')
-          .update({ status: 'paid', paid_at: new Date().toISOString() })
-          .eq('id', captainSlot.id)
-
-        await supabase
-          .from('event_registrations')
-          .insert({
-            user_id: user.id,
-            event_sanity_id: event._id,
-            event_slug: eventSlug,
-            event_title: event.title ?? '',
-            event_date: event.startDate ?? null,
-            stripe_checkout_session_id: null,
-            stripe_payment_intent_id: null,
-            amount_paid: 0,
-            currency: 'usd',
-            status: 'paid',
-            registration_type: formRegistrationType,
-            team_name: teamName,
-            team_id: teamData.id,
-            metadata: { ...registrationData, isTeamCaptain: true, paymentMode: 'individual', inviteCode: teamData.invite_code },
-          })
-
-        return NextResponse.json({
-          url: `${baseUrl}/compete/${eventSlug}/register-success?direct=1`,
-          free: true,
-        })
-      }
-
-      // Create Stripe Checkout Session for captain's own slot.
+      // Create Stripe Checkout Session for captain's own slot. (Free events never
+      // reach this branch — see the paymentMode normalization above.)
       // Wrapped in targeted try/catch: surfaces the actual Stripe error message
       // and rolls back orphaned team/slot records if session creation fails.
       try {
