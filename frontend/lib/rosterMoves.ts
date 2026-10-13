@@ -62,7 +62,7 @@ type AdminDb = ReturnType<typeof createAdminClient>
  *
  * Never writes 'expired' — that value belongs to the expiry cron.
  */
-async function recalcTeamStatus(db: AdminDb, teamId: string): Promise<void> {
+export async function recalcTeamStatus(db: AdminDb, teamId: string): Promise<void> {
   const [slotsRes, regsRes] = await Promise.all([
     db
       .from('registration_slots')

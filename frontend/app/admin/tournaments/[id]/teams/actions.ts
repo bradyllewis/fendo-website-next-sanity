@@ -11,6 +11,7 @@ import {
   UNPAID_SLOT_STATUSES,
   type RosterMemberSource,
 } from '@/lib/tournamentRoster'
+import { recalcTeamStatus } from '@/lib/rosterMoves'
 import { getEventEmailData } from '@/lib/email/eventEmailData'
 import { sendEmail } from '@/lib/email/resend'
 import { buildTournamentReminderEmail } from '@/lib/email/templates/tournament-reminder'
@@ -177,12 +178,17 @@ export async function cancelMember(
 
   const refunded = refund && !!member.paymentIntentId && !result.refundError
 
+  let teamId: string | null = null
+
   if (member.sourceTable === 'registration_slots') {
-    const { error } = await db
+    const { data, error } = await db
       .from('registration_slots')
       .update({ status: 'cancelled' })
       .eq('id', member.sourceId)
+      .select('team_id')
+      .maybeSingle()
     if (error) return { ...result, error: 'Failed to cancel member' }
+    teamId = data?.team_id ?? null
 
     if (member.linkedRegistrationId) {
       await db
@@ -191,12 +197,19 @@ export async function cancelMember(
         .eq('id', member.linkedRegistrationId)
     }
   } else {
-    const { error } = await db
+    const { data, error } = await db
       .from('event_registrations')
       .update({ status: refunded ? 'refunded' : 'cancelled' })
       .eq('id', member.sourceId)
+      .select('team_id')
+      .maybeSingle()
     if (error) return { ...result, error: 'Failed to cancel member' }
+    teamId = data?.team_id ?? null
   }
+
+  // The remaining members decide the team's status (e.g. removing the last
+  // unpaid player completes the team; removing the last player cancels it).
+  if (teamId) await recalcTeamStatus(db, teamId)
 
   revalidateRoster(eventSanityId)
   return result
