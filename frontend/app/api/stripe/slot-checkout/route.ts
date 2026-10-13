@@ -3,6 +3,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { stripe } from '@/lib/stripe/client'
 import { client } from '@/sanity/lib/client'
 import { eventByIdQuery } from '@/sanity/lib/queries'
+import {
+  extraChargeLineItems,
+  extraChargesTotal,
+  readExtraCharges,
+} from '@/lib/stripe/registrationExtras'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Load the slot
     const { data: slot, error: slotError } = await admin
       .from('registration_slots')
-      .select('id, team_id, event_sanity_id, event_slug, status, amount_due, currency, expires_at, player_email, player_first_name, player_last_name, stripe_checkout_session_id')
+      .select('id, team_id, event_sanity_id, event_slug, status, amount_due, currency, expires_at, player_email, player_first_name, player_last_name, stripe_checkout_session_id, metadata')
       .eq('invite_token', token)
       .maybeSingle()
 
@@ -72,6 +77,13 @@ export async function POST(request: NextRequest) {
     const teamType = team.registration_type === 'duo' ? 'Duo' : 'Foursome'
     const playerName = `${slot.player_first_name} ${slot.player_last_name}`
 
+    // amount_due is the full amount owed. An individual-pay captain's includes
+    // their add-ons/donation, itemized in the extraCharges snapshot. Any slot
+    // without a usable snapshot is charged as a single entry line, as before.
+    const extras = readExtraCharges(slot.metadata)
+    const entryCents = extras ? slot.amount_due - extraChargesTotal(extras) : slot.amount_due
+    const itemized = extras !== null && entryCents > 0
+
     // Create Stripe Checkout Session (30-minute expiry)
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -82,7 +94,7 @@ export async function POST(request: NextRequest) {
         {
           price_data: {
             currency: slot.currency,
-            unit_amount: slot.amount_due,
+            unit_amount: itemized ? entryCents : slot.amount_due,
             product_data: {
               name: `${teamType} Entry — ${team.team_name}`,
               description: `Tournament entry fee for ${playerName}`,
@@ -90,6 +102,7 @@ export async function POST(request: NextRequest) {
           },
           quantity: 1,
         },
+        ...(itemized && extras ? extraChargeLineItems(extras, slot.currency) : []),
       ],
       success_url: `${baseUrl}/compete/invite/${token}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/compete/invite/${token}?payment=cancelled`,

@@ -5,6 +5,11 @@ import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { stripe } from '@/lib/stripe/client'
 import { getOrCreateStripeCustomer } from '@/lib/stripe/customer'
+import {
+  buildExtraCharges,
+  extraChargeLineItems,
+  extraChargesTotal,
+} from '@/lib/stripe/registrationExtras'
 import { client } from '@/sanity/lib/client'
 import { eventQuery } from '@/sanity/lib/queries'
 import { getEventSeatCounts } from '@/sanity/lib/eventSeats'
@@ -184,6 +189,14 @@ export async function POST(request: NextRequest) {
 
       const entryFeeInCents = event.entryFee ? Math.round(event.entryFee * 100) : 0
 
+      // The captain pays for their own add-ons and donation with their entry fee.
+      // Free events charge nothing extra, matching the standard flow.
+      const selectedAddOns = registrationData?.selectedAddOns as Record<string, string | boolean> | undefined
+      const captainDonationCents = entryFeeInCents > 0 && donationAmountCents > 0 ? donationAmountCents : 0
+      const captainExtras =
+        entryFeeInCents > 0 ? buildExtraCharges(event.addOns, selectedAddOns, captainDonationCents) : []
+      const captainAmountDue = entryFeeInCents + extraChargesTotal(captainExtras)
+
       // Get captain profile for name
       const { data: captainProfile } = await supabase
         .from('profiles')
@@ -209,7 +222,8 @@ export async function POST(request: NextRequest) {
           invited_by_user_id: user.id,
           invite_token: captainToken,
           status: 'captain_pending' as const,
-          amount_due: entryFeeInCents,
+          // Entry fee plus the captain's own extras — the full amount this slot owes.
+          amount_due: captainAmountDue,
           currency: 'usd',
           expires_at: expiresAt,
           // The captain's slot is their canonical roster record, so keep their form details here.
@@ -220,6 +234,10 @@ export async function POST(request: NextRequest) {
             handicap: (registrationData?.handicap as string | undefined) || null,
             referral: (registrationData?.referral as string | undefined) || null,
             ageConfirmed: registrationData?.ageConfirmed === true,
+            ...(selectedAddOns ? { selectedAddOns } : {}),
+            ...(captainDonationCents > 0 ? { donationAmount: captainDonationCents / 100 } : {}),
+            // Itemized snapshot so a retried payment (slot-checkout) charges the same lines.
+            ...(captainExtras.length > 0 ? { extraCharges: captainExtras } : {}),
           },
         },
         ...invitees.map((inv) => ({
@@ -351,6 +369,7 @@ export async function POST(request: NextRequest) {
               },
               quantity: 1,
             },
+            ...extraChargeLineItems(captainExtras, 'usd'),
           ],
           success_url: `${baseUrl}/compete/${eventSlug}/register-success?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${baseUrl}/compete/${eventSlug}`,
@@ -697,37 +716,16 @@ export async function POST(request: NextRequest) {
       },
     ]
 
-    const selectedAddOnIds = Object.entries(
-      (registrationData?.selectedAddOns as Record<string, string | boolean> | undefined) ?? {},
+    lineItems.push(
+      ...extraChargeLineItems(
+        buildExtraCharges(
+          event.addOns,
+          registrationData?.selectedAddOns as Record<string, string | boolean> | undefined,
+          donationAmountCents,
+        ),
+        'usd',
+      ),
     )
-      .filter(([, v]) => v === true || (typeof v === 'string' && (v as string).trim() !== ''))
-      .map(([id]) => id)
-
-    const pricedAddOns = ((event.addOns ?? []) as Array<{ _id: string; name: string; price?: number }>).filter(
-      (a) => selectedAddOnIds.includes(a._id) && (a.price ?? 0) > 0,
-    )
-
-    for (const addOn of pricedAddOns) {
-      lineItems.push({
-        price_data: {
-          currency: 'usd',
-          unit_amount: Math.round((addOn.price ?? 0) * 100),
-          product_data: { name: addOn.name },
-        },
-        quantity: 1,
-      })
-    }
-
-    if (donationAmountCents > 0) {
-      lineItems.push({
-        price_data: {
-          currency: 'usd',
-          unit_amount: donationAmountCents,
-          product_data: { name: 'Donation', description: 'Charitable donation to support the event' },
-        },
-        quantity: 1,
-      })
-    }
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

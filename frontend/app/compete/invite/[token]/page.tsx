@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { client } from '@/sanity/lib/client'
 import { eventByIdQuery } from '@/sanity/lib/queries'
 import { IconCalendar, IconMapPin, IconDollar } from '@/app/components/icons'
+import { readExtraCharges } from '@/lib/stripe/registrationExtras'
 import InvitePayButton from './InvitePayButton'
 
 type Props = { params: Promise<{ token: string }> }
@@ -14,7 +15,7 @@ export default async function InvitePage({ params }: Props) {
 
   const { data: slot } = await admin
     .from('registration_slots')
-    .select('id, status, player_first_name, player_last_name, player_email, amount_due, expires_at, invited_by_user_id, team_id, event_sanity_id, event_slug, is_captain')
+    .select('id, status, player_first_name, player_last_name, player_email, amount_due, expires_at, invited_by_user_id, team_id, event_sanity_id, event_slug, is_captain, metadata')
     .eq('invite_token', token)
     .maybeSingle()
 
@@ -120,7 +121,8 @@ export default async function InvitePage({ params }: Props) {
               </div>
               <div className="flex justify-between gap-4 py-3 items-center">
                 <span className="text-sm text-muted font-mono flex items-center gap-1.5">
-                  <IconDollar className="w-3.5 h-3.5" /> Entry Fee
+                  {/* A captain's amount also covers their own add-ons/donation. */}
+                  <IconDollar className="w-3.5 h-3.5" /> {readExtraCharges(slot.metadata) ? 'Amount Due' : 'Entry Fee'}
                 </span>
                 <span className="text-sm text-fg font-semibold">
                   ${(slot.amount_due / 100).toFixed(2)} USD

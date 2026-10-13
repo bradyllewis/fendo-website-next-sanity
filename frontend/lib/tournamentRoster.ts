@@ -275,9 +275,9 @@ export async function getTournamentRoster(eventSanityId: string): Promise<Roster
         s.app_user_id ? profileById.get(s.app_user_id)?.handicap : null,
       ),
       referral: readMetaFirst('referral', ...metas),
-      // Individual-pay checkout charges only the entry fee; no add-ons/donation.
-      addOns: null,
-      donation: null,
+      // Only individual-pay captains carry these (their own purchases).
+      addOns: readAddOns(s.metadata),
+      donation: readDonation(s.metadata),
       status: s.status,
       amountPaidCents: mirror?.amount_paid ?? s.amount_due ?? null,
       isCaptain: !!s.is_captain,
