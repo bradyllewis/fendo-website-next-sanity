@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { IconSearch, IconX } from '@/app/components/icons'
 
@@ -10,6 +11,7 @@ interface TeamRow {
   invite_code: string
   registration_type: 'duo' | 'team'
   max_members: number
+  event_sanity_id: string
   event_title: string
   member_count: number
   created_at: string
@@ -74,7 +76,15 @@ export default function TeamsTable({ teams }: Props) {
               ) : (
                 filtered.map((team) => (
                   <tr key={team.id} className="hover:bg-surface/40 transition-colors">
-                    <td className="px-4 py-3 font-medium text-fg">{team.team_name}</td>
+                    <td className="px-4 py-3 font-medium text-fg">
+                      <Link
+                        href={`/admin/tournaments/${team.event_sanity_id}/teams`}
+                        className="hover:text-accent transition-colors"
+                        title="Manage this tournament's roster"
+                      >
+                        {team.team_name}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-md text-[0.65rem] font-mono font-medium tracking-wide border ${

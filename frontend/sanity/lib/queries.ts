@@ -207,6 +207,19 @@ export const eventByIdQuery = defineQuery(`
   }
 `)
 
+// Registration settings an admin needs to add a team to an event by hand.
+export const eventRegistrationByIdQuery = defineQuery(`
+  *[_type == "event" && _id == $id] [0] {
+    _id,
+    title,
+    "slug": slug.current,
+    status,
+    entryFee,
+    spotsTotal,
+    requiresRegistration
+  }
+`)
+
 export const eventSlugByIdQuery = defineQuery(`
   *[_type == "event" && _id == $id] [0] {
     "slug": slug.current

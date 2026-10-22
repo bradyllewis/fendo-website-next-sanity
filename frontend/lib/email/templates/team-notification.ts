@@ -1,6 +1,7 @@
 interface TeamNotificationEmailParams {
   playerFirstName: string
-  captainName: string
+  /** null when a Fendo Golf admin registered the player rather than a captain. */
+  captainName: string | null
   eventTitle: string
   eventDate: string
   eventLocation: string | null
@@ -10,6 +11,12 @@ interface TeamNotificationEmailParams {
 }
 
 export function buildTeamNotificationEmail(p: TeamNotificationEmailParams): string {
+  const registeredBy = p.captainName
+    ? `<strong style="color:#0C1C23;font-weight:600;">${p.captainName}</strong> has registered you`
+    : 'The Fendo Golf team has registered you'
+  const footerReason = p.captainName
+    ? `${p.captainName} registered for a tournament and covered your entry`
+    : 'the Fendo Golf team registered you for a tournament'
   const locationLine = p.eventLocation
     ? `<p style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;line-height:1.6;color:#4D6B59;margin:0;">${p.eventLocation}</p>`
     : ''
@@ -74,7 +81,7 @@ export function buildTeamNotificationEmail(p: TeamNotificationEmailParams): stri
               <h1 class="heading" style="font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;font-size:30px;font-weight:600;letter-spacing:-0.03em;line-height:1.1;color:#0C1C23;margin:0 0 16px 0;">You&rsquo;re on the team, ${p.playerFirstName}!</h1>
 
               <p style="font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;font-size:16px;font-weight:400;line-height:1.65;color:#4D6B59;margin:0 0 28px 0;">
-                <strong style="color:#0C1C23;font-weight:600;">${p.captainName}</strong> has registered you for ${p.teamType.toLowerCase()} team <strong style="color:#0C1C23;font-weight:600;">${p.teamName}</strong> at <strong style="color:#0C1C23;font-weight:600;">${p.eventTitle}</strong>. Your entry fee has been covered &mdash; no payment needed from you.
+                ${registeredBy} for ${p.teamType.toLowerCase()} team <strong style="color:#0C1C23;font-weight:600;">${p.teamName}</strong> at <strong style="color:#0C1C23;font-weight:600;">${p.eventTitle}</strong>. Your entry fee has been covered &mdash; no payment needed from you.
               </p>
 
               <!-- Confirmed badge -->
@@ -133,7 +140,7 @@ export function buildTeamNotificationEmail(p: TeamNotificationEmailParams): stri
           <tr>
             <td class="footer-td" style="background-color:#F8EDD9;padding:22px 36px;border:1px solid #C8B596;border-top:none;border-radius:0 0 16px 16px;">
               <p style="font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;line-height:1.6;color:#6E8880;margin:0 0 6px 0;">
-                You received this because ${p.captainName} registered for a tournament and covered your entry. You don&rsquo;t need to do anything &mdash; your spot is confirmed.
+                You received this because ${footerReason}. You don&rsquo;t need to do anything &mdash; your spot is confirmed.
               </p>
               <p style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#9D8762;margin:0;">
                 &copy; Fendo Golf &nbsp;&middot;&nbsp; <a href="${p.siteUrl}" style="color:#9D8762;text-decoration:none;">${p.siteUrl.replace(/^https?:\/\//, '')}</a>

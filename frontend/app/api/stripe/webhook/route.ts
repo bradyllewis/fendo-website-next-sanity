@@ -11,6 +11,7 @@ import { buildSponsorConfirmationEmail } from '@/lib/email/templates/sponsor-con
 import { buildTeammatePaidEmail } from '@/lib/email/templates/teammate-paid'
 import { buildRefundConfirmationEmail } from '@/lib/email/templates/refund-confirmation'
 import { formatEventDateLong } from '@/lib/eventDates'
+import { recalcTeamStatus } from '@/lib/rosterMoves'
 
 // Stripe requires the raw request body for signature verification
 export const runtime = 'nodejs'
@@ -268,32 +269,20 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          // Recalculate team status
-          const { data: allTeamSlots } = await supabase
-            .from('registration_slots')
-            .select('status')
-            .eq('team_id', slotCheck.team_id)
+          // Recalculate team status from ACTIVE members only (shared rule), so a
+          // cancelled or expired slot can't hold a fully paid team below 'complete'.
+          await recalcTeamStatus(supabase, slotCheck.team_id)
+          const [{ data: statusRow }, { data: allTeamSlots }] = await Promise.all([
+            supabase.from('teams').select('team_status').eq('id', slotCheck.team_id).maybeSingle(),
+            supabase
+              .from('registration_slots')
+              .select('status')
+              .eq('team_id', slotCheck.team_id)
+              .not('status', 'in', '("cancelled","expired")'),
+          ])
 
           if (allTeamSlots) {
-            const paid = allTeamSlots.filter((s) => s.status === 'paid' || s.status === 'claimed').length
-            const total = allTeamSlots.length
-            const active = allTeamSlots.filter((s) =>
-              !['paid', 'claimed', 'expired', 'cancelled'].includes(s.status)
-            ).length
-
-            let newTeamStatus: string
-            if (paid === total) {
-              newTeamStatus = 'complete'
-            } else if (paid > 0) {
-              newTeamStatus = 'partially_paid'
-            } else {
-              newTeamStatus = active > 0 ? 'pending' : 'expired'
-            }
-
-            await supabase
-              .from('teams')
-              .update({ team_status: newTeamStatus })
-              .eq('id', slotCheck.team_id)
+            const newTeamStatus: string = statusRow?.team_status ?? 'pending'
 
             // Send confirmation email to the player who just paid
             const siteUrl = getBaseUrl()
@@ -373,6 +362,7 @@ export async function POST(request: NextRequest) {
                 .from('registration_slots')
                 .select('player_first_name, player_last_name, player_email, invited_by_user_id, is_captain')
                 .eq('team_id', slotCheck.team_id)
+                .not('status', 'in', '("cancelled","expired")')
 
               if (allSlotsWithDetails) {
                 const captainSlot = allSlotsWithDetails.find((s) => s.is_captain)

@@ -1335,6 +1335,19 @@ export type EventByIdQueryResult = {
 } | null;
 
 // Source: sanity/lib/queries.ts
+// Variable: eventRegistrationByIdQuery
+// Query: *[_type == "event" && _id == $id] [0] {    _id,    title,    "slug": slug.current,    status,    entryFee,    spotsTotal,    requiresRegistration  }
+export type EventRegistrationByIdQueryResult = {
+  _id: string;
+  title: string;
+  slug: string;
+  status: "cancelled" | "completed" | "registration_open" | "upcoming" | "waitlist";
+  entryFee: number | null;
+  spotsTotal: number | null;
+  requiresRegistration: boolean | null;
+} | null;
+
+// Source: sanity/lib/queries.ts
 // Variable: eventSlugByIdQuery
 // Query: *[_type == "event" && _id == $id] [0] {    "slug": slug.current  }
 export type EventSlugByIdQueryResult = {
@@ -1640,6 +1653,7 @@ declare module "@sanity/client" {
     "\n  *[_type == \"event\" && slug.current == $slug] [0] {\n    \n  _id,\n  \"docStatus\": select(_originalId in path(\"drafts.**\") => \"draft\", \"published\"),\n  title,\n  \"slug\": slug.current,\n  eventType,\n  status,\n  startDate,\n  endDate,\n  timezone,\n  location,\n  coverImage,\n  shortDescription,\n  spotsTotal,\n  spotsFilled,\n  entryFee,\n  registrationUrl,\n  requiresRegistration,\n  sponsorshipsEnabled,\n  \"sponsorshipTiers\": sponsorshipTiers[]->{\n    \"id\": _id,\n    name,\n    price,\n    description,\n    benefits,\n    includedPlayerSpots,\n  },\n  isFeatured,\n  tags,\n  \"addOns\": addOns[]->{\n    _id,\n    name,\n    description,\n    inputType,\n    placeholder,\n    category,\n    price,\n  },\n\n    description,\n    sponsors[] {\n      name,\n      logo,\n      url,\n    },\n  }\n": EventQueryResult;
     "\n  *[_type == \"event\" && defined(slug.current)]\n  {\"slug\": slug.current}\n": EventSlugQueryResult;
     "\n  *[_type == \"event\" && _id == $id] [0] {\n    title,\n    startDate,\n    timezone,\n    location,\n    \"slug\": slug.current\n  }\n": EventByIdQueryResult;
+    "\n  *[_type == \"event\" && _id == $id] [0] {\n    _id,\n    title,\n    \"slug\": slug.current,\n    status,\n    entryFee,\n    spotsTotal,\n    requiresRegistration\n  }\n": EventRegistrationByIdQueryResult;
     "\n  *[_type == \"event\" && _id == $id] [0] {\n    \"slug\": slug.current\n  }\n": EventSlugByIdQueryResult;
     "\n  *[_type == \"event\" && slug.current == $slug] [0] {\n    _id,\n    title\n  }\n": EventRefBySlugQueryResult;
     "\n  *[_type == \"event\" && _id in $ids] {\n    _id,\n    title,\n    startDate,\n    timezone\n  }\n": EventInfoByIdsQueryResult;

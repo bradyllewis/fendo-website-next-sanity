@@ -1,6 +1,9 @@
 interface InviteEmailParams {
   playerFirstName: string
-  captainName: string
+  /** null when a Fendo Golf admin registered the player rather than a captain. */
+  captainName: string | null
+  /** Shown when an admin registered the player. */
+  teamName?: string
   eventTitle: string
   eventDate: string
   eventLocation: string | null
@@ -13,6 +16,12 @@ interface InviteEmailParams {
 export function buildInviteEmail(p: InviteEmailParams): string {
   const amountStr = `$${(p.amountDue / 100).toFixed(2)}`
   const locationLine = p.eventLocation ? `<p style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:11px;line-height:1.6;color:#4D6B59;margin:0;">${p.eventLocation}</p>` : ''
+  const introLine = p.captainName
+    ? `<strong style="color:#0C1C23;font-weight:600;">${p.captainName}</strong> invited you to join their ${p.teamType.toLowerCase()} for <strong style="color:#0C1C23;font-weight:600;">${p.eventTitle}</strong>.`
+    : `The Fendo Golf team has added you to the ${p.teamType.toLowerCase()}${p.teamName ? ` <strong style="color:#0C1C23;font-weight:600;">${p.teamName}</strong>` : ''} for <strong style="color:#0C1C23;font-weight:600;">${p.eventTitle}</strong>.`
+  const footerReason = p.captainName
+    ? `${p.captainName} registered for a tournament and listed you as a teammate`
+    : 'the Fendo Golf team registered you for a tournament'
 
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
@@ -74,7 +83,7 @@ export function buildInviteEmail(p: InviteEmailParams): string {
               <h1 class="heading" style="font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;font-size:30px;font-weight:600;letter-spacing:-0.03em;line-height:1.1;color:#0C1C23;margin:0 0 16px 0;">You&rsquo;ve been invited to join a tournament team</h1>
 
               <p style="font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;font-size:16px;font-weight:400;line-height:1.65;color:#4D6B59;margin:0 0 28px 0;">
-                <strong style="color:#0C1C23;font-weight:600;">${p.captainName}</strong> invited you to join their ${p.teamType.toLowerCase()} for <strong style="color:#0C1C23;font-weight:600;">${p.eventTitle}</strong>.
+                ${introLine}
                 Your spot is reserved for 7 days — secure it now before it expires.
               </p>
 
@@ -138,7 +147,7 @@ export function buildInviteEmail(p: InviteEmailParams): string {
           <tr>
             <td class="footer-td" style="background-color:#F8EDD9;padding:22px 36px;border:1px solid #C8B596;border-top:none;border-radius:0 0 16px 16px;">
               <p style="font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;line-height:1.6;color:#6E8880;margin:0 0 6px 0;">
-                You received this because ${p.captainName} registered for a tournament and listed you as a teammate. No account is required to pay your entry.
+                You received this because ${footerReason}. No account is required to pay your entry.
               </p>
               <p style="font-family:'IBM Plex Mono','Courier New',monospace;font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#9D8762;margin:0;">
                 &copy; Fendo Golf &nbsp;&middot;&nbsp; <a href="https://spinsociety.fendogolf.com" style="color:#9D8762;text-decoration:none;">spinsociety.fendogolf.com</a>

@@ -14,9 +14,11 @@ import {
   IconMail,
   IconClock,
   IconArrow,
+  IconPlus,
 } from '@/app/components/icons'
 import MovePlayersModal from '@/app/components/admin/roster/MovePlayersModal'
 import ChangeCaptainModal from '@/app/components/admin/roster/ChangeCaptainModal'
+import TeamFormModal, { type TeamFormEvent } from '@/app/components/admin/roster/TeamFormModal'
 import {
   formatAddOns,
   isUnpaidSlotMember,
@@ -695,10 +697,13 @@ export default function TournamentRosterTable({
   eventSanityId,
   entries,
   addOnNames,
+  teamFormEvent,
 }: {
   eventSanityId: string
   entries: RosterEntry[]
   addOnNames: Record<string, string>
+  /** Registration settings for adding players; null when the event can't take new players. */
+  teamFormEvent: TeamFormEvent | null
 }) {
   const router = useRouter()
   const [editMember, setEditMember] = useState<RosterMember | null>(null)
@@ -708,6 +713,7 @@ export default function TournamentRosterTable({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [moveOpen, setMoveOpen] = useState(false)
   const [captainTeamId, setCaptainTeamId] = useState<string | null>(null)
+  const [addToTeam, setAddToTeam] = useState<RosterEntry | null>(null)
 
   const teams = entries.filter((e) => e.kind === 'team')
   const solos = entries.filter((e) => e.kind === 'solo')
@@ -738,6 +744,7 @@ export default function TournamentRosterTable({
     setCancelTarget(null)
     setMoveOpen(false)
     setCaptainTeamId(null)
+    setAddToTeam(null)
     setSelectedIds(new Set())
     router.refresh()
   }
@@ -745,7 +752,10 @@ export default function TournamentRosterTable({
   if (entries.length === 0) {
     return (
       <div className="card-base p-10 text-center">
-        <p className="text-sm text-muted">No active registrations for this tournament yet.</p>
+        <p className="text-sm text-muted">
+          No active registrations for this tournament yet.
+          {teamFormEvent && ' Use Create team to add the first one.'}
+        </p>
       </div>
     )
   }
@@ -787,6 +797,15 @@ export default function TournamentRosterTable({
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                    {teamFormEvent && entry.members.length < entry.maxMembers && (
+                      <button
+                        onClick={() => setAddToTeam(entry)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-fg border border-border hover:bg-bg transition-all"
+                      >
+                        <IconPlus className="w-3 h-3" />
+                        Add player{entry.maxMembers - entry.members.length === 1 ? '' : 's'}
+                      </button>
+                    )}
                     <button
                       onClick={() => setReminderTarget({ mode: 'tournament', entry })}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-muted border border-border hover:text-fg hover:bg-bg transition-all"
@@ -909,6 +928,15 @@ export default function TournamentRosterTable({
           entries={entries}
           selected={selectedMembers}
           onClose={() => setMoveOpen(false)}
+          onDone={refresh}
+        />
+      )}
+      {addToTeam && teamFormEvent && (
+        <TeamFormModal
+          eventSanityId={eventSanityId}
+          event={teamFormEvent}
+          team={addToTeam}
+          onClose={() => setAddToTeam(null)}
           onDone={refresh}
         />
       )}

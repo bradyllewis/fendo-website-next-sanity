@@ -10,6 +10,7 @@ import {
   IconLoader,
   IconCheck,
   IconUsers,
+  IconPlus,
 } from '@/app/components/icons'
 import type { DeleteTournamentResult } from '@/app/api/admin/delete-tournament/route'
 
@@ -33,6 +34,7 @@ interface TournamentEvent {
   location?: { venueName?: string; city?: string; state?: string } | null
   spotsTotal?: number | null
   entryFee?: number | null
+  requiresRegistration?: boolean | null
   stats: EventStats
 }
 
@@ -551,6 +553,15 @@ export default function TournamentsClient({ events: initialEvents }: Tournaments
                           <IconUsers className="w-3.5 h-3.5" />
                           Teams
                         </a>
+                        {ev.requiresRegistration && ev.status !== 'cancelled' && (
+                          <a
+                            href={`/admin/tournaments/${ev._id}/teams?create=1`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-fg border border-border hover:bg-surface transition-all duration-150 active:scale-[0.97]"
+                          >
+                            <IconPlus className="w-3.5 h-3.5" />
+                            Add team
+                          </a>
+                        )}
                         <button
                           onClick={() => setDeleteTarget(ev)}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-all duration-150 active:scale-[0.97]"

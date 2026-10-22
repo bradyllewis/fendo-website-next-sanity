@@ -108,13 +108,7 @@ export async function recalcTeamStatus(
 
 // ─── Roster lookup helpers ──────────────────────────────────────────────────
 
-/**
- * Finds a member in the roster by its source table + id.
- *
- * NOT exported: this file carries the `'use server'` directive, and Next.js
- * requires every export from such a file to be an async function. A synchronous
- * export here is a build error. Type-only exports are erased and are fine.
- */
+/** Finds a member in the roster by its source table + id. */
 function findMember(
   roster: RosterEntry[],
   ref: MemberRef,
@@ -287,7 +281,7 @@ async function applyMemberMove(
  * 6-character invite code. Alphabet matches `generateInviteCode` in
  * app/api/stripe/checkout/route.ts exactly (no I, L, O, 0 or 1).
  */
-function generateInviteCode(): string {
+export function generateInviteCode(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
