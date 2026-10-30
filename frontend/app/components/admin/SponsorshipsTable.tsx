@@ -51,7 +51,7 @@ function readPlayers(metadata: Record<string, unknown>): SponsorPlayer[] {
 function hasDetails(s: SponsorRegistration): boolean {
   return (
     readPlayers(s.metadata).length > 0 ||
-    !!(s.phone || s.logo_url || s.marketing_requests || s.activation_notes)
+    !!(s.phone || s.logo_url || s.marketing_requests || s.activation_notes || s.notes)
   )
 }
 
@@ -213,6 +213,12 @@ function SponsorDetails({ sponsorship: s }: { sponsorship: SponsorRegistration }
 
   return (
     <div className="grid sm:grid-cols-2 gap-5 px-5 py-4 bg-surface/50 border-t border-border">
+      {s.notes && (
+        <div className="sm:col-span-2">
+          <p className={label}>Notes</p>
+          <p className="text-sm text-fg mt-1 whitespace-pre-line">{s.notes}</p>
+        </div>
+      )}
       {players.length > 0 && (
         <div className="sm:col-span-2">
           <p className={label}>Players</p>

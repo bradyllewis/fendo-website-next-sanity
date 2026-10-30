@@ -8,6 +8,7 @@ import { buildTeamCompleteEmail } from '@/lib/email/templates/team-complete'
 import { buildTeamNotificationEmail } from '@/lib/email/templates/team-notification'
 import { buildRegistrationConfirmationEmail } from '@/lib/email/templates/registration-confirmation'
 import { buildSponsorConfirmationEmail } from '@/lib/email/templates/sponsor-confirmation'
+import { buildSponsorPaymentFailedEmail } from '@/lib/email/templates/sponsor-payment-failed'
 import { buildTeammatePaidEmail } from '@/lib/email/templates/teammate-paid'
 import { buildRefundConfirmationEmail } from '@/lib/email/templates/refund-confirmation'
 import { formatEventDateLong } from '@/lib/eventDates'
@@ -15,6 +16,85 @@ import { recalcTeamStatus } from '@/lib/rosterMoves'
 
 // Stripe requires the raw request body for signature verification
 export const runtime = 'nodejs'
+
+/**
+ * Marks a sponsor's Checkout Session paid and sends their confirmation. Card
+ * payments arrive here from `checkout.session.completed`; ACH payments clear
+ * days later and arrive from `checkout.session.async_payment_succeeded`.
+ * Returns a response only when Stripe should retry.
+ */
+async function confirmSponsorPayment(
+  supabase: ReturnType<typeof createAdminClient>,
+  session: Stripe.Checkout.Session,
+): Promise<NextResponse | null> {
+  const meta = session.metadata as Record<string, string>
+
+  const { data: existingSponsor } = await supabase
+    .from('sponsor_registrations')
+    .select('id, status')
+    .eq('stripe_checkout_session_id', session.id)
+    .maybeSingle()
+
+  if (existingSponsor?.status === 'paid') {
+    console.log(`[webhook] Sponsor session ${session.id} already paid — skipping`)
+    return null
+  }
+
+  const { data: updatedSponsor, error: sponsorUpdateError } = await supabase
+    .from('sponsor_registrations')
+    .update({
+      status: 'paid',
+      stripe_payment_intent_id: (session.payment_intent as string) ?? null,
+      amount_paid: session.amount_total,
+      currency: session.currency ?? 'usd',
+    })
+    .eq('stripe_checkout_session_id', session.id)
+    .eq('status', 'pending')
+    .select('id')
+
+  if (sponsorUpdateError) {
+    console.error('[webhook] Failed to update sponsor registration:', sponsorUpdateError)
+    return NextResponse.json({ error: 'Failed to update sponsor registration' }, { status: 500 })
+  }
+
+  if (!updatedSponsor?.length) {
+    console.warn(`[webhook] No pending sponsor row for session ${session.id} — skipping fallback insert`)
+    return null
+  }
+
+  console.log(`[webhook] Confirmed paid sponsor registration / event ${meta.eventSlug}`)
+
+  // Send confirmation email to sponsor
+  const { data: sponsorRow } = await supabase
+    .from('sponsor_registrations')
+    .select('email, primary_contact, company_name, sponsorship_level, sponsorship_level_price, event_title, event_date')
+    .eq('stripe_checkout_session_id', session.id)
+    .maybeSingle()
+
+  if (sponsorRow?.email) {
+    const siteUrl = getBaseUrl()
+    const eventDateStr = sponsorRow.event_date
+      ? formatEventDateLong(sponsorRow.event_date, meta.eventTimezone)
+      : ''
+    await sendEmail({
+      to: sponsorRow.email,
+      subject: `Sponsorship confirmed — ${sponsorRow.event_title ?? meta.eventSlug}`,
+      html: buildSponsorConfirmationEmail({
+        contactName: sponsorRow.primary_contact,
+        companyName: sponsorRow.company_name,
+        sponsorshipLevel: sponsorRow.sponsorship_level,
+        eventTitle: sponsorRow.event_title ?? meta.eventSlug,
+        eventDate: eventDateStr,
+        eventLocation: null,
+        amountPaid: session.amount_total,
+        paymentMethod: 'stripe',
+        siteUrl,
+      }),
+    }).catch((err) => console.error('[webhook] Sponsor confirmation email error:', err))
+  }
+
+  return null
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
@@ -50,68 +130,8 @@ export async function POST(request: NextRequest) {
 
         // ── Sponsor checkout ───────────────────────────────────────────────────
         if (meta.type === 'sponsor') {
-          const { data: existingSponsor } = await supabase
-            .from('sponsor_registrations')
-            .select('id, status')
-            .eq('stripe_checkout_session_id', session.id)
-            .maybeSingle()
-
-          if (existingSponsor?.status === 'paid') {
-            console.log(`[webhook] Sponsor session ${session.id} already paid — skipping`)
-            break
-          }
-
-          const { data: updatedSponsor, error: sponsorUpdateError } = await supabase
-            .from('sponsor_registrations')
-            .update({
-              status: 'paid',
-              stripe_payment_intent_id: (session.payment_intent as string) ?? null,
-              amount_paid: session.amount_total,
-              currency: session.currency ?? 'usd',
-            })
-            .eq('stripe_checkout_session_id', session.id)
-            .eq('status', 'pending')
-            .select('id')
-
-          if (sponsorUpdateError) {
-            console.error('[webhook] Failed to update sponsor registration:', sponsorUpdateError)
-            return NextResponse.json({ error: 'Failed to update sponsor registration' }, { status: 500 })
-          }
-
-          if (!updatedSponsor?.length) {
-            console.warn(`[webhook] No pending sponsor row for session ${session.id} — skipping fallback insert`)
-          } else {
-            console.log(`[webhook] Confirmed paid sponsor registration / event ${meta.eventSlug}`)
-
-            // Send confirmation email to sponsor
-            const { data: sponsorRow } = await supabase
-              .from('sponsor_registrations')
-              .select('email, primary_contact, company_name, sponsorship_level, sponsorship_level_price, event_title, event_date')
-              .eq('stripe_checkout_session_id', session.id)
-              .maybeSingle()
-
-            if (sponsorRow?.email) {
-              const siteUrl = getBaseUrl()
-              const eventDateStr = sponsorRow.event_date
-                ? formatEventDateLong(sponsorRow.event_date, meta.eventTimezone)
-                : ''
-              await sendEmail({
-                to: sponsorRow.email,
-                subject: `Sponsorship confirmed — ${sponsorRow.event_title ?? meta.eventSlug}`,
-                html: buildSponsorConfirmationEmail({
-                  contactName: sponsorRow.primary_contact,
-                  companyName: sponsorRow.company_name,
-                  sponsorshipLevel: sponsorRow.sponsorship_level,
-                  eventTitle: sponsorRow.event_title ?? meta.eventSlug,
-                  eventDate: eventDateStr,
-                  eventLocation: null,
-                  amountPaid: session.amount_total,
-                  paymentMethod: 'stripe',
-                  siteUrl,
-                }),
-              }).catch((err) => console.error('[webhook] Sponsor confirmation email error:', err))
-            }
-          }
+          const retry = await confirmSponsorPayment(supabase, session)
+          if (retry) return retry
           break
         }
 
@@ -544,6 +564,55 @@ export async function POST(request: NextRequest) {
                 }),
               ),
             ).catch((err) => console.error('[webhook] Teammate notification email error:', err))
+          }
+        }
+
+        break
+      }
+
+      // Only sponsor checkouts offer ACH, the one delayed payment method in use.
+      case 'checkout.session.async_payment_succeeded': {
+        const session = event.data.object as Stripe.Checkout.Session
+
+        if (session.metadata?.type === 'sponsor') {
+          const retry = await confirmSponsorPayment(supabase, session)
+          if (retry) return retry
+        }
+
+        break
+      }
+
+      case 'checkout.session.async_payment_failed': {
+        const session = event.data.object as Stripe.Checkout.Session
+
+        if (session.metadata?.type === 'sponsor') {
+          const { data: failedSponsor, error: failedSponsorError } = await supabase
+            .from('sponsor_registrations')
+            .update({ status: 'cancelled', notes: 'Bank payment failed' })
+            .eq('stripe_checkout_session_id', session.id)
+            .eq('status', 'pending')
+            .select('email, primary_contact, company_name, sponsorship_level, event_title, event_slug')
+            .maybeSingle()
+
+          if (failedSponsorError) {
+            console.error('[webhook] Failed to cancel sponsor registration:', failedSponsorError)
+            return NextResponse.json({ error: 'Failed to update sponsor registration' }, { status: 500 })
+          }
+
+          if (failedSponsor?.email) {
+            const siteUrl = getBaseUrl()
+            await sendEmail({
+              to: failedSponsor.email,
+              subject: `Your sponsorship payment didn't go through — ${failedSponsor.event_title}`,
+              html: buildSponsorPaymentFailedEmail({
+                contactName: failedSponsor.primary_contact,
+                companyName: failedSponsor.company_name,
+                sponsorshipLevel: failedSponsor.sponsorship_level,
+                eventTitle: failedSponsor.event_title,
+                retryUrl: `${siteUrl}/compete/${failedSponsor.event_slug}/sponsor`,
+                siteUrl,
+              }),
+            }).catch((err) => console.error('[webhook] Sponsor payment failed email error:', err))
           }
         }
 
