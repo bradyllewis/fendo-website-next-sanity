@@ -203,7 +203,7 @@ export default async function SponsorSuccessPage({ params, searchParams }: Props
                 )}
                 <div className="flex justify-between gap-4 py-3">
                   <span className="text-sm text-muted font-mono">Status</span>
-                  <span className={`text-sm font-mono font-medium ${isInvoice ? 'text-mustard' : 'text-green'}`}>
+                  <span className={`text-sm font-mono font-medium ${isInvoice ? 'text-fg' : 'text-green'}`}>
                     {isInvoice ? 'Invoice Pending' : 'Confirmed'}
                   </span>
                 </div>

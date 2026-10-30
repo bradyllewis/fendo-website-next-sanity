@@ -6,6 +6,7 @@ import { format, parseISO } from 'date-fns'
 import { updateSponsorshipStatus } from '@/app/admin/actions'
 import type { SponsorRegistration } from '@/lib/supabase/types'
 import { formatEventDateRange } from '@/lib/eventDates'
+import { IconChevronDown, IconExternalLink } from '@/app/components/icons'
 
 interface Props {
   sponsorships: (SponsorRegistration & { event_timezone?: string | null })[]
@@ -25,14 +26,38 @@ const STATUS_LABEL: Record<string, string> = {
 
 const STATUS_STYLES: Record<string, string> = {
   paid:      'text-green bg-green/10 border border-green/30',
-  invoiced:  'text-mustard bg-mustard/20 border border-mustard/40',
+  invoiced:  'text-fg bg-mustard/20 border border-mustard/30',
   pending:   'text-muted bg-surface border border-border',
   cancelled: 'text-danger bg-danger/10 border border-danger/20',
   refunded:  'text-muted bg-surface border border-border',
 }
 
+interface SponsorPlayer {
+  name: string
+  email: string
+}
+
+/** Players entered on the sponsor form. Open slots are saved blank, so they're dropped. */
+function readPlayers(metadata: Record<string, unknown>): SponsorPlayer[] {
+  const raw = metadata?.playerAllocation
+  if (!Array.isArray(raw)) return []
+  return raw.flatMap((p: { name?: unknown; email?: unknown } | null) => {
+    const name = typeof p?.name === 'string' ? p.name.trim() : ''
+    const email = typeof p?.email === 'string' ? p.email.trim() : ''
+    return name || email ? [{ name, email }] : []
+  })
+}
+
+function hasDetails(s: SponsorRegistration): boolean {
+  return (
+    readPlayers(s.metadata).length > 0 ||
+    !!(s.phone || s.logo_url || s.marketing_requests || s.activation_notes)
+  )
+}
+
 export default function SponsorshipsTable({ sponsorships }: Props) {
   const [filter, setFilter] = useState<Filter>('all')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const filtered = useMemo(() => {
     if (filter === 'all') return sponsorships
@@ -88,75 +113,149 @@ export default function SponsorshipsTable({ sponsorships }: Props) {
 
           {/* Rows */}
           <div className="divide-y divide-border">
-            {filtered.map(s => (
-              <div
-                key={s.id}
-                className="flex flex-col md:grid md:grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-2 md:gap-4 md:items-center px-5 py-4"
-              >
-                {/* Company */}
-                <div>
-                  <p className="text-sm font-medium text-fg">{s.company_name}</p>
-                  <p className="text-xs text-muted">{s.primary_contact}</p>
-                  <p className="text-xs text-muted truncate">{s.email}</p>
-                </div>
-
-                {/* Event */}
-                <div>
-                  <Link
-                    href={`/compete/event/${s.event_sanity_id}`}
-                    className="text-sm text-fg hover:text-accent transition-colors line-clamp-1"
+            {filtered.map(s => {
+              const playerCount = readPlayers(s.metadata).length
+              const expanded = expandedId === s.id
+              return (
+                <div key={s.id}>
+                  <div
+                    className="flex flex-col md:grid md:grid-cols-[2fr_2fr_1fr_1fr_1fr_1fr] gap-2 md:gap-4 md:items-center px-5 py-4"
                   >
-                    {s.event_title}
-                  </Link>
-                  {s.event_date && (
-                    <p className="text-xs font-mono text-muted">
-                      {formatEventDateRange(s.event_date, null, s.event_timezone)}
-                    </p>
-                  )}
-                </div>
-
-                {/* Level */}
-                <div className="flex items-center gap-2 md:block">
-                  <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Level</span>
-                  <div>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.6rem] font-mono uppercase tracking-wider bg-surface border border-border text-muted">
-                      {s.sponsorship_level}
-                    </span>
-                    <p className="text-[0.65rem] font-mono text-muted mt-0.5">
-                      {s.payment_method === 'invoice' ? 'Invoice' : 'Card/ACH'}
-                    </p>
+                    {/* Company */}
+                    <div>
+                      <p className="text-sm font-medium text-fg">{s.company_name}</p>
+                      <p className="text-xs text-muted">{s.primary_contact}</p>
+                      <p className="text-xs text-muted truncate">{s.email}</p>
+                      {hasDetails(s) && (
+                        <button
+                          type="button"
+                          onClick={() => setExpandedId(expanded ? null : s.id)}
+                          aria-expanded={expanded}
+                          className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-fg hover:text-accent transition-colors"
+                        >
+                          Details{playerCount > 0 && ` · ${playerCount} player${playerCount === 1 ? '' : 's'}`}
+                          <IconChevronDown className={`w-3 h-3 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                        </button>
+                      )}
+                    </div>
+    
+                    {/* Event */}
+                    <div>
+                      <Link
+                        href={`/compete/event/${s.event_sanity_id}`}
+                        className="text-sm text-fg hover:text-accent transition-colors line-clamp-1"
+                      >
+                        {s.event_title}
+                      </Link>
+                      {s.event_date && (
+                        <p className="text-xs font-mono text-muted">
+                          {formatEventDateRange(s.event_date, null, s.event_timezone)}
+                        </p>
+                      )}
+                    </div>
+    
+                    {/* Level */}
+                    <div className="flex items-center gap-2 md:block">
+                      <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Level</span>
+                      <div>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[0.6rem] font-mono uppercase tracking-wider bg-surface border border-border text-muted">
+                          {s.sponsorship_level}
+                        </span>
+                        <p className="text-[0.65rem] font-mono text-muted mt-0.5">
+                          {s.payment_method === 'invoice' ? 'Invoice' : 'Card/ACH'}
+                        </p>
+                      </div>
+                    </div>
+    
+                    {/* Status */}
+                    <div className="flex items-center gap-2 md:block">
+                      <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Status</span>
+                      <SponsorStatusSelector sponsorshipId={s.id} currentStatus={s.status} statusStyles={STATUS_STYLES} />
+                    </div>
+    
+                    {/* Amount */}
+                    <div className="flex items-center gap-2 md:block">
+                      <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Amount</span>
+                      <p className="text-sm font-mono text-fg">
+                        {s.amount_paid != null
+                          ? `$${(s.amount_paid / 100).toFixed(2)}`
+                          : s.sponsorship_level_price != null
+                            ? <span className="text-muted">${(s.sponsorship_level_price / 100).toFixed(2)}</span>
+                            : <span className="text-muted">—</span>
+                        }
+                      </p>
+                    </div>
+    
+                    {/* Date */}
+                    <div className="flex items-center gap-2 md:block">
+                      <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Date</span>
+                      <p className="text-xs font-mono text-muted">
+                        {format(parseISO(s.created_at), 'MMM d, yyyy')}
+                      </p>
+                    </div>
                   </div>
+                  {expanded && <SponsorDetails sponsorship={s} />}
                 </div>
-
-                {/* Status */}
-                <div className="flex items-center gap-2 md:block">
-                  <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Status</span>
-                  <SponsorStatusSelector sponsorshipId={s.id} currentStatus={s.status} statusStyles={STATUS_STYLES} />
-                </div>
-
-                {/* Amount */}
-                <div className="flex items-center gap-2 md:block">
-                  <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Amount</span>
-                  <p className="text-sm font-mono text-fg">
-                    {s.amount_paid != null
-                      ? `$${(s.amount_paid / 100).toFixed(2)}`
-                      : s.sponsorship_level_price != null
-                        ? <span className="text-muted">${(s.sponsorship_level_price / 100).toFixed(2)}</span>
-                        : <span className="text-muted">—</span>
-                    }
-                  </p>
-                </div>
-
-                {/* Date */}
-                <div className="flex items-center gap-2 md:block">
-                  <span className="md:hidden text-[0.6rem] font-mono text-muted uppercase tracking-wider w-14 shrink-0">Date</span>
-                  <p className="text-xs font-mono text-muted">
-                    {format(parseISO(s.created_at), 'MMM d, yyyy')}
-                  </p>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SponsorDetails({ sponsorship: s }: { sponsorship: SponsorRegistration }) {
+  const players = readPlayers(s.metadata)
+  // Submitted by the sponsor's browser, so only web URLs become links.
+  const logoUrl = s.logo_url && /^https?:\/\//i.test(s.logo_url) ? s.logo_url : null
+  const label = 'label-mono text-[0.6rem] text-muted'
+
+  return (
+    <div className="grid sm:grid-cols-2 gap-5 px-5 py-4 bg-surface/50 border-t border-border">
+      {players.length > 0 && (
+        <div className="sm:col-span-2">
+          <p className={label}>Players</p>
+          <ul className="mt-1 space-y-1">
+            {players.map((p, i) => (
+              <li key={i} className="text-sm text-fg">
+                {p.name || `Player ${i + 1}`}
+                <span className="text-xs text-muted"> · {p.email || 'No email given'}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {s.phone && (
+        <div>
+          <p className={label}>Phone</p>
+          <p className="text-sm text-fg mt-1">{s.phone}</p>
+        </div>
+      )}
+      {logoUrl && (
+        <div>
+          <p className={label}>Logo</p>
+          <a
+            href={logoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 inline-flex items-center gap-1 text-sm text-fg hover:text-accent transition-colors"
+          >
+            View logo
+            <IconExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      )}
+      {s.marketing_requests && (
+        <div>
+          <p className={label}>Marketing requests</p>
+          <p className="text-sm text-fg mt-1 whitespace-pre-line">{s.marketing_requests}</p>
+        </div>
+      )}
+      {s.activation_notes && (
+        <div>
+          <p className={label}>Activation notes</p>
+          <p className="text-sm text-fg mt-1 whitespace-pre-line">{s.activation_notes}</p>
         </div>
       )}
     </div>
