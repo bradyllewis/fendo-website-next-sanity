@@ -61,7 +61,8 @@ type AdminDb = ReturnType<typeof createAdminClient>
  * cancelled rows are absent from the calculation and never drag a team down.
  *
  * A team left with no active members gets `emptyStatus`: 'cancelled' for admin
- * removals and moves, 'expired' only when the expiry cron emptied it.
+ * removals and moves, 'expired' when time ran out (the expiry cron or an
+ * abandoned checkout).
  */
 export async function recalcTeamStatus(
   db: AdminDb,

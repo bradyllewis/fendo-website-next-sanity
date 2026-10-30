@@ -582,6 +582,9 @@ export async function POST(request: NextRequest) {
               .update({ status: 'cancelled' })
               .eq('team_id', expiredMeta.teamId)
               .eq('status', 'captain_registered')
+
+            // Everyone on an abandoned checkout is gone, so the team can't stay 'pending'.
+            await recalcTeamStatus(supabase, expiredMeta.teamId, 'expired')
           }
         }
 
