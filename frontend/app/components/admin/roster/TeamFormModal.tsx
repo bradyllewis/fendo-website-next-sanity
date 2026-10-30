@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { SHIRT_SIZES } from '@/lib/shirt-sizes'
 import { IconCheck, IconLoader, IconX } from '@/app/components/icons'
 import type { RosterEntry } from '@/lib/tournamentRoster'
-import type { NewPlayerPayment, TeamFormat } from '@/lib/rosterCreate'
+import type { NewPlayerPayment, TeamFormat, UnpaidSpot } from '@/lib/rosterCreate'
 import {
   addPlayersToTeam,
   createTeam,
@@ -99,14 +99,22 @@ export default function TeamFormModal({
   const [notify, setNotify] = useState(true)
   const [confirmOver, setConfirmOver] = useState(false)
   const [serverOverCapacity, setServerOverCapacity] = useState(false)
+  const [unpaidSpots, setUnpaidSpots] = useState<UnpaidSpot[]>([])
+  const [confirmReplace, setConfirmReplace] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<TeamActionResult | null>(null)
 
   const players = rows.filter((r) => !isBlank(r))
-  const projected = event.seatsFilled + players.length
+  const projected = event.seatsFilled + players.length - unpaidSpots.length
   const overCapacity =
     serverOverCapacity || (event.spotsTotal != null && projected > event.spotsTotal)
+
+  // The spots belong to the players as last submitted, so any edit voids them.
+  function clearUnpaidSpots() {
+    setUnpaidSpots([])
+    setConfirmReplace(false)
+  }
 
   function changeFormat(next: TeamFormat) {
     setTeamFormat(next)
@@ -115,10 +123,12 @@ export default function TeamFormModal({
       prev.length > size ? prev.slice(0, size) : [...prev, ...Array.from({ length: size - prev.length }, emptyRow)],
     )
     if (captainIndex >= size) setCaptainIndex(0)
+    clearUnpaidSpots()
   }
 
   function updateRow(index: number, field: keyof PlayerRow, value: string) {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, [field]: value } : r)))
+    clearUnpaidSpots()
   }
 
   // First problem blocking submit, shown beside the button.
@@ -129,6 +139,7 @@ export default function TeamFormModal({
     issue = 'Each player needs a first name, last name and email.'
   } else if (!isAdd && isBlank(rows[captainIndex] ?? emptyRow())) issue = 'Choose a captain from the players entered.'
   else if (!payment) issue = 'Choose how these players pay.'
+  else if (unpaidSpots.length > 0 && !confirmReplace) issue = 'Confirm replacing the unpaid registration.'
   else if (overCapacity && !confirmOver) issue = 'Confirm going over capacity.'
 
   async function submit() {
@@ -145,13 +156,20 @@ export default function TeamFormModal({
       phone: r.phone || null,
       shirtSize: r.shirtSize || null,
     }))
+    const confirmReplaceSpots = confirmReplace ? unpaidSpots.map((s) => s.sourceId) : []
 
     let res: TeamActionResult
     try {
       res = isAdd
         ? await addPlayersToTeam(
             eventSanityId,
-            { teamId: team.teamId!, players: playerInputs, payment, confirmOverCapacity: confirmOver },
+            {
+              teamId: team.teamId!,
+              players: playerInputs,
+              payment,
+              confirmOverCapacity: confirmOver,
+              confirmReplaceSpots,
+            },
             notify,
           )
         : await createTeam(
@@ -164,6 +182,7 @@ export default function TeamFormModal({
               captainIndex: submitted.findIndex(({ i }) => i === captainIndex),
               payment,
               confirmOverCapacity: confirmOver,
+              confirmReplaceSpots,
             },
             notify,
           )
@@ -173,6 +192,12 @@ export default function TeamFormModal({
     }
 
     setBusy(false)
+    if (res.unpaidSpots) {
+      // Shown as a confirmation below, so there is no error to display.
+      setUnpaidSpots(res.unpaidSpots)
+      setConfirmReplace(false)
+      return
+    }
     if (res.error) {
       // Seats may have filled since the page loaded; let the admin confirm.
       if (res.overCapacity) setServerOverCapacity(true)
@@ -404,6 +429,29 @@ export default function TeamFormModal({
                 )}
               </span>
             </label>
+
+            {/* Unpaid spots */}
+            {unpaidSpots.length > 0 && (
+              <label className="flex items-start gap-3 rounded-xl border border-mustard/40 bg-mustard/10 p-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={confirmReplace}
+                  onChange={(e) => setConfirmReplace(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-fg"
+                />
+                <span className="text-xs text-fg space-y-1">
+                  <span className="block">
+                    Cancel {unpaidSpots.length === 1 ? 'this unpaid registration' : 'these unpaid registrations'} and add
+                    the {unpaidSpots.length === 1 ? 'player' : 'players'} here. Any open checkout or payment link stops working.
+                  </span>
+                  {unpaidSpots.map((s) => (
+                    <span key={s.sourceId} className="block text-muted">
+                      {s.playerName} · {s.teamName ?? 'Solo'} · {s.status.replace(/_/g, ' ')}
+                    </span>
+                  ))}
+                </span>
+              </label>
+            )}
 
             {/* Capacity */}
             {overCapacity && (

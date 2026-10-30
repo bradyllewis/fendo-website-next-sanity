@@ -17,6 +17,7 @@ import {
   type CreateTeamInput,
   type TeamEventContext,
   type TeamWriteResult,
+  type UnpaidSpot,
 } from '@/lib/rosterCreate'
 
 // Never re-export types from this file (`export type { … }`): the 'use server'
@@ -28,6 +29,8 @@ export type TeamActionResult = {
   error?: string
   /** The error is the capacity check; resubmitting with confirmation will pass it. */
   overCapacity?: boolean
+  /** Unpaid spots that need confirming; resubmitting with them will replace them. */
+  unpaidSpots?: UnpaidSpot[]
   teamName?: string
   emailed?: number
 }
@@ -161,7 +164,9 @@ export async function createTeam(
   if ('error' in ctx) return { error: ctx.error }
 
   const result = await runCreateTeam(createAdminClient(), check.email, ctx, input)
-  if (result.error) return { error: result.error, overCapacity: result.overCapacity }
+  if (result.error) {
+    return { error: result.error, overCapacity: result.overCapacity, unpaidSpots: result.unpaidSpots }
+  }
 
   revalidateRoster(eventSanityId)
   const emailed = notify ? await emailNewPlayers(eventSanityId, result) : 0
@@ -181,7 +186,9 @@ export async function addPlayersToTeam(
   if ('error' in ctx) return { error: ctx.error }
 
   const result = await runAddPlayersToTeam(createAdminClient(), check.email, ctx, input)
-  if (result.error) return { error: result.error, overCapacity: result.overCapacity }
+  if (result.error) {
+    return { error: result.error, overCapacity: result.overCapacity, unpaidSpots: result.unpaidSpots }
+  }
 
   revalidateRoster(eventSanityId)
   const emailed = notify ? await emailNewPlayers(eventSanityId, result) : 0

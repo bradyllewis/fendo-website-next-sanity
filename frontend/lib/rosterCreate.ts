@@ -18,8 +18,16 @@
 import { randomBytes } from 'crypto'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getEventSeatCounts } from '@/sanity/lib/eventSeats'
-import { getTournamentRoster, type RosterEntry } from '@/lib/tournamentRoster'
+import {
+  getTournamentRoster,
+  isUnpaidSlotMember,
+  UNPAID_SLOT_STATUSES,
+  type RosterEntry,
+  type RosterMember,
+  type RosterMemberSource,
+} from '@/lib/tournamentRoster'
 import { generateInviteCode, recalcTeamStatus } from '@/lib/rosterMoves'
+import { closeCheckoutSession } from '@/lib/stripe/closeCheckoutSession'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -60,6 +68,8 @@ export interface CreateTeamInput {
   payment: NewPlayerPayment
   /** Admin acknowledged that the event will go over its capacity. */
   confirmOverCapacity: boolean
+  /** `sourceId`s of the unpaid spots the admin agreed to cancel. */
+  confirmReplaceSpots: string[]
 }
 
 export interface AddPlayersInput {
@@ -67,6 +77,22 @@ export interface AddPlayersInput {
   players: NewPlayerInput[]
   payment: NewPlayerPayment
   confirmOverCapacity: boolean
+  confirmReplaceSpots: string[]
+}
+
+/**
+ * A spot a player holds on this event without having paid: an abandoned
+ * checkout or an unanswered invite. It stays active until it expires, so the
+ * player can only be added elsewhere once it is cancelled.
+ */
+export interface UnpaidSpot {
+  sourceTable: RosterMemberSource
+  sourceId: string
+  linkedRegistrationId: string | null
+  teamId: string | null
+  teamName: string | null
+  playerName: string
+  status: string
 }
 
 export interface CreatedPlayer {
@@ -83,6 +109,8 @@ export interface TeamWriteResult {
   error?: string
   /** Set when `error` is the capacity check, so the UI can offer to confirm. */
   overCapacity?: boolean
+  /** Set when these spots must be confirmed for cancellation first. */
+  unpaidSpots?: UnpaidSpot[]
   teamId?: string
   teamName?: string
   format?: TeamFormat
@@ -115,11 +143,8 @@ function normalizePlayers(players: NewPlayerInput[]): NewPlayerInput[] {
   }))
 }
 
-/**
- * Checks the players' own fields, duplicates within the form, and duplicates
- * against everyone already active on this event's roster.
- */
-function validatePlayers(roster: RosterEntry[], players: NewPlayerInput[]): string | null {
+/** Checks the players' own fields and duplicates within the form. */
+function validatePlayers(players: NewPlayerInput[]): string | null {
   if (players.length === 0) return 'Add at least one player'
 
   for (const p of players) {
@@ -135,15 +160,116 @@ function validatePlayers(roster: RosterEntry[], players: NewPlayerInput[]): stri
     seen.add(p.email)
   }
 
-  const taken = new Set(
-    roster.flatMap((e) => e.members.map((m) => m.email.trim().toLowerCase())).filter(Boolean),
+  return null
+}
+
+/**
+ * True when nobody has paid for this spot. A captain_registered teammate is
+ * only as settled as the captain's checkout, which is still open while the
+ * captain's registration is pending.
+ */
+function isUnpaidSpot(entry: RosterEntry, member: RosterMember): boolean {
+  if (member.sourceTable === 'event_registrations') return member.status === 'pending'
+  if (member.status === 'captain_registered') return !!findPendingCaptain(entry)
+  return isUnpaidSlotMember(member)
+}
+
+/** The captain's own registration while their team checkout is still open. */
+function findPendingCaptain(entry: RosterEntry): RosterMember | undefined {
+  return entry.members.find(
+    (m) => m.sourceTable === 'event_registrations' && m.status === 'pending',
   )
-  const clashes = players.filter((p) => taken.has(p.email)).map((p) => p.email)
-  if (clashes.length > 0) {
-    return `Already registered for this tournament: ${clashes.join(', ')}. Use Move to change their team instead.`
+}
+
+const emailOf = (m: RosterMember) => m.email.trim().toLowerCase()
+const nameOf = (m: RosterMember) => `${m.firstName} ${m.lastName}`.trim()
+
+/**
+ * Why an unpaid spot can't be replaced on its own, if there is a reason.
+ * `emails` holds everyone on the form, who all leave their old spots together.
+ */
+function replaceBlocker(
+  entry: RosterEntry,
+  member: RosterMember,
+  emails: Set<string>,
+): string | null {
+  // The money sits in the captain's checkout. Cancelling a teammate's slot
+  // would leave that checkout open to charge for the whole team.
+  const pendingCaptain = findPendingCaptain(entry)
+  if (
+    member.status === 'captain_registered' &&
+    pendingCaptain &&
+    !emails.has(emailOf(pendingCaptain))
+  ) {
+    const captain = nameOf(pendingCaptain)
+    return `${nameOf(member)} is on ${entry.teamName}, and ${captain} hasn't finished paying for that team. Add ${captain} here too, which releases the whole team, or wait for that checkout to expire.`
+  }
+
+  const leavesPaidTeammate =
+    member.isCaptain &&
+    member.sourceTable === 'registration_slots' &&
+    entry.members.some(
+      (m) => m.sourceId !== member.sourceId && !emails.has(emailOf(m)) && !isUnpaidSpot(entry, m),
+    )
+  if (leavesPaidTeammate) {
+    return `${nameOf(member)} is the captain of ${entry.teamName}, which has paid players. Use Change captain on the roster first.`
   }
 
   return null
+}
+
+/**
+ * Sorts the event's existing spots for these players into `settled` (the admin
+ * must use Move), `waiting` (can't be replaced yet) and `unpaid` (replaceable
+ * once confirmed). A spot on the team being added to is always settled: that
+ * player is already there.
+ */
+function findClashes(
+  roster: RosterEntry[],
+  players: NewPlayerInput[],
+  targetTeamId?: string,
+): { settled: string[]; waiting: string[]; unpaid: UnpaidSpot[] } {
+  const emails = new Set(players.map((p) => p.email))
+  const settled: string[] = []
+  const waiting: string[] = []
+  const unpaid: UnpaidSpot[] = []
+
+  for (const entry of roster) {
+    for (const m of entry.members) {
+      if (!emails.has(emailOf(m))) continue
+
+      if (entry.teamId === targetTeamId || !isUnpaidSpot(entry, m)) {
+        const where = entry.kind === 'team' ? `on ${entry.teamName}` : 'registered as a solo player'
+        settled.push(`${nameOf(m)} is already ${where} (${m.status.replace(/_/g, ' ')})`)
+        continue
+      }
+
+      const blocker = replaceBlocker(entry, m, emails)
+      if (blocker) {
+        waiting.push(blocker)
+        continue
+      }
+
+      unpaid.push({
+        sourceTable: m.sourceTable,
+        sourceId: m.sourceId,
+        linkedRegistrationId: m.linkedRegistrationId,
+        teamId: entry.teamId,
+        teamName: entry.teamName,
+        playerName: nameOf(m),
+        status: m.status,
+      })
+    }
+  }
+
+  // Captains first: if their checkout can't be closed, their team stays intact.
+  unpaid.sort(
+    (a, b) =>
+      Number(b.sourceTable === 'event_registrations') -
+      Number(a.sourceTable === 'event_registrations'),
+  )
+
+  return { settled, waiting, unpaid }
 }
 
 /** Blocks a write that would take the event over capacity unless confirmed. */
@@ -158,6 +284,133 @@ async function checkCapacity(
   if (filled + adding <= ctx.spotsTotal) return null
   const open = Math.max(0, ctx.spotsTotal - filled)
   return `This tournament has ${open} open spot${open === 1 ? '' : 's'} and you are adding ${adding}. Confirm to go over capacity.`
+}
+
+/**
+ * Every check that runs before a write. Returns the unpaid spots to cancel, or
+ * the result to hand back to the admin. Replaced spots free their seats, so only
+ * the net new seats count against capacity.
+ */
+async function checkAgainstEvent(
+  ctx: TeamEventContext,
+  roster: RosterEntry[],
+  players: NewPlayerInput[],
+  input: { confirmOverCapacity: boolean; confirmReplaceSpots: string[] },
+  targetTeamId?: string,
+): Promise<{ failure: TeamWriteResult } | { replacing: UnpaidSpot[] }> {
+  const invalid = validatePlayers(players)
+  if (invalid) return { failure: fail(invalid) }
+
+  const { settled, waiting, unpaid } = findClashes(roster, players, targetTeamId)
+  if (settled.length > 0) {
+    return {
+      failure: fail(`${settled.join('. ')}. Leave them off this form, then use Move on the roster.`),
+    }
+  }
+  if (waiting.length > 0) return { failure: fail(waiting.join(' ')) }
+  if (unpaid.some((s) => !input.confirmReplaceSpots.includes(s.sourceId))) {
+    return {
+      failure: { ...fail('Confirm replacing the unpaid registrations first.'), unpaidSpots: unpaid },
+    }
+  }
+
+  const overCapacity = await checkCapacity(
+    ctx,
+    players.length - unpaid.length,
+    input.confirmOverCapacity,
+  )
+  if (overCapacity) return { failure: { ...fail(overCapacity), overCapacity: true } }
+
+  return { replacing: unpaid }
+}
+
+// ─── Replacing unpaid spots ─────────────────────────────────────────────────
+
+/**
+ * Cancels unpaid spots so their players can be added to `toTeamName`. Stops at
+ * the first spot that can't be released, before anything new is written, and
+ * leaves that spot as it was.
+ *
+ * Runs before the new players are inserted: the admin has already agreed to
+ * these cancellations, while a failure here must not leave a player seated twice.
+ */
+async function releaseUnpaidSpots(
+  db: AdminDb,
+  spots: UnpaidSpot[],
+  toTeamName: string,
+  adminEmail: string,
+): Promise<string | null> {
+  const at = new Date().toISOString()
+
+  for (const spot of spots) {
+    const { data: row } = await db
+      .from(spot.sourceTable)
+      .select('stripe_checkout_session_id, metadata')
+      .eq('id', spot.sourceId)
+      .maybeSingle()
+    if (!row) return `${spot.playerName}'s registration no longer exists. Reload and try again.`
+
+    if (row.stripe_checkout_session_id) {
+      const closed = await closeCheckoutSession(row.stripe_checkout_session_id)
+      if (!closed.ok) {
+        return `Could not close ${spot.playerName}'s checkout: ${closed.error}. Nothing was changed for them.`
+      }
+    }
+
+    const base = (row.metadata ?? {}) as Record<string, unknown>
+    const prior = Array.isArray(base.adminHistory) ? base.adminHistory : []
+    const metadata = {
+      ...base,
+      adminHistory: [
+        ...prior,
+        { at, action: 'replaced_by_admin', from: spot.teamName, to: toTeamName, by: adminEmail },
+      ],
+    }
+
+    // 'cancelled' is included because closing the session can fire the Stripe
+    // webhook first, which cancels the same row. Anything paid is left alone.
+    const { data: updated, error } =
+      spot.sourceTable === 'registration_slots'
+        ? await db
+            .from('registration_slots')
+            .update({ status: 'cancelled', metadata })
+            .eq('id', spot.sourceId)
+            .in('status', [...UNPAID_SLOT_STATUSES, 'captain_registered', 'cancelled'])
+            .select('id')
+        : await db
+            .from('event_registrations')
+            .update({ status: 'cancelled', metadata })
+            .eq('id', spot.sourceId)
+            .in('status', ['pending', 'cancelled'])
+            .select('id')
+
+    if (error || !updated?.length) {
+      return `${spot.playerName}'s registration just changed. Reload and try again.`
+    }
+
+    if (spot.linkedRegistrationId) {
+      await db
+        .from('event_registrations')
+        .update({ status: 'cancelled' })
+        .eq('id', spot.linkedRegistrationId)
+        .eq('status', 'pending')
+    }
+
+    // A pending captain's teammates exist only through that checkout, so they
+    // go with it, as they do in the webhook's session-expired handling.
+    if (spot.sourceTable === 'event_registrations' && spot.teamId) {
+      await db
+        .from('registration_slots')
+        .update({ status: 'cancelled' })
+        .eq('team_id', spot.teamId)
+        .eq('status', 'captain_registered')
+    }
+  }
+
+  const teamIds = new Set(spots.flatMap((s) => (s.teamId ? [s.teamId] : [])))
+  for (const teamId of teamIds) await recalcTeamStatus(db, teamId)
+
+  return null
 }
 
 // ─── Slot writes ────────────────────────────────────────────────────────────
@@ -268,14 +521,19 @@ export async function runCreateTeam(
   }
   if (!players[input.captainIndex]) return fail('Choose which player is the captain')
 
-  const invalid = validatePlayers(await getTournamentRoster(ctx.eventSanityId), players)
-  if (invalid) return fail(invalid)
-
-  const overCapacity = await checkCapacity(ctx, players.length, input.confirmOverCapacity)
-  if (overCapacity) return { ...fail(overCapacity), overCapacity: true }
+  const checked = await checkAgainstEvent(
+    ctx,
+    await getTournamentRoster(ctx.eventSanityId),
+    players,
+    input,
+  )
+  if ('failure' in checked) return checked.failure
 
   // Free events have nothing to collect, so players are always confirmed.
   const payment: NewPlayerPayment = ctx.entryFeeCents > 0 ? input.payment : 'paid'
+
+  const released = await releaseUnpaidSpots(db, checked.replacing, teamName, adminEmail)
+  if (released) return fail(released)
 
   const accountIds = await resolveAccountIds(
     db,
@@ -379,13 +637,13 @@ export async function runAddPlayersToTeam(
     )
   }
 
-  const invalid = validatePlayers(roster, players)
-  if (invalid) return fail(invalid)
-
-  const overCapacity = await checkCapacity(ctx, players.length, input.confirmOverCapacity)
-  if (overCapacity) return { ...fail(overCapacity), overCapacity: true }
+  const checked = await checkAgainstEvent(ctx, roster, players, input, team.id)
+  if ('failure' in checked) return checked.failure
 
   const payment: NewPlayerPayment = ctx.entryFeeCents > 0 ? input.payment : 'paid'
+
+  const released = await releaseUnpaidSpots(db, checked.replacing, team.team_name, adminEmail)
+  if (released) return fail(released)
 
   // New players report to the team's current captain, like their teammates.
   const captain = current.find((m) => m.isCaptain)
