@@ -9,6 +9,18 @@ import { sendEmail, getBaseUrl } from '@/lib/email/resend'
 import { buildSponsorConfirmationEmail } from '@/lib/email/templates/sponsor-confirmation'
 import { formatEventDateLong } from '@/lib/eventDates'
 
+/** Keeps only the fields the form collects, up to the spots the tier includes. */
+function readPlayerAllocation(raw: unknown, spots: number): { name: string; email: string }[] {
+  if (!Array.isArray(raw)) return []
+  return raw
+    .map((p: { name?: unknown; email?: unknown } | null) => ({
+      name: typeof p?.name === 'string' ? p.name.trim().slice(0, 200) : '',
+      email: typeof p?.email === 'string' ? p.email.trim().slice(0, 200) : '',
+    }))
+    .filter((p) => p.name || p.email)
+    .slice(0, spots)
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -28,8 +40,7 @@ export async function POST(request: NextRequest) {
         primaryContact: string
         email: string
         phone?: string
-        sponsorshipLevel: string
-        sponsorshipLevelPrice: number
+        tierId: string
         paymentMethod: 'stripe' | 'invoice'
         activationNotes?: string
         marketingRequests?: string
@@ -54,6 +65,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sponsorships are not enabled for this event' }, { status: 400 })
     }
 
+    if (event.status === 'completed' || event.status === 'cancelled') {
+      return NextResponse.json({ error: 'Event is no longer open for sponsorship' }, { status: 400 })
+    }
+
+    // The level, price and player spots always come from Sanity, never the request.
+    const tier = event.sponsorshipTiers?.find((t) => t.id === sponsorData.tierId)
+    if (!tier?.name || tier.price == null) {
+      return NextResponse.json(
+        { error: 'That sponsorship level is no longer available. Reload the page and choose again.' },
+        { status: 400 },
+      )
+    }
+
+    const amountInCents = Math.round(tier.price * 100)
+    const playerAllocation = readPlayerAllocation(
+      sponsorData.playerAllocation,
+      tier.includedPlayerSpots ?? 0,
+    )
+    const metadata = playerAllocation.length > 0 ? { playerAllocation } : {}
+
     const baseUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
       (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
@@ -74,16 +105,14 @@ export async function POST(request: NextRequest) {
           primary_contact: sponsorData.primaryContact,
           email: sponsorData.email,
           phone: sponsorData.phone ?? null,
-          sponsorship_level: sponsorData.sponsorshipLevel,
-          sponsorship_level_price: sponsorData.sponsorshipLevelPrice
-            ? Math.round(sponsorData.sponsorshipLevelPrice * 100)
-            : null,
+          sponsorship_level: tier.name,
+          sponsorship_level_price: amountInCents,
           payment_method: 'invoice',
           status: 'invoiced',
           logo_url: sponsorData.logoUrl ?? null,
           activation_notes: sponsorData.activationNotes ?? null,
           marketing_requests: sponsorData.marketingRequests ?? null,
-          metadata: sponsorData.playerAllocation ? { playerAllocation: sponsorData.playerAllocation } : {},
+          metadata,
         })
 
       if (insertError) {
@@ -100,7 +129,7 @@ export async function POST(request: NextRequest) {
         html: buildSponsorConfirmationEmail({
           contactName: sponsorData.primaryContact,
           companyName: sponsorData.companyName,
-          sponsorshipLevel: sponsorData.sponsorshipLevel,
+          sponsorshipLevel: tier.name,
           eventTitle: event.title,
           eventDate: eventDateStr,
           eventLocation: null,
@@ -126,8 +155,6 @@ export async function POST(request: NextRequest) {
     const customerName = profile?.full_name || profile?.display_name || sponsorData.primaryContact
     const customerId = await getOrCreateStripeCustomer(user.id, user.email!, customerName)
 
-    const amountInCents = Math.round(sponsorData.sponsorshipLevelPrice * 100)
-
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card', 'us_bank_account'],
@@ -138,7 +165,7 @@ export async function POST(request: NextRequest) {
             currency: 'usd',
             unit_amount: amountInCents,
             product_data: {
-              name: `${event.title} — ${sponsorData.sponsorshipLevel} Sponsorship`,
+              name: `${event.title} — ${tier.name} Sponsorship`,
               description: `Sponsorship registration for ${event.title}`,
             },
           },
@@ -179,7 +206,7 @@ export async function POST(request: NextRequest) {
         primary_contact: sponsorData.primaryContact,
         email: sponsorData.email,
         phone: sponsorData.phone ?? null,
-        sponsorship_level: sponsorData.sponsorshipLevel,
+        sponsorship_level: tier.name,
         sponsorship_level_price: amountInCents,
         payment_method: 'stripe',
         stripe_checkout_session_id: session.id,
@@ -187,7 +214,7 @@ export async function POST(request: NextRequest) {
         logo_url: sponsorData.logoUrl ?? null,
         activation_notes: sponsorData.activationNotes ?? null,
         marketing_requests: sponsorData.marketingRequests ?? null,
-        metadata: sponsorData.playerAllocation ? { playerAllocation: sponsorData.playerAllocation } : {},
+        metadata,
       })
 
     if (pendingError) {
